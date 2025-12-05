@@ -1,0 +1,46 @@
+
+\begin{table}[htbp]
+   \bigskip
+   \centering
+   \resizebox{5.5cm}{3cm}{%
+   \begin{tabular}{lcc}
+      \toprule
+                                & LCR                     & LAR\\  
+      \midrule 
+      rci\_cut $=$ (2,2.5]      & -0.0019                 & -0.0084\\   
+                                & (0.0047)                & (0.0127)\\   
+      rci\_cut $=$ (2.5,3]      & 0.0083                  & 0.0014\\   
+                                & (0.0057)                & (0.0141)\\   
+      rci\_cut $=$ (3,3.5]      & 0.0186$^{**}$           & 0.0316$^{*}$\\   
+                                & (0.0073)                & (0.0161)\\   
+      rci\_cut $=$ (3.5,4]      & 0.0290$^{**}$           & 0.0381\\   
+                                & (0.0128)                & (0.0236)\\   
+      rci\_cut $=$ (4,4.5]      & 0.0225                  & 0.0547\\   
+                                & (0.0206)                & (0.0427)\\   
+      Apr-May GDD               & -0.0002$^{***}$         & -0.0002$^{***}$\\   
+                                & ($3.94\times 10^{-5}$)  & ($6.76\times 10^{-5}$)\\    
+      Apr-May HDD               & 0.0009$^{***}$          & -0.0013$^{**}$\\   
+                                & (0.0003)                & (0.0006)\\   
+      Apr-May Precipitation     & 0.0002$^{***}$          & 0.0004$^{***}$\\   
+                                & ($4.86\times 10^{-5}$)  & (0.0001)\\   
+      Apr-May Precipitation\^2  & $-5.29\times 10^{-8}$   & $4.1\times 10^{-8}$\\    
+                                & ($9.93\times 10^{-8}$)  & ($2.58\times 10^{-7}$)\\    
+      Apr-May PDSI wet          & 0.0003                  & 0.0002\\   
+                                & (0.0002)                & (0.0003)\\   
+      Apr-May PDSI dry          & 0.0003$^{**}$           & 0.0005\\   
+                                & (0.0001)                & (0.0003)\\   
+       \\
+      Observations              & 7,262                   & 7,262\\  
+      R$^2$                     & 0.42314                 & 0.47086\\  
+      Within R$^2$              & 0.04027                 & 0.08236\\  
+       \\
+      fips fixed effects        & $\checkmark$            & $\checkmark$\\   
+      year fixed effects        & $\checkmark$            & $\checkmark$\\   
+      state fixed effects       & $\checkmark$            & $\checkmark$\\   
+      year $\times $ state      & $\checkmark$            & $\checkmark$\\   
+      \bottomrule
+   \end{tabular}}
+      \caption{\label{tab:fit3} Effect of rotational complexity (state-specific trends and precipitation)}
+\end{table}
+
+
