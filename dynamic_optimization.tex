@@ -1,0 +1,277 @@
+\documentclass[notes,11pt, aspectratio=169]{beamer}
+
+\usepackage{pgfpages}
+% These slides also contain speaker notes. You can print just the slides,
+% just the notes, or both, depending on the setting below. Comment out the want
+% you want.
+\setbeameroption{hide notes} % Only slide
+%\setbeameroption{show only notes} % Only notes
+%\setbeameroption{show notes on second screen=right} % Both
+\setbeamertemplate{caption}[numbered]
+\usepackage{helvet}
+\usepackage[default]{lato}
+\usepackage{array}
+\usepackage{natbib}
+\usepackage{epstopdf}
+\bibliographystyle{apalike}
+\usepackage[affil-it]{authblk}
+\usepackage{tikz}
+\usepackage{verbatim}
+\setbeamertemplate{note page}{\pagecolor{yellow!5}\insertnote}
+\usepackage{amsmath}
+\usepackage{mathpazo}
+\usepackage{hyperref}
+\usepackage{lipsum}
+\usepackage{multimedia}
+\usepackage{graphicx}
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage{dcolumn}
+\usepackage{bbm}
+\newcolumntype{d}[0]{D{.}{.}{5}}
+
+\usepackage{changepage}
+\usepackage{appendixnumberbeamer}
+\newcommand{\beginbackup}{
+   \newcounter{framenumbervorappendix}
+   \setcounter{framenumbervorappendix}{\value{framenumber}}
+   \setbeamertemplate{footline}
+   {
+     \leavevmode%
+     \hline
+     box{%
+       \begin{beamercolorbox}[wd=\paperwidth,ht=2.25ex,dp=1ex,right]{footlinecolor}%
+%         \insertframenumber  \hspace*{2ex} 
+       \end{beamercolorbox}}%
+     \vskip0pt%
+   }
+ }
+\newcommand{\backupend}{
+   \addtocounter{framenumbervorappendix}{-\value{framenumber}}
+   \addtocounter{framenumber}{\value{framenumbervorappendix}} 
+}
+
+
+\usepackage{graphicx}
+\usepackage[space]{grffile}
+\usepackage{booktabs}
+
+% These are my colors -- there are many like them, but these ones are mine.
+\definecolor{blue}{RGB}{0,114,178}
+\definecolor{red}{RGB}{213,94,0}
+\definecolor{yellow}{RGB}{240,228,66}
+\definecolor{green}{RGB}{0,158,115}
+\definecolor{cardinalred}{RGB}{157,34,53}
+\definecolor{appleblossom}{RGB}{255,255,255}
+\definecolor{quartz}{RGB}{242,242,244}
+\definecolor{graysquirrel}{RGB}{199,200,202}
+\definecolor{spoofersstone}{RGB}{66,66,66}
+\definecolor{blackwhetstone}{RGB}{0,0,0}
+
+
+\hypersetup{
+  colorlinks=false,
+  linkbordercolor = {white},
+  linkcolor = {blue}
+}
+
+
+%% I use a beige off white for my background
+\definecolor{MyBackground}{RGB}{255,255,255}
+
+%% Uncomment this if you want to change the background color to something else
+%\setbeamercolor{background canvas}{bg=MyBackground}
+
+%% Change the bg color to adjust your transition slide background color!
+\newenvironment{transitionframe}{
+  \setbeamercolor{background canvas}{bg=yellow}
+  \begin{frame}}{
+    \end{frame}
+}
+
+\setbeamercolor{frametitle}{fg=spoofersstone, bg=appleblossom}
+\setbeamercolor{title}{fg=black}
+\setbeamertemplate{footline}[frame number]
+\setbeamertemplate{navigation symbols}{} 
+\setbeamertemplate{itemize items}{-}
+\setbeamercolor{itemize item}{fg=blue}
+\setbeamercolor{itemize subitem}{fg=blue}
+\setbeamercolor{enumerate item}{fg=blue}
+\setbeamercolor{enumerate subitem}{fg=blue}
+\setbeamercolor{button}{bg=MyBackground,fg=blue,}
+
+
+% If you like road maps, rather than having clutter at the top, have a roadmap show up at the end of each section 
+% (and after your introduction)
+% Uncomment this is if you want the roadmap!
+% \AtBeginSection[]
+% {
+%    \begin{frame}
+%        \frametitle{Roadmap of Talk}
+%        \tableofcontents[currentsection]
+%    \end{frame}
+% }
+\setbeamercolor{section in toc}{fg=blue}
+\setbeamercolor{subsection in toc}{fg=red}
+\setbeamersize{text margin left=1em,text margin right=1em} 
+
+\newenvironment{wideitemize}{\itemize\addtolength{\itemsep}{10pt}}{\enditemize}
+
+\usepackage{environ}
+\NewEnviron{videoframe}[1]{
+  \begin{frame}
+    \vspace{-8pt}
+    \begin{columns}[onlytextwidth, T] % align columns
+      \begin{column}{.58\textwidth}
+        \begin{minipage}[t][\textheight][t]
+          {\dimexpr\textwidth}
+          \vspace{8pt}
+          \hspace{4pt} {\Large \sc \textcolor{blue}{#1}}
+          \vspace{8pt}
+          
+          \BODY
+        \end{minipage}
+      \end{column}%
+      \hfill%
+      \begin{column}{.42\textwidth}
+        \colorbox{green!20}{\begin{minipage}[t][1.2\textheight][t]
+            {\dimexpr\textwidth}
+            Face goes here
+          \end{minipage}}
+      \end{column}%
+    \end{columns}
+  \end{frame}
+}
+
+
+
+
+\date{\today}
+\title[]{\textcolor{cardinalred}{Dynamic producer optimization}}
+%\author[VEF]{}
+%\institute[UARK]{\small{\begin{tabular}{c c c}
+%			Lawson Connor && Victor Funes-Leal && Eunchun Park\\
+%			\multicolumn{3}{c}{\small Department of Agricultural Economics and Agribusiness}\\ 
+%			\multicolumn{3}{c}{\small University of Arkansas}\\
+%\end{tabular}}}
+ 
+\makeatletter
+
+\begin{document}
+
+% logo of my university  
+%\logo{\includegraphics[width=2.5cm]{figures/ACES-Logo.pdf}}
+\titlegraphic { 
+\begin{tikzpicture}[overlay,remember picture]
+\node[right = 0.2cm] at (current page.200){
+    \includegraphics[width=3cm]{figures/UA_Logo.eps}
+};
+\end{tikzpicture}
+}
+	
+	%%% TIKZ STUFF
+	\tikzset{   
+		every picture/.style={remember picture,baseline},
+		every node/.style={anchor=base,align=center,outer sep=1.5pt},
+		every path/.style={thick},
+	}
+	\newcommand\marktopleft[1]{%
+		\tikz[overlay,remember picture] 
+		\node (marker-#1-a) at (-.3em,.3em) {};%
+	}
+	\newcommand\markbottomright[2]{%
+		\tikz[overlay,remember picture] 
+		\node (marker-#1-b) at (0em,0em) {};%
+	}
+	\tikzstyle{every picture}+=[remember picture] 
+	\tikzstyle{mybox} =[draw=black, very thick, rectangle, inner sep=10pt, inner ysep=20pt]
+	\tikzstyle{fancytitle} =[draw=black,fill=red, text=white]
+	%%%% END TIKZ STUFF
+
+ 
+	% Title Slide
+ 
+\begin{frame}
+	\maketitle
+	\centering 
+\end{frame}
+
+\begin{frame}{Producer's optimization problem}
+    \begin{wideitemize}
+        \item Farmer$i$'s maximizes his CRRA utility $U(W_{i})=W_{i}^{1-\gamma}/(1-\gamma)$, where $W_{i}$ is wealth, defined as:
+        \begin{equation}
+           W_{i}(a)=PY_{i}(a)-C(a)-\Pi_{i}(\mu_{i}(a))+I_{i}(Y_{i};\mu_{i}(a),\theta,P) 
+        \end{equation}
+        \item Wealth is equal to revenue ($PY_{i}(a)$) minus cost ($C(a)$) minus producer premium ($\Pi_{i}(\mu_{i}(a)$) plus indemnity paid ($I_{i}(Y_{i};\mu_{i}(a),\theta,P)$).
+        \item During \textbf{planting} time, harvest price and yields are not known, so they must be replaced with their expectations, so that premium and indemnity depend on these expected magnitudes.
+    \end{wideitemize}
+\end{frame}
+
+\begin{frame}{Expected indemnity and premium}
+    \begin{wideitemize}
+        \item Expected idemnity: $EI(c,a,\theta,s)=P_{c}\mu_{c}(a,s)S(\theta,G_{a,s})$.
+        \item Expected premium: $\Pi^{prod}(c,a,\theta,s)=(1-\zeta(\theta))K(\theta)\mu_{c}(a,s)^{1+\beta}$.
+        \item $\beta\in(0,1)$, $K(\theta)>0$, and $\zeta(\theta)\in [0,1)$ are the CRF elasticity, rating scale, and subsidy rate.
+        \item By Jensen's inequality, we have that:
+        \begin{eqnarray}
+        E\left[U(W_{i})\right] &=& E\left[W_{i}^{1-\gamma}/(1-\gamma)\right] \geq E(W_{i})^{1-\gamma}/(1-\gamma)\\
+        E(W_{i}) &=& E(PY_{i}(a))-C(a)-\Pi^{prod}(c,a,\theta,s)+EI(c,a,\theta,s)
+        \end{eqnarray}
+    \end{wideitemize}
+\end{frame}
+
+\begin{frame}{Revenue breakdown}
+
+    \begin{wideitemize}
+        \item Revenue is a function of expected harvest price and yields, expected yields are themselves a function of crop choices $a_{t}$ and weather scenarios, $s_{t}$, so that:
+        \begin{equation}
+           E(PY_{i}(a)) = P^{e}\mu_{i}(a)
+        \end{equation}
+        \item $P^{e}$ can be estimated using forward contracts.
+        \item $\mu_{i}(a) \equiv \overline{y}(a)$ is the mean yield as a function of rotation choice.
+        \item $a_{t}=A(h_{t-1})$, where:
+        \begin{equation}
+            A(h)=1+\sum_{k=1}^{5}\mathbf{1}_{h_{k}\neq h_{k+1}} \in \{1,2,\dots,6\}
+        \end{equation}
+    \end{wideitemize}
+\end{frame}  
+
+\begin{frame}{Costs}
+    \begin{wideitemize}
+        \item Both corn and soy have their distinct per-acre cost functions $C^{crop}(corn)$ and $C^{crop}(soy)$.
+        \item Similarly, switching from one practice to another has an additional ``penalty'', a.k.a. adjustment cost:
+        \begin{equation}
+             C^{RCI}(a_{t-1},a_{t})=\kappa\times \max\{0,a_{t}-a_{t-1}\}
+        \end{equation}
+        \item $\kappa$ is a fixed parameter, but may depend on the geographical location, since RCI tends to be higher in less productive areas, such as far western South Dakota or Northern Wisconsin.
+    \end{wideitemize}
+\end{frame}
+
+\begin{frame}{Profit (wealth) function}
+    \begin{wideitemize}
+        \item Given $(h_{t},c_{t},\theta_{t})$, the one-period expected cash flow is:
+        \begin{eqnarray}
+             \pi(h_{t},c_{t},\theta_{t}) &=& \sum_{s\in \mathcal{S}}\pi_{s}\left[P_{c_{t}}^{e}\mu_{c_{t}}(a_{t},s)+P_{c_{t}}^{e}\mu_{c_{t}}(a_{t},s)S(\theta_{t};G_{a,s})\right.\notag\\ 
+             &-& \left. (1-\zeta(\theta_{t}))K(\theta_{t})\mu_{c_{t}}(a_{t},s)^{1+\beta}-C^{crop}(c_{t})-C^{RCI}(a_{t-1},a_{t})\right]
+        \end{eqnarray}
+        \item $(c_{t}, \theta_{t})\in \{corn, soy\}\times \Theta$, where $\Theta\subset (0,1)$.
+        \item The state variable is the six-character strings over $\{C,S\}$, hence:
+        \begin{equation}
+            \mathcal{T}(h_{t},c_{t})=suffix_{5}(h_{t})||lead(c_{t})=h_{t+1}
+        \end{equation}
+        \item Control variables are the crop choices ($c_{t}$) and coverage level ($\theta_{t}$)
+    \end{wideitemize}
+\end{frame}
+
+\begin{frame}{Bellman equation}
+    \begin{wideitemize}
+        \item Let $\delta = (1+r)^{-1}$ be the discount factor and $V_{T+1}(h)\equiv 0$ be the terminal condition, the Bellman equation will be:
+        \begin{equation}
+            V_{t}(h_{t}) = \max_{c\in\{corn,soy\},\theta\in\Theta}\pi(h_{t},c_{t},\theta_{t})+\delta E\left[V_{t+1}(h_{t+1})\right],\quad t=T-1,\dots,1
+        \end{equation}
+        \item Where the expectation is defined across the probabilities $\pi_{s}$.
+        \item The state space is, by definition, discrete, hence the solution to this problem consists on finding the optimal value across periods and scenarios.
+    \end{wideitemize}
+\end{frame}
+
+\end{document}

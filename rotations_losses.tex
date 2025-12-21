@@ -1,0 +1,273 @@
+\documentclass[a4paper]{article}
+
+\usepackage[pages=all, color=black, position={current page.south}, placement=bottom, scale=1, opacity=1, vshift=5mm]{background}
+\SetBgContents{
+	\tt This work is shared under a \href{https://creativecommons.org/licenses/by-sa/4.0/}{CC BY-SA 4.0 license} unless otherwise noted
+}      % copyright
+
+\usepackage[margin=1in]{geometry} % full-width
+
+% AMS Packages
+\usepackage{amsmath}
+\usepackage{amsthm}
+\usepackage{amssymb}
+
+% Unicode
+\usepackage[utf8]{inputenc}
+\usepackage{hyperref}
+\hypersetup{
+	unicode,
+%	colorlinks,
+%	breaklinks,
+%	urlcolor=cyan, 
+%	linkcolor=blue, 
+	pdfauthor={Author One, Author Two, Author Three},
+	pdftitle={A simple article template},
+	pdfsubject={A simple article template},
+	pdfkeywords={article, template, simple},
+	pdfproducer={LaTeX},
+	pdfcreator={pdflatex}
+}
+
+% Vietnamese
+%\usepackage{vntex}
+
+% Natbib
+\usepackage[sort&compress,numbers,square]{natbib}
+\bibliographystyle{mplainnat}
+
+% Theorem, Lemma, etc
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{claim}{Claim}[theorem]
+\newtheorem{axiom}[theorem]{Axiom}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{fact}[theorem]{Fact}
+\newtheorem{hypothesis}[theorem]{Hypothesis}
+\newtheorem{assumption}[theorem]{Assumption}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{criterion}[theorem]{Criterion}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{problem}[theorem]{Problem}
+\newtheorem{principle}[theorem]{Principle}
+
+\usepackage{graphicx, color}
+\graphicspath{{fig/}}
+
+%\usepackage[linesnumbered,ruled,vlined,commentsnumbered]{algorithm2e} % use algorithm2e for typesetting algorithms
+\usepackage{algorithm, algpseudocode} % use algorithm and algorithmicx for typesetting algorithms
+\usepackage{mathrsfs} % for \mathscr command
+
+
+% Author info
+\title{Challenges of Incorporating Rotation Information into Crop Insurance Rates}
+\author{Author One$^1$\thanks{Author One was partially supported by Grant XXX} \and Author Two$^2$ \and Author Three$^1$}
+
+\date{
+	$^1$Organization 1 \\ \texttt{\{auth1, auth3\}@org1.edu}\\%
+	$^2$Organization 2 \\ \texttt{auth3@inst2.edu}\\[2ex]%
+%	\today
+}
+
+\begin{document}
+	\maketitle
+	
+	\begin{abstract}
+		We investigate how long-term crop rotation patterns affect corn yields. The research is motivated by an interest in incorporating farm-level conservation practices, such as crop rotations, into crop insurance rates. These practices are believed to mitigate yield risk and provide agroecological benefits for farm production, particularly in the face of adverse weather events. However, challenges exist in developing a rating system due to the nonlinear relationship between yields and diversity indices.
+
+    This study employs linear fixed effects models to quantify the magnitude of the relationship between yields and rotational complexity, accounting for land quality, and modeling the conditional first and second moments of the yield distribution. Data sources include the Scalable Satellite-Based Crop Yield Mapper (SCYM) and Quantile loss Domain Adversarial Neural Networks (QDANN) yield data, the Rotational Complexity Index (RCI), field-level crop data (CDL), and weather variables (PRISM). QDANN has a higher reported accuracy than SCYM.
+
+    Key findings suggest that corn monoculture is not the most productive pattern in terms of either the mean or variance of corn yields. We find a handful of rotations that outperform monoculture. However, transitioning from monoculture to a corn-soy rotation most often lowers yields until a well-designed rotation plan is established. We argue that the majority of farmers engage in simple rotation patterns; our dataset shows that 51\% of fields follow a perfect corn/soy rotation, 8\% engage in corn monoculture, while the remaining 41\% correspond to other patterns. Future work will include more complex rotation patterns, such as rotations with Wheat or Alfalfa, and cover crops.
+
+    High-performing sequences typically feature a recent soy rotation (years 1 or 2), no consecutive soy years, and a low impact from older crops (within the first three years). A perfect corn/soy rotation, while positive, has non-significant effects on yields and reduces yield variance. Later soybean rotations and shorter gaps between soy harvests have more positive and significant effects on yields. Conversely, more and less spaced-out soy harvests show negative and significant effects on corn yields. The analysis reveals that only a limited number of rotation sequences outperform corn monoculture in achieving higher mean yields and lower yield variance.
+
+    We identify four key indicators that account for variations in corn yield moments: Soy Lag (number of lagged periods since the most recent soy harvest), Consecutive soy years (dummy for two or more consecutive soy harvests), Soy gap (minimum number of years between two soy harvests), and Number of soy harvests across six years. These variables are used to construct a rotation score, which summarizes rotation patterns and allows for the prediction of yields, serving as a tool for causal identification of the effect of shifting rotations on yield outcomes.
+	\end{abstract}
+
+	%\tableofcontents
+    \newpage
+	
+	\section{Introduction}
+	\label{sec:intro}
+	
+	\emph{Research Question}: How do long-term crop rotation patterns affect corn yields?
+    
+    \emph{Method}: We use linear fixed effects models to quantify the magnitude of the relationship between yields and rotational complexity.
+    
+    \emph{Data}: Yield (biomass) data from \cite{lobell2015} (SCYM) and \cite{Ma2024} (QDANN), Rotational complexity index, from \cite{socolar2021}, field-level crops (CDL), and weather variables (PRISM).
+    
+    \emph{Results}: The effect of rotations on yields depends critically on their timing; later soybean rotations and shorter gaps between soy harvests have more positive and significant effects on yields.
+    
+    However, more and less spaced-out soy harvests have negative and significant effects on corn yields.
+	
+	\subsection{Preliminaries}
+	\label{sec:pre}
+	
+	Interest in incorporating farm-level conservation practices into crop insurance rates?
+        \begin{itemize}
+            \item Cover cropping
+            \item No till farming
+            \item Crop rotations (corn and soybeans plus other crops)
+        \end{itemize}
+    
+    These practices are thought to reduce yield risk, but may adversely affect short-term yields and farmer premium rates through their APH.
+    
+    Potentially reduce practice adoption incentives
+	
+	Increased rotation shown to have agroecological benefits for farm production, particularly in the face of adverse weather events \citep{socolar2021, burchfield2024}.
+    
+    Rotations help maintain soil organic carbon and fertility and reduce yield variability \citep{wu2025}. Still, this effect is conditional on soil characteristics (higher yield boost in lower productivity areas).
+    
+    Corn and soy rotations are the most prevalent in the US Midwest
+    
+    Challenges exist from a rating perspective for incorporating crop rotations into the rates.
+	
+	There are several ways to measure ecological diversity
+    \begin{enumerate}
+        \item Rotational Complexity Index (RCI)
+        \item Landscape Diversity Index
+        \item Entropy-based measures
+        \item Diversity indexes (weighted average of each number of crops)
+    \end{enumerate}
+    
+    Values of these indices can be incorporated into the rating system
+    
+    However, yields and yield risk are not a linear function of diversity indices, which presents a challenge for rating.
+	
+	Objectives:
+
+    \begin{itemize}
+        \item Show that RCI has a nonlinear effect on yield and yield risk.
+        \item Determine identifiable indicators in a 6-year corn soy. rotation that affect yield and yield risk.
+        \item Develop a rotation score and rank 6-year rotations using score.
+    \end{itemize}
+
+	\subsection{Data}
+	\label{sec:data}
+
+    \textbf{Scalable Satellite-Based Crop Yield Mapper (SCYM) yield data}: \citep{lobell2015} relies on a large number of crop model simulations over a range of soil, climate, and management conditions daily to train a statistical model at a pixel level, which is used to predict field-level biomass that can be converted to yields.
+    
+    \textbf{Quantile loss Domain Adversarial Neural Networks (QDANN) yield data}: \citep{Ma2024} uses county-level yields and field-level data to train a neural network, which is, in turn, used to predict yields at the field level using a technique called \textit{Unsupervised domain adaptation} (UDA).
+    
+    Both models use Landsat data as their main input, along with Gridmet data to calibrate yield models at a 30m resolution.
+    
+    Reported accuracy for QDANN is higher than that of SCYM (35\% for SCYM versus 48\% for QDANN at a field level).
+
+	
+	%Table~\ref*{tbl:1} is an example of a table.
+	
+	\section{Methods}
+	\label{sec:methods}
+
+    First moment of yields:
+
+     We model the conditional moments from the yield distribution as:
+        \begin{equation*}
+    yields_{it}=seq_{it}+W_{it}\beta_{it}+\lambda_{k}+\gamma_{t}+\varepsilon_{it}
+        \end{equation*}
+    
+    $yields_{it}$: corn yields (in bushels per acre) of field $i$ in year$t$.   
+    
+    $seq_{it}$: is a categorical variable for each rotation sequence, with corn monoculture as the base category.
+    
+    $W_{it}$: controls (precipitation, mean temperatures, VPD, PDSI, NCCPI, soil characteristics).
+    
+    $\lambda_{k}$, $\gamma_{t}$ are FIPS and year fixed effects.
+
+    Second Moment of Yields:
+
+    Let $\hat{u}_{1}$ be the associated error term, such that: $\hat{u}_{1}=y-X\hat{\beta}_{1}$, $X=\left[Z, W \right]$, then all higher moments can be estimated as:
+    \begin{equation*}
+        (\hat{u}_{1})^{i} = M_{i}(X,\beta_{i})+\varepsilon_{1}=X\beta_{i}+\varepsilon_{1}
+    \end{equation*}
+    
+    Coefficients $\hat{\beta}_{1}$ can be consistently estimated using OLS with heteroskedasticity-consistent standard errors \citep{shi2013} or using bootstrap \citep{li2021}.
+    
+    We can quantify the differential impacts of every rotation sequence on the risk by examining the coefficients in the regression of $X$ on $\hat{u}_{1}^{2}$ \citep{antle1983}.
+	
+	\begin{figure}[H]
+    \centering
+    \includegraphics[scale = 0.45]{figures/rci_coeff.png}
+    \caption{Response of yields to rotation sequences}
+    \label{fig:crop_rotation_yields} 
+    \end{figure}
+	
+	\section{Results}
+	\label{sec:results}
+    Only a few sequences outperform corn monoculture in terms of higher mean/lower variance.
+    
+    Both SCYM and QDANN yield similar results. 
+    
+    Higher performing sequences have common elements:
+    \begin{enumerate}
+        \item A recent soy rotation (year 1 or 2).
+        \item No consecutive soy years.
+        \item Low impact of older crops (first three years).
+        \item Perfect corn/soy rotation has positive but nonsignificant effects on yields, and reduces yield variance.
+    \end{enumerate}
+
+    We identified a set of rotation patterns that account for variations in first and second moments of corn yields.
+    \begin{enumerate}
+        \item Soy Lag: equal to the number of lagged periods a soy harvest was detected since the most recent year (e.g. if the latest soy harvest was the previous year, it takes a value equal to -1).
+        \item Consecutive soy years: Dummy equal to 1 if a rotation pattern had two or more consecutive soy harvests.
+        \item Soy gap: minimum number of years between two soy harvests (e.g. if two years of soy harvests occur, then the soy gap is 0).
+        \item Number of soy harvests: how many times in the last seven years was a soy harvest detected?
+    \end{enumerate}
+
+    \begin{figure}[H]
+    \centering
+    \includegraphics[scale = 0.6]{figures/qdann_means.png}
+    \caption{Coefficients of rotation sequences}
+    \label{fig:qdann_means} 
+    \end{figure}
+
+    We model average yields as a linear FE model:
+    \begin{equation*}
+        y_{it}=Z\tau_{it}+W_{it}\beta_{it}+\lambda_{k}+\gamma_{t}+\varepsilon_{it}
+    \end{equation*}
+    
+    Where: $Z = \left[late\_soy, soy\_cons,soy\_gap, nsoy\right]$
+    
+    \input{tables/yield_models}
+
+    All four variables can be used to construct a \textbf{rotation score}:
+    \begin{equation*}
+        score_{it}=\hat{\beta}_{1}late\_soy_{it}+\hat{\beta}_{2}soy\_cons_{it}+\hat{\beta}_{3}soy\_gap_{it}+\hat{\beta}_{4}nsoy_{it}
+    \end{equation*}
+    
+    This score summarizes the information from the four variables and allows us to classify the 64 rotation patterns into a smaller set of values.
+    
+    Score values for corn monoculture are 0, and for perfect rotation, 2.59.
+    
+    We predict yields based on rotation score and summarize our findings.
+
+    \begin{figure}[H]
+    \centering
+    \includegraphics[scale = 0.75]{figures/rot_score.png}
+    \caption{Response of yields to rotation sequences}
+    \label{fig:rot_score} 
+    \end{figure}
+
+    \begin{figure}[H]
+    \centering
+    \includegraphics[scale = 0.65]{figures/mean_var_score.png}
+    \caption{Response of yields to score values}
+    \label{fig:rot_score} 
+    \end{figure}
+    
+	\newpage
+	\bibliography{bibliography.bib}
+	
+	\appendix
+	
+	%\section{Omitted Proof in Section~\ref{sec:examples}}
+	%\label{app:1}
+	
+	%\lipsum[7]
+	
+\end{document}

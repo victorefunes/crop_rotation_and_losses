@@ -1,0 +1,38 @@
+
+\begin{table}[htbp]
+   \bigskip
+   \centering
+   \resizebox{5.5cm}{3cm}{%
+   \begin{tabular}{lcc}
+      \toprule
+                                  & LCR             & LAR\\  
+      \midrule 
+      Cover crop adoption (\%)        & -0.0169$^{***}$ & -0.0088\\   
+                                  & (0.0048)        & (0.0103)\\   
+      Apr-May GDD                 & -0.1449$^{***}$ & -0.3826$^{***}$\\   
+                                  & (0.0166)        & (0.0333)\\   
+      Apr-May HDD                 & 0.0244$^{*}$    & 0.0266\\   
+                                  & (0.0147)        & (0.0216)\\   
+      Apr-May PDSI wet            & -0.1709$^{***}$ & -0.9229$^{***}$\\   
+                                  & (0.0603)        & (0.1257)\\   
+      Apr-May PDSI dry            & 0.1894$^{***}$  & 0.4834$^{***}$\\   
+                                  & (0.0706)        & (0.1449)\\   
+      Apr-May Precipitation       & 0.0834$^{***}$  & 0.3403$^{***}$\\   
+                                  & (0.0161)        & (0.0430)\\   
+      Apr-May Precipitation$^{2}$ & -0.0011         & 0.0266\\   
+                                  & (0.0307)        & (0.0868)\\   
+       \\
+      Observations                & 26,325          & 26,325\\  
+      R$^2$                       & 0.32567         & 0.41873\\  
+      Within R$^2$                & 0.02702         & 0.08497\\  
+       \\
+      fips fixed effects          & $\checkmark$    & $\checkmark$\\   
+      year fixed effects          & $\checkmark$    & $\checkmark$\\   
+      state fixed effects         & $\checkmark$    & $\checkmark$\\   
+      year $\times $ state        & $\checkmark$    & $\checkmark$\\   
+      \bottomrule
+   \end{tabular}}
+   \caption{\label{tab:fit1} Effect of cover crop adoption on losses (state-specific trends and precipitation)}
+\end{table}
+
+

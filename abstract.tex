@@ -1,0 +1,30 @@
+\documentclass[12pt]{article}
+\usepackage[left=0.5in, right=0.5in, top=1in, bottom=1in]{geometry}
+\usepackage{authblk}
+
+
+\title{Challenges of Incorporating Rotation Information into Crop Insurance Rates}
+\author{}
+%\author{Lawson Connor}
+%\author{Victor Funes-Leal}
+%\author{Eunchun Park}
+%\affil{Department of Agricultural Economics and Agribusiness\\ University of Arkansas}
+
+\date{}
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+We investigate how long-term crop rotation patterns affect corn yields. The research is motivated by an interest in incorporating farm-level conservation practices, such as crop rotations, into crop insurance rates. These practices are believed to mitigate yield risk and provide agroecological benefits for farm production, particularly in the face of adverse weather events. However, challenges exist in developing a rating system due to the nonlinear relationship between yields and diversity indices.
+
+This study employs linear fixed effects models to quantify the magnitude of the relationship between yields and rotational complexity, accounting for land quality, and modeling the conditional first and second moments of the yield distribution. Data sources include the Scalable Satellite-Based Crop Yield Mapper (SCYM) and Quantile loss Domain Adversarial Neural Networks (QDANN) yield data, the Rotational Complexity Index (RCI), field-level crop data (CDL), and weather variables (PRISM). QDANN has a higher reported accuracy than SCYM.
+
+Key findings suggest that corn monoculture is not the most productive pattern in terms of either the mean or variance of corn yields. We find a handful of rotations that outperform monoculture. However, transitioning from monoculture to a corn-soy rotation most often lowers yields until a well-designed rotation plan is established. We argue that the majority of farmers engage in simple rotation patterns; our dataset shows that 51\% of fields follow a perfect corn/soy rotation, 8\% engage in corn monoculture, while the remaining 41\% correspond to other patterns. Future work will include more complex rotation patterns, such as rotations with Wheat or Alfalfa, and cover crops.
+
+High-performing sequences typically feature a recent soy rotation (years 1 or 2), no consecutive soy years, and a low impact from older crops (within the first three years). A perfect corn/soy rotation, while positive, has non-significant effects on yields and reduces yield variance. Later soybean rotations and shorter gaps between soy harvests have more positive and significant effects on yields. Conversely, more and less spaced-out soy harvests show negative and significant effects on corn yields. The analysis reveals that only a limited number of rotation sequences outperform corn monoculture in achieving higher mean yields and lower yield variance.
+
+We identify four key indicators that account for variations in corn yield moments: Soy Lag (number of lagged periods since the most recent soy harvest), Consecutive soy years (dummy for two or more consecutive soy harvests), Soy gap (minimum number of years between two soy harvests), and Number of soy harvests across six years. These variables are used to construct a rotation score, which summarizes rotation patterns and allows for the prediction of yields, serving as a tool for causal identification of the effect of shifting rotations on yield outcomes.
+\end{abstract}
+
+\end{document}
