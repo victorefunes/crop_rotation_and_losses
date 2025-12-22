@@ -83,7 +83,7 @@ crop_df |>
   feols(corn_yield_formula, data = _, cluster = ~COUNTY_FIPS) ->
   corn_rot
 
-dict <- c("rot_cropC-C-C-C-S-C" = "C-C-C-C-S-C", "rot_cropC-C-C-S-C-C" = "C-C-C-S-C-C",
+dict_corn <- c("rot_cropC-C-C-C-S-C" = "C-C-C-C-S-C", "rot_cropC-C-C-S-C-C" = "C-C-C-S-C-C",
           "rot_cropC-C-C-S-S-C" = "C-C-C-S-S-C", "rot_cropC-C-S-C-C-C" = "C-C-S-C-C-C",
           "rot_cropC-C-S-C-S-C" = "C-C-S-C-S-C", "rot_cropC-C-S-S-C-C" = "C-C-S-S-C-C",
           "rot_cropC-C-S-S-S-C" = "C-C-S-S-S-C", "rot_cropC-S-C-C-C-C" = "C-S-C-C-C-C",
@@ -100,13 +100,13 @@ dict <- c("rot_cropC-C-C-C-S-C" = "C-C-C-C-S-C", "rot_cropC-C-C-S-C-C" = "C-C-C-
           "rot_cropS-S-S-C-S-C" = "S-S-S-C-S-C", "rot_cropS-S-S-S-C-C" = "S-S-S-S-C-C",
           "rot_cropS-S-S-S-S-C" = "S-S-S-S-S-C")
 
-etable(corn_rot_nc, corn_rot, dict = dict,
+etable(corn_rot_nc, corn_rot, dict = dict_corn,
        drop = c("pr_", "cGDD_", "tmmx_", "tmmn_", "soil_", "vpd_", "Constant",
                 "nccpi3all_mean", "rootznaws_mean", "soc0_100_mean"),
        extralines = list("_Controls" = c("No", "Yes")))
 etable(corn_rot_nc, corn_rot, 
        tex = TRUE,
-       dict = dict,
+       dict = dict_corn,
        drop = c("pr_", "cGDD_", "tmmx_", "tmmn_", "soil_", "vpd_", "Constant",
                 "nccpi3all_mean", "rootznaws_mean", "soc0_100_mean"),
        style.tex = style.tex("aer"),
@@ -151,7 +151,7 @@ soy_yield_formula <- paste("soy_yield ~ rot_crop+",
   as.formula()
 
 
-dict <- c("rot_cropC-C-C-C-C-S" = "C-C-C-C-C-S", "rot_cropC-C-C-C-S-S" = "C-C-C-C-S-S",
+dict_soy <- c("rot_cropC-C-C-C-C-S" = "C-C-C-C-C-S", "rot_cropC-C-C-C-S-S" = "C-C-C-C-S-S",
           "rot_cropC-C-C-S-C-S" = "C-C-C-S-C-S", "rot_cropC-C-C-S-S-S" = "C-C-C-S-S-S",
           "rot_cropC-C-S-C-C-S" = "C-C-S-C-C-S", "rot_cropC-C-S-C-S-S" = "C-C-S-C-S-S",
           "rot_cropC-C-S-S-C-S" = "C-C-S-S-C-S", "rot_cropC-C-S-S-S-S" = "C-C-S-S-S-S",
@@ -183,19 +183,19 @@ crop_df |>
          rot_crop = relevel(rot_crop, ref = "S-S-S-S-S-S")) |>
   feols(soy_yield_formula, data = _, cluster = ~COUNTY_FIPS) ->
   soy_rot
-etable(soy_rot_nc, soy_rot, dict = dict,
+etable(soy_rot_nc, soy_rot, dict = dict_soy,
        drop = c("pr_", "cGDD_", "tmmx_", "tmmn_", "soil_", "vpd_", "Constant",
                 "nccpi3all_mean", "rootznaws_mean", "soc0_100_mean"),
        extralines = list("_Controls" = c("No", "Yes")))
 etable(soy_rot_nc, soy_rot, 
        tex = TRUE,
-       dict = dict,
+       dict = dict_soy,
        drop = c("pr_", "cGDD_", "tmmx_", "tmmn_", "soil_", "vpd_", "Constant",
                 "nccpi3all_mean", "rootznaws_mean", "soc0_100_mean"),
        style.tex = style.tex("aer"),
        replace = TRUE,
-       title = "Rotation patterns and corn yields",
-       label = "tab:table1",
+       title = "Rotation patterns and soybean yields",
+       label = "tab:table2",
        extralines = list("_Controls" = c("No", "Yes")),
        file = paste0(tab_dir, "soy_rot.tex"))
 
@@ -232,6 +232,16 @@ corn_RCI_formula <- paste("corn_yield~RCI+",
                           "+nccpi3all_mean+rootznaws_mean+soc0_100_mean|tile_field_ID+year") |>
   as.formula()
 
+dict <- c("RCI1.41" = "RCI = 1.41", "RCI1.73" = "RCI = 1.73",
+          "RCI2" = "RCI = 2", "RCI2.24" = "RCI = 2.24",
+          "RCI2.45" = "RCI = 2.45", "RCI2.65" = "RCI = 2.65",
+          "RCI2.74" = "RCI = 2.74", "RCI2.83" = "RCI = 2.83",
+          "RCI3" = "RCI = 3","RCI3.24" = "RCI = 3.24", 
+          "RCI3.46" = "RCI = 3.46", "RCI3.67" = "RCI = 3.67", 
+          "RCI3.74" = "RCI = 3.74", "RCI4" = "RCI = 4",
+          "RCI4.24" = "RCI = 4.24", "RCI4.47" = "RCI = 4.47",
+          "RCI4.74" = "RCI = 4.74", "RCI5.2" = "RCI = 5.2")
+
 crop_df |>
   mutate(RCI = factor(RCI)) |>
   feols(corn_RCI_formula, data = _, cluster = ~COUNTY_FIPS) ->
@@ -242,7 +252,25 @@ crop_df |>
   filter(rot_crop %in% corn_soy_patterns$pattern) |>
   feols(corn_RCI_formula, data = _, cluster = ~COUNTY_FIPS) ->
   corn_rci_cs
-etable(corn_rci_all, corn_rci_cs, keep = "RCI")
+
+etable(corn_rci_all, corn_rci_cs, keep = "RCI",
+       headers = c("All crops", "Corn and soybeans only"),
+       drop = c("pr_", "cGDD_", "tmmx_", "tmmn_", "soil_", "vpd_", "Constant",
+                "nccpi3all_mean", "rootznaws_mean", "soc0_100_mean"),
+       dict = dict)
+etable(corn_rci_all, corn_rci_cs, 
+       tex = TRUE,
+       dict = dict,
+       headers = c("All crops", "Corn and soybeans only"),
+       drop = c("pr_", "cGDD_", "tmmx_", "tmmn_", "soil_", "vpd_", "Constant",
+                "nccpi3all_mean", "rootznaws_mean", "soc0_100_mean"),
+       style.tex = style.tex("aer"),
+       replace = TRUE,
+       title = "Rotation Complexity and corn yields",
+       label = "tab:table3",
+       extralines = list("_Controls" = c("No", "Yes")),
+       file = paste0(tab_dir, "corn_rci.tex"))
+
 
 corn_rci_all |> 
   tidy() |> 
@@ -250,7 +278,7 @@ corn_rci_all |>
   separate(term, into = c("temp", "term"), sep = 3) |>
   mutate(term = as.numeric(term))|>
   filter(term < 5) |>
-  arrange(term) |>
+  arrange(desc(term)) |>
   dwplot(style = "dotwhisker",
          dist_args = list(color = "black", alpha = 0.75),
          ci = 0.99,
@@ -259,9 +287,16 @@ corn_rci_all |>
            colour = "grey60", 
            linetype = 2)) +
   theme_bw() +
+  coord_flip() +
   theme(legend.position = "none") + 
   xlab("Coefficient Estimate") + ylab("Rotation Complexity Index") +
-  theme(plot.title = element_text(face = "bold", hjust = 0.5))
+  theme(plot.title = element_text(face = "bold", hjust = 0.5)) ->
+  corn_rci_plot
+corn_rci_plot
+ggsave(corn_rci_plot, 
+       filename = paste0(fig_dir, "corn_rci_plot.png"), 
+       width = 10, height = 7.5)
+
 
 soy_RCI_formula <- paste("soy_yield~RCI+", 
                          paste("pr_", 6:8, collapse = "+", sep = ""), 
@@ -283,7 +318,24 @@ crop_df |>
   filter(rot_crop %in% corn_soy_patterns$pattern) |>
   feols(soy_RCI_formula, data = _, cluster = ~COUNTY_FIPS) ->
   soy_rci_cs
-etable(soy_rci_all, soy_rci_cs, keep = "RCI")
+
+etable(soy_rci_all, soy_rci_cs, keep = "RCI",
+       headers = c("All crops", "Corn and soybeans only"),
+       drop = c("pr_", "cGDD_", "tmmx_", "tmmn_", "soil_", "vpd_", "Constant",
+                "nccpi3all_mean", "rootznaws_mean", "soc0_100_mean"),
+       dict = dict)
+etable(soy_rci_all, soy_rci_cs, 
+       tex = TRUE,
+       dict = dict,
+       headers = c("All crops", "Corn and soybeans only"),
+       drop = c("pr_", "cGDD_", "tmmx_", "tmmn_", "soil_", "vpd_", "Constant",
+                "nccpi3all_mean", "rootznaws_mean", "soc0_100_mean"),
+       style.tex = style.tex("aer"),
+       replace = TRUE,
+       title = "Rotation Complexity and soybean yields",
+       label = "tab:table4",
+       extralines = list("_Controls" = c("No", "Yes")),
+       file = paste0(tab_dir, "soy_rci.tex"))
 
 soy_rci_all |> 
   tidy() |> 
@@ -300,9 +352,15 @@ soy_rci_all |>
            colour = "grey60", 
            linetype = 2)) +
   theme_bw() +
+  coord_flip() +
   theme(legend.position = "none") + 
   xlab("Coefficient Estimate") + ylab("Rotation Complexity Index") +
-  theme(plot.title = element_text(face = "bold", hjust = 0.5))
+  theme(plot.title = element_text(face = "bold", hjust = 0.5)) ->
+  soy_rci_plot
+soy_rci_plot
+ggsave(soy_rci_plot, 
+       filename = paste0(fig_dir, "soy_rci_plot.png"), 
+       width = 10, height = 7.5)
 
 ## VPDmax_7 as a category:
 # Normal       0<=vpdmax_7<1.9
@@ -335,7 +393,22 @@ crop_df |>
          rot_crop = relevel(rot_crop, ref = "C-C-C-C-C-C")) |>
   feols(corn_vpd_formula, data = _, cluster = ~COUNTY_FIPS) ->
   corn_rot_vpd
-etable(corn_rot_vpd, keep = c("rot_crop", "vpd_name"))
+etable(corn_rot_vpd,
+       dict = c(dict_corn, "vpd_namesomewhatdry" = "Somewhat dry season",
+                "vpd_namedry" = "Dry season"),
+       drop = c("pr_", "cGDD_", "tmmx_", "tmmn_", "soil_", "vpd_",
+                "nccpi3all_mean", "rootznaws_mean", "soc0_100_mean"))
+etable(corn_rot_vpd, 
+       tex = TRUE,
+       dict = c(dict_corn, "vpd_namesomewhatdry" = "Somewhat dry season",
+                "vpd_namedry" = "Dry season"),
+       drop = c("pr_", "cGDD_", "tmmx_", "tmmn_", "soil_", "vpd_",
+                "nccpi3all_mean", "rootznaws_mean", "soc0_100_mean"),
+       style.tex = style.tex("aer"),
+       replace = TRUE,
+       title = "Effect of weather and rotation sequences on corn yields",
+       label = "tab:table5",
+       file = paste0(tab_dir, "corn_rot_vpd.tex"))
 
 soy_vpd_formula <- paste("soy_yield ~ rot_crop+vpd_name+", 
                          paste("pr_", 6:8, collapse = "+", sep = ""), 
@@ -354,7 +427,22 @@ crop_df |>
          rot_crop = relevel(rot_crop, ref = "S-S-S-S-S-S")) |>
   feols(soy_vpd_formula, data = _, cluster = ~COUNTY_FIPS) ->
   soy_rot_vpd
-etable(soy_rot_vpd, keep = c("rot_crop", "vpd_name"))
+etable(soy_rot_vpd,
+       dict = c(dict_soy, "vpd_namesomewhatdry" = "Somewhat dry season",
+                "vpd_namedry" = "Dry season"),
+       drop = c("pr_", "cGDD_", "tmmx_", "tmmn_", "soil_", "vpd_",
+                "nccpi3all_mean", "rootznaws_mean", "soc0_100_mean"))
+etable(soy_rot_vpd, 
+       tex = TRUE,
+       dict = c(dict_soy, "vpd_namesomewhatdry" = "Somewhat dry season",
+                "vpd_namedry" = "Dry season"),
+       drop = c("pr_", "cGDD_", "tmmx_", "tmmn_", "soil_", "vpd_",
+                "nccpi3all_mean", "rootznaws_mean", "soc0_100_mean"),
+       style.tex = style.tex("aer"),
+       replace = TRUE,
+       title = "Effect of weather and rotation sequences on corn yields",
+       label = "tab:table6",
+       file = paste0(tab_dir, "soy_rot_vpd.tex"))
 
 
 corn_rci_vpd_formula <- paste("corn_yield ~ RCI*vpd_name+", 
@@ -367,10 +455,28 @@ corn_rci_vpd_formula <- paste("corn_yield ~ RCI*vpd_name+",
                           "+nccpi3all_mean+rootznaws_mean+soc0_100_mean|tile_field_ID+year") |>
   as.formula()
 
+dict_vpd <- c("vpd_namesomewhatdry" = "Somewhat dry season",
+              "vpd_namedry" = "Dry season", 
+              "RCI x vpd_namesomewhatdry" = "RCI x Somewhat dry season",
+              "RCI x vpd_namedry" = "RCI x Dry season")
+
 crop_df |>
   feols(corn_rci_vpd_formula, data = _, cluster = ~COUNTY_FIPS) ->
   corn_rci_vpd
-etable(corn_rci_vpd, keep = c("RCI", "vpd_name"))
+etable(corn_rci_vpd, 
+       dict = dict_vpd,
+       drop = c("pr_", "cGDD_", "tmmx_", "tmmn_", "soil_", "vpd_",
+                "nccpi3all_mean", "rootznaws_mean", "soc0_100_mean"))
+etable(corn_rci_vpd, 
+       tex = TRUE,
+       dict = dict_vpd,
+       drop = c("pr_", "cGDD_", "tmmx_", "tmmn_", "soil_", "vpd_",
+                "nccpi3all_mean", "rootznaws_mean", "soc0_100_mean"),
+       style.tex = style.tex("aer"),
+       replace = TRUE,
+       title = "Effect of weather and rotation sequences on corn yields",
+       label = "tab:table7",
+       file = paste0(tab_dir, "corn_rci_vpd.tex"))
 
 soy_rci_vpd_formula <- paste("soy_yield ~ RCI*vpd_name+", 
                               paste("pr_", 6:8, collapse = "+", sep = ""), 
@@ -385,7 +491,20 @@ soy_rci_vpd_formula <- paste("soy_yield ~ RCI*vpd_name+",
 crop_df |>
   feols(soy_rci_vpd_formula, data = _, cluster = ~COUNTY_FIPS) ->
   soy_rci_vpd
-etable(soy_rci_vpd, keep = c("RCI", "vpd_name"))
+etable(soy_rci_vpd, 
+       dict = dict_vpd,
+       drop = c("pr_", "cGDD_", "tmmx_", "tmmn_", "soil_", "vpd_",
+                "nccpi3all_mean", "rootznaws_mean", "soc0_100_mean"))
+etable(soy_rci_vpd, 
+       tex = TRUE,
+       dict = dict_vpd,
+       drop = c("pr_", "cGDD_", "tmmx_", "tmmn_", "soil_", "vpd_",
+                "nccpi3all_mean", "rootznaws_mean", "soc0_100_mean"),
+       style.tex = style.tex("aer"),
+       replace = TRUE,
+       title = "Effect of weather and rotation sequences on corn yields",
+       label = "tab:table8",
+       file = paste0(tab_dir, "soy_rci_vpd.tex"))
 
 ## Conditional standard error regressions
 corn_rot |>
@@ -438,7 +557,12 @@ corn_var |>
   theme_bw() +
   theme(legend.position = "none") + 
   xlab("Coefficient Estimate") + ylab("") +
-  theme(plot.title = element_text(face = "bold", hjust = 0.5))
+  theme(plot.title = element_text(face = "bold", hjust = 0.5)) ->
+  corn_var_plot
+corn_var_plot
+ggsave(corn_var_plot, 
+       filename = paste0(fig_dir, "corn_var_plot.png"), 
+       width = 10, height = 7.5)
 
 soy_var_formula <- paste("res_var ~ rot_crop+", 
                          paste("pr_", 6:8, collapse = "+", sep = ""), 
@@ -472,7 +596,12 @@ soy_var |>
   theme_bw() +
   theme(legend.position = "none") + 
   xlab("Coefficient Estimate") + ylab("") +
-  theme(plot.title = element_text(face = "bold", hjust = 0.5))
+  theme(plot.title = element_text(face = "bold", hjust = 0.5)) ->
+  soy_var_plot
+soy_var_plot
+ggsave(soy_var_plot, 
+       filename = paste0(fig_dir, "soy_var_plot.png"), 
+       width = 10, height = 7.5)
 
 ## Coefficient plots
 corn_rot |> 
@@ -500,7 +629,14 @@ corn_coeff |>
   geom_text(check_overlap = TRUE, size = 3) +
   geom_hline(yintercept = 0, linetype = 2) +
   geom_vline(xintercept = 0, linetype = 2) +
-  theme(legend.position = "none")
+  theme(legend.position = "none") + 
+  xlab("Corn standard deviation model coefficients") +
+  ylab("Corn mean yield model coefficients") ->
+  corn_coeff_plot
+corn_coeff_plot
+ggsave(corn_coeff_plot, 
+       filename = paste0(fig_dir, "corn_coeff_plot.png"), 
+       width = 10, height = 10)
 
 soy_rot |> 
   tidy() |> 
@@ -527,7 +663,14 @@ soy_coeff |>
   geom_text(check_overlap = TRUE, size = 3) +
   geom_hline(yintercept = 0, linetype = 2) +
   geom_vline(xintercept = 0, linetype = 2) +
-  theme(legend.position = "none")
+  theme(legend.position = "none")  + 
+  xlab("Soybeans standard deviation model coefficients") +
+  ylab("Soybeans mean yield model coefficients") ->
+  soy_coeff_plot
+soy_coeff_plot
+ggsave(soy_coeff_plot, 
+       filename = paste0(fig_dir, "soy_coeff_plot.png"), 
+       width = 10, height = 10)
 
 ## Corn with beginning-of-season precipitation
 corn_yield_formula_pr <- paste("corn_yield ~ rot_crop+", 
