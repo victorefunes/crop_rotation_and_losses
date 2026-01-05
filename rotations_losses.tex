@@ -1,9 +1,9 @@
-\documentclass[a4paper]{article}
+\documentclass[a4paper, 11pt]{article}
 
 \usepackage[pages=all, color=black, position={current page.south}, placement=bottom, scale=1, opacity=1, vshift=5mm]{background}
-\SetBgContents{
-	\tt This work is shared under a \href{https://creativecommons.org/licenses/by-sa/4.0/}{CC BY-SA 4.0 license} unless otherwise noted
-}      % copyright
+%\SetBgContents{
+%	\tt This work is shared under a \href{https://creativecommons.org/licenses/by-sa/4.0/}{CC BY-SA 4.0 license} unless otherwise noted
+%}      % copyright
 
 \usepackage[margin=1in]{geometry} % full-width
 
@@ -11,6 +11,7 @@
 \usepackage{amsmath}
 \usepackage{amsthm}
 \usepackage{amssymb}
+\usepackage{lato}
 
 % Unicode
 \usepackage[utf8]{inputenc}
@@ -189,12 +190,20 @@
     Coefficients $\hat{\beta}_{1}$ can be consistently estimated using OLS with heteroskedasticity-consistent standard errors \citep{shi2013} or using bootstrap \citep{li2021}.
     
     We can quantify the differential impacts of every rotation sequence on the risk by examining the coefficients in the regression of $X$ on $\hat{u}_{1}^{2}$ \citep{antle1983}.
-	
+
+    \newpage
 	\begin{figure}[H]
     \centering
-    \includegraphics[scale = 0.45]{figures/rci_coeff.png}
-    \caption{Response of yields to rotation sequences}
-    \label{fig:crop_rotation_yields} 
+    \includegraphics[scale = 0.55]{figures/corn_rot_plot.png}
+    \caption{Response of corn yields to rotation sequences}
+    \label{fig:corn_rot_plot}
+    \end{figure}
+
+    \begin{figure}[H]
+    \centering
+    \includegraphics[scale = 0.55]{figures/soy_rot_plot.png}
+    \caption{Response of soybean yields to rotation sequences}
+    \label{fig:soy_rot_plot}
     \end{figure}
 	
 	\section{Results}
@@ -219,11 +228,19 @@
         \item Number of soy harvests: how many times in the last seven years was a soy harvest detected?
     \end{enumerate}
 
+    \newpage
     \begin{figure}[H]
     \centering
-    \includegraphics[scale = 0.6]{figures/qdann_means.png}
-    \caption{Coefficients of rotation sequences}
-    \label{fig:qdann_means} 
+    \includegraphics[scale = 0.55]{figures/corn_rci_plot.png}
+    \caption{Changes on RCI and corn yields}
+    \label{fig:corn_rci_plot} 
+    \end{figure}
+
+    \begin{figure}[H]
+    \centering
+    \includegraphics[scale = 0.55]{figures/soy_rci_plot.png}
+    \caption{Changes on RCI and soybean yields}
+    \label{fig:soy_rci_plot} 
     \end{figure}
 
     We model average yields as a linear FE model:
