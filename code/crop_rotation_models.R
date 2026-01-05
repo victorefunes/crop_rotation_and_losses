@@ -344,6 +344,7 @@ soy_rci_all |>
   mutate(term = as.numeric(term))|>
   arrange(term) |>
   filter(term < 5) |>
+  arrange(desc(term)) |>
   dwplot(style = "dotwhisker",
          dist_args = list(color = "black", alpha = 0.75),
          ci = 0.99,
