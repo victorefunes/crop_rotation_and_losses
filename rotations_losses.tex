@@ -58,6 +58,7 @@
 \newtheorem{principle}[theorem]{Principle}
 
 \usepackage{graphicx, color}
+\usepackage{booktabs}
 \graphicspath{{fig/}}
 
 %\usepackage[linesnumbered,ruled,vlined,commentsnumbered]{algorithm2e} % use algorithm2e for typesetting algorithms
@@ -191,10 +192,6 @@
     
     We can quantify the differential impacts of every rotation sequence on the risk by examining the coefficients in the regression of $X$ on $\hat{u}_{1}^{2}$ \citep{antle1983}.
 
-    \include{tables/corn_rot}
-
-    \include{tables/soy_rot}
-
     \newpage
 	\begin{figure}[H]
     \centering
@@ -232,6 +229,7 @@
         \item Number of soy harvests: how many times in the last seven years was a soy harvest detected?
     \end{enumerate}
 
+
     \newpage
     \begin{figure}[H]
     \centering
@@ -243,7 +241,7 @@
     \begin{figure}[H]
     \centering
     \includegraphics[scale = 0.55]{figures/soy_rci_plot.png}
-    \caption{Changes on RCI and soybean yields}
+    \caption{Changes in RCI and soybean yields}
     \label{fig:soy_rci_plot} 
     \end{figure}
 
@@ -286,9 +284,16 @@
 	
 	\appendix
 	
-	%\section{Omitted Proof in Section~\ref{sec:examples}}
-	%\label{app:1}
+	\section{Appendix~\ref{sec:appendix}}
+    \subsection{Rotation patterns and yield coefficients}
+	\include{tables/corn_rot}
+
+    \include{tables/soy_rot}
+
+    \subsection{RCI and yield coefficients}
 	
-	%\lipsum[7]
+    \include{tables/corn_rci}
+
+    \include{tables/soy_rci}
 	
 \end{document}
