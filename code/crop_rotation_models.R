@@ -692,9 +692,37 @@ corn_var |>
   theme(plot.title = element_text(face = "bold", hjust = 0.5)) ->
   corn_var_plot
 corn_var_plot
-ggsave(corn_var_plot, 
+#ggsave(corn_var_plot, 
+#       filename = paste0(fig_dir, "corn_var_plot.png"), 
+#       width = 10, height = 7.5)
+
+corn_var |>
+  coefplot() |>
+  data.frame() |> 
+  filter(grepl("rot_crop", prms.estimate_names)) |>
+  separate(prms.estimate_names, into = c("temp", "term"), sep = 8) |>
+  select(-temp) |>
+  mutate(group =  case_when(
+    term == "S-C-S-C-S-C" ~ "Perfect rotation",
+    term %in% c("C-C-C-C-S-C", "C-C-S-C-S-C", "S-S-S-S-S-C",
+                "S-S-S-C-S-C") ~ "Transitioning",
+    .default = 'Other')) |>
+  ggplot(aes(x = reorder(term, -prms.y), y = prms.y)) +
+  geom_point(size = 2, aes(color = group)) +
+  geom_errorbar(aes(ymin = prms.ci_low, ymax = prms.ci_high, color = group), 
+                width = 0.2) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey60") +
+  coord_flip() +
+  xlab("Coefficient Estimate") + ylab("Crop sequence") +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5),
+        legend.title = element_blank(),
+        legend.position = "bottom") ->
+  corn_var_plot
+corn_var_plot
+ggsave(corn_rot_plot, 
        filename = paste0(fig_dir, "corn_var_plot.png"), 
        width = 10, height = 7.5)
+
 
 soy_var_formula <- paste("res_var ~ rot_crop+", 
                          paste("pr_", 6:8, collapse = "+", sep = ""), 
@@ -729,6 +757,33 @@ soy_var |>
   theme(legend.position = "none") + 
   xlab("Coefficient Estimate") + ylab("") +
   theme(plot.title = element_text(face = "bold", hjust = 0.5)) ->
+  soy_var_plot
+soy_var_plot
+#ggsave(soy_var_plot, 
+#       filename = paste0(fig_dir, "soy_var_plot.png"), 
+#       width = 10, height = 7.5)
+
+soy_var |>
+  coefplot() |>
+  data.frame() |> 
+  filter(grepl("rot_crop", prms.estimate_names)) |>
+  separate(prms.estimate_names, into = c("temp", "term"), sep = 8) |>
+  select(-temp) |>
+  mutate(group =  case_when(
+    term == "C-S-C-S-C-S" ~ "Perfect rotation",
+    term %in% c("C-C-C-C-C-S", "C-C-C-S-C-S", "S-S-S-S-C-S",
+                "S-S-C-S-C-S") ~ "Transitioning",
+    .default = 'Other')) |>
+  ggplot(aes(x = reorder(term, -prms.y), y = prms.y)) +
+  geom_point(size = 2, aes(color = group)) +
+  geom_errorbar(aes(ymin = prms.ci_low, ymax = prms.ci_high, color = group), 
+                width = 0.2) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey60") +
+  coord_flip() +
+  xlab("Coefficient Estimate") + ylab("Crop sequence") +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5),
+        legend.title = element_blank(),
+        legend.position = "bottom") ->
   soy_var_plot
 soy_var_plot
 ggsave(soy_var_plot, 
@@ -857,3 +912,110 @@ crop_df |>
   soy_cc
 etable(soy_cc)
 
+## Rotation models with scaled outcomes
+crop_df |> 
+  mutate(pr_6 = scale(pr_6),
+         pr_7 = scale(pr_7),
+         pr_8 = scale(pr_8),
+         cGDD_6m = scale(cGDD_6m),
+         cGDD_7m = scale(cGDD_7m),
+         cGDD_8m = scale(cGDD_8m),
+         tmmx_6 = scale(tmmx_6),
+         tmmx_7 = scale(tmmx_7),
+         tmmx_8 = scale(tmmx_8),
+         tmmn_6 = scale(tmmn_6),
+         tmmn_7 = scale(tmmn_7),
+         tmmn_8 = scale(tmmn_8),
+         soil_6 = scale(soil_6),
+         soil_7 = scale(soil_7),
+         soil_8 = scale(soil_8),
+         vpd_6 = scale(vpd_6),
+         vpd_7 = scale(vpd_7),
+         vpd_8 = scale(vpd_8),
+         nccpi3all_mean = scale(nccpi3all_mean),
+         rootznaws_mean = scale(rootznaws_mean),
+         soc0_100_mean = scale(soc0_100_mean),
+         corn_yield = scale(corn_yield)) |>
+  filter(rot_crop %in% corn_soy_patterns$pattern) |>
+  mutate(rot_crop = gsub("1", "C", gsub("5", "S", rot_crop)),  
+         rot_crop = factor(rot_crop),
+         rot_crop = relevel(rot_crop, ref = "C-C-C-C-C-C")) |>
+  feols(corn_yield_formula, data = _, cluster = ~COUNTY_FIPS) ->
+  corn_rot_scaled
+etable(corn_rot_scaled)
+
+corn_rot_scaled |>
+  coefplot() |>
+  data.frame() |> 
+  filter(grepl("rot_crop", prms.estimate_names)) |>
+  separate(prms.estimate_names, into = c("temp", "term"), sep = 8) |>
+  select(-temp) |>
+  mutate(group =  case_when(
+    term == "S-C-S-C-S-C" ~ "Perfect rotation",
+    term %in% c("C-C-C-C-S-C", "C-C-S-C-S-C", "S-S-S-S-S-C",
+                "S-S-S-C-S-C") ~ "Transitioning",
+    .default = 'Other')) |>
+  ggplot(aes(x = reorder(term, -prms.y), y = prms.y)) +
+  geom_point(size = 2, aes(color = group)) +
+  geom_errorbar(aes(ymin = prms.ci_low, ymax = prms.ci_high, color = group), 
+                width = 0.2) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey60") +
+  coord_flip() + ylim(c(-0.1,0.2)) +
+  xlab("Coefficient Estimate") + ylab("Crop sequence") +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5),
+        legend.title = element_blank(),
+        legend.position = "bottom")
+
+
+crop_df |>
+  mutate(pr_6 = scale(pr_6),
+         pr_7 = scale(pr_7),
+         pr_8 = scale(pr_8),
+         cGDD_6m = scale(cGDD_6m),
+         cGDD_7m = scale(cGDD_7m),
+         cGDD_8m = scale(cGDD_8m),
+         tmmx_6 = scale(tmmx_6),
+         tmmx_7 = scale(tmmx_7),
+         tmmx_8 = scale(tmmx_8),
+         tmmn_6 = scale(tmmn_6),
+         tmmn_7 = scale(tmmn_7),
+         tmmn_8 = scale(tmmn_8),
+         soil_6 = scale(soil_6),
+         soil_7 = scale(soil_7),
+         soil_8 = scale(soil_8),
+         vpd_6 = scale(vpd_6),
+         vpd_7 = scale(vpd_7),
+         vpd_8 = scale(vpd_8),
+         nccpi3all_mean = scale(nccpi3all_mean),
+         rootznaws_mean = scale(rootznaws_mean),
+         soc0_100_mean = scale(soc0_100_mean),
+         soy_yield = scale(soy_yield)) |>
+  filter(rot_crop %in% corn_soy_patterns$pattern) |>
+  mutate(rot_crop = gsub("1", "C", gsub("5", "S", rot_crop)),
+         rot_crop = factor(rot_crop),
+         rot_crop = relevel(rot_crop, ref = "S-S-S-S-S-S")) |>
+  feols(soy_yield_formula, data = _, cluster = ~COUNTY_FIPS) ->
+  soy_rot_scaled
+etable(soy_rot_scaled)
+
+soy_rot_scaled |>
+  coefplot() |>
+  data.frame() |> 
+  filter(grepl("rot_crop", prms.estimate_names)) |>
+  separate(prms.estimate_names, into = c("temp", "term"), sep = 8) |>
+  select(-temp) |>
+  mutate(group =  case_when(
+    term == "C-S-C-S-C-S" ~ "Perfect rotation",
+    term %in% c("C-C-C-C-C-S", "C-C-C-S-C-S", "S-S-S-S-C-S",
+                "S-S-C-S-C-S") ~ "Transitioning",
+    .default = 'Other')) |>
+  ggplot(aes(x = reorder(term, -prms.y), y = prms.y)) +
+  geom_point(size = 2, aes(color = group)) +
+  geom_errorbar(aes(ymin = prms.ci_low, ymax = prms.ci_high, color = group), 
+                width = 0.2) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey60") +
+  coord_flip() +
+  xlab("Coefficient Estimate") + ylab("Crop sequence") +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5),
+        legend.title = element_blank(),
+        legend.position = "bottom")
