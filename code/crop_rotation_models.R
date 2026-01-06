@@ -34,6 +34,21 @@ expand.grid(crop_0 = c("1","5"),
                          crop_0, sep = "-")) ->
   corn_soy_patterns
 
+# Transition out of corn/soy monoculture
+# C-C-C-C-C-C: 0.00
+# C-C-C-C-C-S: 1.41
+# C-C-C-C-S-C: 1.73
+# C-C-C-S-C-S: 2.00
+# C-C-S-C-S-C: 2.24
+# C-S-C-S-C-S: 2.24
+
+# S-S-S-S-S-S: 0.00
+# S-S-S-S-S-C: 1.41
+# S-S-S-S-C-S: 1.73
+# S-S-S-C-S-C: 2.00
+# S-S-C-S-C-S: 2.24
+# S-C-S-C-S-C: 2.24
+
 # RCI values correction
 crop_df |>
   mutate(data_rm = case_when(
@@ -118,28 +133,59 @@ etable(corn_rot_nc, corn_rot,
        extralines = list("_Controls" = c("No", "Yes")),
        file = paste0(tab_dir, "corn_rot.tex"))
 
-# Rotation coefficient plots with CIs
+
 corn_rot |> 
   tidy() |> 
   filter(grepl("rot_crop", term)) |> 
   separate(term, into = c("temp", "term"), sep = 8) |>
   arrange(estimate) |>
   dwplot(style = "dotwhisker",
-         ci = 0.99,
-         dist_args = list(color = "black", alpha = 0.75),
+         ci = 0.99, 
+         dodge_size = 0.4,
+         dist_args = list(alpha = 0.75),
          vline = geom_vline(
            xintercept = 0, 
            colour = "grey60", 
            linetype = 2)) +
+  aes(color = group) +
+  scale_color_discrete() +
   theme_bw() +
   theme(legend.position = "none") + 
   xlab("Coefficient Estimate") + ylab("Crop sequence") +
   theme(plot.title = element_text(face = "bold", hjust = 0.5)) ->
   corn_rot_plot
 corn_rot_plot
+#ggsave(corn_rot_plot, 
+#        filename = paste0(fig_dir, "corn_rot_plot.png"), 
+#        width = 10, height = 7.5)
+
+corn_rot |>
+  coefplot() |>
+  data.frame() |> 
+  filter(grepl("rot_crop", prms.estimate_names)) |>
+  separate(prms.estimate_names, into = c("temp", "term"), sep = 8) |>
+  select(-temp) |>
+  mutate(group =  case_when(
+    term == "S-C-S-C-S-C" ~ "Perfect rotation",
+    term %in% c("C-C-C-C-S-C", "C-C-S-C-S-C", "S-S-S-S-S-C",
+                "S-S-S-C-S-C") ~ "Transitioning",
+    .default = 'Other')) |>
+  ggplot(aes(x = reorder(term, -prms.y), y = prms.y)) +
+  geom_point(size = 2, aes(color = group)) +
+  geom_errorbar(aes(ymin = prms.ci_low, ymax = prms.ci_high, color = group), 
+                width = 0.2) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey60") +
+  coord_flip() +
+  xlab("Coefficient Estimate") + ylab("Crop sequence") +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5),
+        legend.title = element_blank(),
+        legend.position = "bottom") ->
+  corn_rot_plot
+corn_rot_plot
 ggsave(corn_rot_plot, 
-        filename = paste0(fig_dir, "corn_rot_plot.png"), 
-        width = 10, height = 7.5)
+       filename = paste0(fig_dir, "corn_rot_plot.png"), 
+       width = 10, height = 7.5)
+
 
 ## Soybean rotations 
 soy_yield_formula <- paste("soy_yield ~ rot_crop+", 
@@ -221,6 +267,33 @@ soy_rot |>
   theme(plot.title = element_text(face = "bold", hjust = 0.5)) ->
   soy_rot_plot
 soy_rot_plot
+#ggsave(soy_rot_plot, 
+#       filename = paste0(fig_dir, "soy_rot_plot.png"), 
+#       width = 10, height = 7.5)
+
+soy_rot |>
+  coefplot() |>
+  data.frame() |> 
+  filter(grepl("rot_crop", prms.estimate_names)) |>
+  separate(prms.estimate_names, into = c("temp", "term"), sep = 8) |>
+  select(-temp) |>
+  mutate(group =  case_when(
+    term == "C-S-C-S-C-S" ~ "Perfect rotation",
+    term %in% c("C-C-C-C-C-S", "C-C-C-S-C-S", "S-S-S-S-C-S",
+                "S-S-C-S-C-S") ~ "Transitioning",
+    .default = 'Other')) |>
+  ggplot(aes(x = reorder(term, -prms.y), y = prms.y)) +
+  geom_point(size = 2, aes(color = group)) +
+  geom_errorbar(aes(ymin = prms.ci_low, ymax = prms.ci_high, color = group), 
+                width = 0.2) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey60") +
+  coord_flip() +
+  xlab("Coefficient Estimate") + ylab("Crop sequence") +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5),
+        legend.title = element_blank(),
+        legend.position = "bottom") ->
+  soy_rot_plot
+soy_rot_plot
 ggsave(soy_rot_plot, 
        filename = paste0(fig_dir, "soy_rot_plot.png"), 
        width = 10, height = 7.5)
@@ -298,10 +371,35 @@ corn_rci_all |>
   theme(plot.title = element_text(face = "bold", hjust = 0.5)) ->
   corn_rci_plot
 corn_rci_plot
+#ggsave(corn_rci_plot, 
+#       filename = paste0(fig_dir, "corn_rci_plot.png"), 
+#       width = 10, height = 7.5)
+
+corn_rci_all |>
+  coefplot() |>
+  data.frame() |> 
+  filter(grepl("RCI", prms.estimate_names)) |>
+  separate(prms.estimate_names, into = c("temp", "term"), sep = 3) |>
+  select(-temp) |>
+  filter(term < 5.2) |>
+  mutate(group = case_when(
+    term == 2.24 ~ "Perfect rotation",
+    term %in% c(1.41, 1.73, 2) ~ "Transitioning",
+    .default = 'Other')) |>
+  ggplot(aes(x = term, y = prms.y)) +
+  geom_point(size = 2, aes(color = group)) +
+  geom_errorbar(aes(ymin = prms.ci_low, ymax = prms.ci_high, color = group), 
+                width = 0.2) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey60") +
+  xlab("Coefficient Estimate") + ylab("Crop sequence") +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5),
+        legend.title = element_blank(),
+        legend.position = "bottom") ->
+  corn_rci_plot
+corn_rci_plot
 ggsave(corn_rci_plot, 
        filename = paste0(fig_dir, "corn_rci_plot.png"), 
        width = 10, height = 7.5)
-
 
 soy_RCI_formula <- paste("soy_yield~RCI+", 
                          paste("pr_", 6:8, collapse = "+", sep = ""), 
@@ -365,9 +463,36 @@ soy_rci_all |>
   theme(plot.title = element_text(face = "bold", hjust = 0.5)) ->
   soy_rci_plot
 soy_rci_plot
+#ggsave(soy_rci_plot, 
+#       filename = paste0(fig_dir, "soy_rci_plot.png"), 
+#       width = 10, height = 7.5)
+
+soy_rci_all |>
+  coefplot() |>
+  data.frame() |> 
+  filter(grepl("RCI", prms.estimate_names)) |>
+  separate(prms.estimate_names, into = c("temp", "term"), sep = 3) |>
+  select(-temp) |>
+  filter(term < 5.2) |>
+  mutate(group = case_when(
+    term == 2.24 ~ "Perfect rotation",
+    term %in% c(1.41, 1.73, 2) ~ "Transitioning",
+    .default = 'Other')) |>
+  ggplot(aes(x = term, y = prms.y)) +
+  geom_point(size = 2, aes(color = group)) +
+  geom_errorbar(aes(ymin = prms.ci_low, ymax = prms.ci_high, color = group), 
+                width = 0.2) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey60") +
+  xlab("Coefficient Estimate") + ylab("Crop sequence") +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5),
+        legend.title = element_blank(),
+        legend.position = "bottom") ->
+  soy_rci_plot
+soy_rci_plot
 ggsave(soy_rci_plot, 
        filename = paste0(fig_dir, "soy_rci_plot.png"), 
        width = 10, height = 7.5)
+
 
 ## VPDmax_7 as a category:
 # Normal       0<=vpdmax_7<1.9
