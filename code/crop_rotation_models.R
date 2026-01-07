@@ -890,13 +890,7 @@ corn_yield_cc <- paste("corn_yield ~ cov_crop+",
                                "+nccpi3all_mean+rootznaws_mean+soc0_100_mean|tile_field_ID+year") |>
   as.formula()
 
-crop_df |>
-  mutate(cov_crop = ifelse(CC_probability_corn > 58, 1, 0)) |>
-  feols(corn_yield_cc, data = _, cluster = ~COUNTY_FIPS) ->
-  corn_cc
-etable(corn_cc)
-
-soy_yield_cc <- paste("soy_yield ~ cov_crop+", 
+corn_yield_cc_rci <- paste("corn_yield ~ cov_crop*RCI+", 
                        paste("pr_", 3:8, collapse = "+", sep = ""), 
                        "+", paste("cGDD_", 6:8, "m", collapse = "+", sep = ""), 
                        "+", paste("tmmx_", 6:8, collapse = "+", sep = ""), 
@@ -907,10 +901,43 @@ soy_yield_cc <- paste("soy_yield ~ cov_crop+",
   as.formula()
 
 crop_df |>
+  mutate(cov_crop = ifelse(CC_probability_corn > 58, 1, 0),
+         RCI = factor(RCI)) |>
+  feols(corn_yield_cc, data = _, cluster = ~COUNTY_FIPS) ->
+  corn_cc
+
+crop_df |>
+  mutate(cov_crop = ifelse(CC_probability_corn > 58, 1, 0),
+         RCI = factor(RCI)) |>
+  feols(corn_yield_cc_rci, data = _, cluster = ~COUNTY_FIPS) ->
+  corn_cc_rci
+etable(corn_cc, corn_cc_rci, keep = c("RCI", "cov_crop"))
+
+soy_yield_cc <- paste("soy_yield ~ cov_crop+", 
+                       paste("pr_", 3:8, collapse = "+", sep = ""), 
+                       "+", paste("cGDD_", 6:8, "m", collapse = "+", sep = ""), 
+                       "+", paste("tmmx_", 6:8, collapse = "+", sep = ""), 
+                       "+", paste("tmmn_", 6:8, collapse = "+", sep = ""), 
+                       "+", paste("soil_", 6:8, collapse = "+", sep = ""),
+                       "+", paste("vpd_", 6:8, collapse = "+", sep = ""),
+                       "+nccpi3all_mean+rootznaws_mean+soc0_100_mean|tile_field_ID+year") |>
+  as.formula()
+soy_yield_cc_rci <- paste("soy_yield ~ cov_crop*RCI+", 
+                      paste("pr_", 3:8, collapse = "+", sep = ""), 
+                      "+", paste("cGDD_", 6:8, "m", collapse = "+", sep = ""), 
+                      "+", paste("tmmx_", 6:8, collapse = "+", sep = ""), 
+                      "+", paste("tmmn_", 6:8, collapse = "+", sep = ""), 
+                      "+", paste("soil_", 6:8, collapse = "+", sep = ""),
+                      "+", paste("vpd_", 6:8, collapse = "+", sep = ""),
+                      "+nccpi3all_mean+rootznaws_mean+soc0_100_mean|tile_field_ID+year") |>
+  as.formula()
+
+crop_df |>
   mutate(cov_crop = ifelse(CC_probability_soy > 58, 1, 0)) |>
   feols(soy_yield_cc, data = _, cluster = ~COUNTY_FIPS) ->
   soy_cc
 etable(soy_cc)
+
 
 ## Rotation models with scaled outcomes
 crop_df |> 
@@ -952,8 +979,8 @@ corn_rot_scaled |>
   select(-temp) |>
   mutate(group =  case_when(
     term == "S-C-S-C-S-C" ~ "Perfect rotation",
-    term %in% c("C-C-C-C-S-C", "C-C-S-C-S-C", "S-S-S-S-S-C",
-                "S-S-S-C-S-C") ~ "Transitioning",
+    term %in% c("C-C-C-C-S-C", "C-C-S-C-S-C", 
+                "S-S-S-S-S-C", "S-S-S-C-S-C") ~ "Transitioning",
     .default = 'Other')) |>
   ggplot(aes(x = reorder(term, -prms.y), y = prms.y)) +
   geom_point(size = 2, aes(color = group)) +
@@ -965,7 +992,6 @@ corn_rot_scaled |>
   theme(plot.title = element_text(face = "bold", hjust = 0.5),
         legend.title = element_blank(),
         legend.position = "bottom")
-
 
 crop_df |>
   mutate(pr_6 = scale(pr_6),
@@ -1006,8 +1032,8 @@ soy_rot_scaled |>
   select(-temp) |>
   mutate(group =  case_when(
     term == "C-S-C-S-C-S" ~ "Perfect rotation",
-    term %in% c("C-C-C-C-C-S", "C-C-C-S-C-S", "S-S-S-S-C-S",
-                "S-S-C-S-C-S") ~ "Transitioning",
+    term %in% c("C-C-C-C-C-S", "C-C-C-S-C-S", 
+                "S-S-S-S-C-S", "S-S-C-S-C-S") ~ "Transitioning",
     .default = 'Other')) |>
   ggplot(aes(x = reorder(term, -prms.y), y = prms.y)) +
   geom_point(size = 2, aes(color = group)) +
@@ -1019,3 +1045,101 @@ soy_rot_scaled |>
   theme(plot.title = element_text(face = "bold", hjust = 0.5),
         legend.title = element_blank(),
         legend.position = "bottom")
+
+
+crop_df |>
+  feols(corn_yield~nccpi3corn_mean|tile_field_ID+year, data = _) ->
+  soil_corn
+
+crop_df |>
+  feols(soy_yield~nccpi3soy_mean|tile_field_ID+year, data = _) ->
+  soil_soy
+etable(soil_corn, soil_soy)
+
+library(sf)
+library(usmap)
+
+crs <- st_crs("EPSG:4326")
+us_map(regions = "counties") |>
+  filter(abbr == "IL") |>
+  st_as_sf() |>
+  st_transform(crs) ->
+  map
+
+crop_df |>
+  st_as_sf(coords = c("lon", "lat"), crs = crs) ->
+  crop_sf
+
+crop_sf |>
+  filter(year == 2016 & !is.na(RCI)) |>
+  mutate(RCI = factor(RCI)) |>
+  ggplot() + 
+  geom_sf(data = map) + 
+  geom_sf(aes(color = RCI), size = 0.2, fill = "black") +
+  guides(colour = guide_legend(override.aes = list(size=2))) +
+  theme(legend.position = "bottom") + 
+  ggtitle("RCI values (2016)") ->
+  rci_map
+rci_map
+ggsave(rci_map, 
+       filename = paste0(fig_dir, "rci_map.png"), 
+       width = 10, height = 10)
+
+# Corn yields
+crop_sf |>
+  filter(year == 2016 & !is.na(corn_yield)) |>
+  ggplot() + 
+  geom_sf(data = map) + 
+  geom_sf(aes(color = corn_yield), size = 0.2, fill = "black") +
+  scale_color_viridis_c()  +
+  theme(legend.position = "bottom") + 
+  ggtitle("Corn yields (2016)") ->
+  corn_yield_map
+corn_yield_map
+ggsave(corn_yield_map, 
+       filename = paste0(fig_dir, "corn_yield_map.png"), 
+       width = 10, height = 10)
+
+# Soybean yields
+crop_sf |>
+  filter(year == 2016 & !is.na(soy_yield)) |>
+  ggplot() + 
+  geom_sf(data = map) + 
+  geom_sf(aes(color = soy_yield), size = 0.2, fill = "black") +
+  scale_color_viridis_c()  +
+  theme(legend.position = "bottom") + 
+  ggtitle("Soybeans yields (2016)") ->
+  soy_yield_map
+soy_yield_map
+ggsave(soy_yield_map, 
+       filename = paste0(fig_dir, "soy_yield_map.png"), 
+       width = 10, height = 10)
+
+## NCCPI
+crop_sf |>
+  filter(year == 2016 & !is.na(nccpi3corn_mean)) |>
+  ggplot() + 
+  geom_sf(data = map) + 
+  geom_sf(aes(color = nccpi3corn_mean), size = 0.2, fill = "black") +
+  scale_color_viridis_c()  +
+  theme(legend.position = "bottom") + 
+  ggtitle("NCCPI Corn (2016)") ->
+  nccpi_corn_map
+nccpi_corn_map
+ggsave(nccpi_corn_map, 
+       filename = paste0(fig_dir, "nccpi_corn_map.png"), 
+       width = 10, height = 10)
+
+crop_sf |>
+  filter(year == 2016 & !is.na(nccpi3soy_mean)) |>
+  ggplot() + 
+  geom_sf(data = map) + 
+  geom_sf(aes(color = nccpi3soy_mean), size = 0.2, fill = "black") +
+  scale_color_viridis_c()  +
+  theme(legend.position = "bottom") + 
+  ggtitle("NCCPI Soybeans (2016)") ->
+  nccpi_soy_map
+nccpi_soy_map
+ggsave(nccpi_soy_map, 
+       filename = paste0(fig_dir, "nccpi_soy_map.png"), 
+       width = 10, height = 10)
