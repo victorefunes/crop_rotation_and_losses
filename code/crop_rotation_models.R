@@ -4,7 +4,6 @@ library(statar)
 library(fixest)
 library(broom)
 library(haven)
-library(arrow)
 library(marginaleffects)
 library(furrr)
 library(dotwhisker)
@@ -70,6 +69,14 @@ crop_df |>
   filter(data_rm == 0) |>
   select(-data_rm) ->
   crop_df
+
+crop_df |> 
+  filter(rot_crop %in% corn_soy_patterns$pattern) |>
+  tab(rot_crop) |> 
+  data.frame() |>
+  arrange(desc(Freq.)) |>
+  select(-`Cum.`) |>
+  mutate(cum = cumsum(Percent))
 
 ## Corn rotations using corn monoculture as the base category
 corn_yield_formula <- paste("corn_yield ~ rot_crop+", 
@@ -235,7 +242,7 @@ etable(soy_rot_nc, soy_rot, dict = dict_soy,
        drop = c("pr_", "cGDD_", "tmmx_", "tmmn_", "soil_", "vpd_", "Constant",
                 "nccpi3all_mean", "rootznaws_mean", "soc0_100_mean"),
        extralines = list("_Controls" = c("No", "Yes")))
-etable(soy_rot_nc, soy_rot, 
+etable(soy_rot_nc, soy_rot,
        tex = TRUE,
        dict = dict_soy,
        headers = c("No controls", "With controls"),
@@ -297,6 +304,7 @@ soy_rot_plot
 ggsave(soy_rot_plot, 
        filename = paste0(fig_dir, "soy_rot_plot.png"), 
        width = 10, height = 7.5)
+
 
 ## RCI regressions
 corn_RCI_formula <- paste("corn_yield~RCI+", 
@@ -913,6 +921,27 @@ crop_df |>
   corn_cc_rci
 etable(corn_cc, corn_cc_rci, keep = c("RCI", "cov_crop"))
 
+corn_cc_rci |>
+  coefplot() |>
+  data.frame() |> 
+  filter(grepl("RCI", prms.estimate_names)) |> 
+  mutate(treat = ifelse(prms.x < 40, 0, 1),
+         treat = factor(treat, labels = c("No cover crop", "Cover crop")),
+         RCI = case_when(
+           treat == "No cover crop" ~ gsub("RCI", "", prms.estimate_names),
+           treat == "Cover crop" ~ gsub("cov_crop:RCI", "", prms.estimate_names))) |>
+  filter(RCI < 5) |>
+  ggplot(aes(x = RCI, y = prms.y, groups = treat)) +
+  geom_point(size = 2, aes(color = treat)) +
+  geom_errorbar(aes(ymin = prms.ci_low, ymax = prms.ci_high, color = treat), 
+                width = 0.2) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey60") +
+  xlab("Coefficient Estimate") + ylab("Rotation Complexity Index x Cover Crop") +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5),
+        legend.title = element_blank(),
+        legend.position = "bottom") ->
+  corn_cc_rci_plot
+
 soy_yield_cc <- paste("soy_yield ~ cov_crop+", 
                        paste("pr_", 3:8, collapse = "+", sep = ""), 
                        "+", paste("cGDD_", 6:8, "m", collapse = "+", sep = ""), 
@@ -922,6 +951,7 @@ soy_yield_cc <- paste("soy_yield ~ cov_crop+",
                        "+", paste("vpd_", 6:8, collapse = "+", sep = ""),
                        "+nccpi3all_mean+rootznaws_mean+soc0_100_mean|tile_field_ID+year") |>
   as.formula()
+
 soy_yield_cc_rci <- paste("soy_yield ~ cov_crop*RCI+", 
                       paste("pr_", 3:8, collapse = "+", sep = ""), 
                       "+", paste("cGDD_", 6:8, "m", collapse = "+", sep = ""), 
@@ -937,6 +967,36 @@ crop_df |>
   feols(soy_yield_cc, data = _, cluster = ~COUNTY_FIPS) ->
   soy_cc
 etable(soy_cc)
+
+crop_df |>
+  mutate(cov_crop = ifelse(CC_probability_corn > 58, 1, 0),
+         RCI = factor(RCI)) |>
+  feols(soy_yield_cc_rci, data = _, cluster = ~COUNTY_FIPS) ->
+  soy_cc_rci
+etable(soy_cc, soy_cc_rci, keep = c("RCI", "cov_crop"))
+
+soy_cc_rci |>
+  coefplot() |>
+  data.frame() |> 
+  filter(grepl("RCI", prms.estimate_names)) |> 
+  mutate(treat = ifelse(prms.x < 40, 0, 1),
+         treat = factor(treat, labels = c("No cover crop", "Cover crop")),
+         RCI = case_when(
+           treat == "No cover crop" ~ gsub("RCI", "", prms.estimate_names),
+           treat == "Cover crop" ~ gsub("cov_crop:RCI", "", prms.estimate_names))) |>
+  filter(RCI < 5) |>
+  ggplot(aes(x = RCI, y = prms.y, groups = treat)) +
+  geom_point(size = 2, aes(color = treat)) +
+  geom_errorbar(aes(ymin = prms.ci_low, ymax = prms.ci_high, color = treat), 
+                width = 0.2) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey60") +
+  xlab("Coefficient Estimate") + ylab("Rotation Complexity Index x Cover Crop") +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5),
+        legend.title = element_blank(),
+        legend.position = "bottom") ->
+  soy_cc_rci_plot
+
+## Cover crops interacted with VPD
 
 
 ## Rotation models with scaled outcomes
@@ -1143,3 +1203,344 @@ nccpi_soy_map
 ggsave(nccpi_soy_map, 
        filename = paste0(fig_dir, "nccpi_soy_map.png"), 
        width = 10, height = 10)
+
+### Both crops scaled
+crop_df |>
+  mutate(corn_yield = scale(corn_yield),
+         soy_yield = scale(soy_yield)) |>
+  pivot_longer(c(corn_yield, soy_yield), names_to = "crop_name", values_to = "yield",
+               names_repair = "minimal") ->
+  crop_long
+
+yield_formula <- paste("yield ~ rot_crop+", 
+                       paste("pr_", 6:8, collapse = "+", sep = ""), 
+                       "+", paste("cGDD_", 6:8, "m", collapse = "+", sep = ""), 
+                       "+", paste("tmmx_", 6:8, collapse = "+", sep = ""), 
+                       "+", paste("tmmn_", 6:8, collapse = "+", sep = ""), 
+                       "+", paste("soil_", 6:8, collapse = "+", sep = ""), 
+                       "+", paste("vpd_", 6:8, collapse = "+", sep = ""),
+                       "+nccpi3all_mean+rootznaws_mean+soc0_100_mean|tile_field_ID+year") |>
+  as.formula()
+
+dict <- c("rot_cropC-C-C-C-S-C" = "C-C-C-C-S-C", "rot_cropC-C-C-S-C-C" = "C-C-C-S-C-C",
+          "rot_cropC-C-C-S-S-C" = "C-C-C-S-S-C", "rot_cropC-C-S-C-C-C" = "C-C-S-C-C-C",
+          "rot_cropC-C-S-C-S-C" = "C-C-S-C-S-C", "rot_cropC-C-S-S-C-C" = "C-C-S-S-C-C",
+          "rot_cropC-C-S-S-S-C" = "C-C-S-S-S-C", "rot_cropC-S-C-C-C-C" = "C-S-C-C-C-C",
+          "rot_cropC-S-C-C-S-C" = "C-S-C-C-S-C", "rot_cropC-S-C-S-C-C" = "C-S-C-S-C-C",
+          "rot_cropC-S-C-S-S-C" = "C-S-C-S-S-C", "rot_cropC-S-S-C-C-C" = "C-S-S-C-C-C",
+          "rot_cropC-S-S-C-S-C" = "C-S-S-C-S-C", "rot_cropC-S-S-S-C-C" = "C-S-S-S-C-C",
+          "rot_cropC-S-S-S-S-C" = "C-S-S-S-S-C", "rot_cropS-C-C-C-C-C" = "S-C-C-C-C-C",
+          "rot_cropS-C-C-C-S-C" = "S-C-C-C-S-C", "rot_cropS-C-C-S-C-C" = "S-C-C-S-C-C",
+          "rot_cropS-C-C-S-S-C" = "S-C-C-S-S-C", "rot_cropS-C-S-C-C-C" = "S-C-S-C-C-C",
+          "rot_cropS-C-S-C-S-C" = "S-C-S-C-S-C", "rot_cropS-C-S-S-C-C" = "S-C-S-S-C-C",
+          "rot_cropS-C-S-S-S-C" = "S-C-S-S-S-C", "rot_cropS-S-C-C-C-C" = "S-S-C-C-C-C",
+          "rot_cropS-S-C-C-S-C" = "S-S-C-C-S-C", "rot_cropS-S-C-S-C-C" = "S-S-C-S-C-C",
+          "rot_cropS-S-C-S-S-C" = "S-S-C-S-S-C", "rot_cropS-S-S-C-C-C" = "S-S-S-C-C-C",
+          "rot_cropS-S-S-C-S-C" = "S-S-S-C-S-C", "rot_cropS-S-S-S-C-C" = "S-S-S-S-C-C",
+          "rot_cropS-S-S-S-S-C" = "S-S-S-S-S-C", "rot_cropC-C-C-C-C-S" = "C-C-C-C-C-S", 
+          "rot_cropC-C-C-C-S-S" = "C-C-C-C-S-S", "rot_cropS-S-S-S-S-S" = "S-S-S-S-S-S", 
+          "rot_cropC-C-C-S-C-S" = "C-C-C-S-C-S", "rot_cropC-C-C-S-S-S" = "C-C-C-S-S-S",
+          "rot_cropC-C-S-C-C-S" = "C-C-S-C-C-S", "rot_cropC-C-S-C-S-S" = "C-C-S-C-S-S",
+          "rot_cropC-C-S-S-C-S" = "C-C-S-S-C-S", "rot_cropC-C-S-S-S-S" = "C-C-S-S-S-S",
+          "rot_cropC-S-C-C-C-S" = "C-S-C-C-C-S", "rot_cropC-S-C-C-S-S" = "C-S-C-C-S-S",
+          "rot_cropC-S-C-S-C-S" = "C-S-C-S-C-S", "rot_cropC-S-C-S-S-S" = "C-S-C-S-S-S",
+          "rot_cropC-S-S-C-C-S" = "C-S-S-C-C-S", "rot_cropC-S-S-C-S-S" = "C-S-S-C-S-S",
+          "rot_cropC-S-S-S-C-S" = "C-S-S-S-C-S", "rot_cropC-S-S-S-S-S" = "C-S-S-S-S-S",
+          "rot_cropS-C-C-C-C-S" = "S-C-C-C-C-S", "rot_cropS-C-C-C-S-S" = "S-C-C-C-S-S",
+          "rot_cropS-C-C-S-C-S" = "S-C-C-S-C-S", "rot_cropS-C-C-S-S-S" = "S-C-C-S-S-S",
+          "rot_cropS-C-S-C-C-S" = "S-C-S-C-C-S", "rot_cropS-C-S-C-S-S" = "S-C-S-C-S-S",
+          "rot_cropS-C-S-S-C-S" = "S-C-S-S-C-S", "rot_cropS-C-S-S-S-S" = "S-C-S-S-S-S",
+          "rot_cropS-S-C-C-C-S" = "S-S-C-C-C-S", "rot_cropS-S-C-C-S-S" = "S-S-C-C-S-S",
+          "rot_cropS-S-C-S-C-S" = "S-S-C-S-C-S", "rot_cropS-S-C-S-S-S" = "S-S-C-S-S-S",
+          "rot_cropS-S-S-C-C-S" = "S-S-S-C-C-S", "rot_cropS-S-S-C-S-S" = "S-S-S-C-S-S",
+          "rot_cropS-S-S-S-C-S" = "S-S-S-S-C-S", 
+          "rot_cropCS_perfect_rotation" = "CS_perfect_rotation")
+
+crop_long |>
+  filter(rot_crop %in% corn_soy_patterns$pattern) |>
+  mutate(rot_crop = gsub("1", "C", gsub("5", "S", rot_crop)),
+         rot_crop = ifelse(rot_crop %in% c("C-S-C-S-C-S", "S-C-S-C-S-C"), 
+                           "CS_perfect_rotation", rot_crop),
+         rot_crop = factor(rot_crop),
+         rot_crop = relevel(rot_crop, ref = "C-C-C-C-C-C")) |>
+  feols(yield_formula, data = _, cluster = ~COUNTY_FIPS) ->
+  crop_rot
+
+etable(crop_rot, 
+       dict = dict,
+       drop = c("pr_", "cGDD_", "tmmx_", "tmmn_", "soil_", "vpd_", "Constant",
+                "nccpi3all_mean", "rootznaws_mean", "soc0_100_mean"))
+
+# Transition out of corn/soy monoculture
+# C-C-C-C-C-C: 0.00
+# C-C-C-C-C-S: 1.41
+# C-C-C-C-S-C: 1.73
+# C-C-C-S-C-S: 2.00
+# C-C-S-C-S-C: 2.24
+# C-S-C-S-C-S: 2.24
+
+# S-S-S-S-S-S: 0.00
+# S-S-S-S-S-C: 1.41
+# S-S-S-S-C-S: 1.73
+# S-S-S-C-S-C: 2.00
+# S-S-C-S-C-S: 2.24
+# S-C-S-C-S-C: 2.24
+
+crop_rot |>
+  coefplot() |>
+  data.frame() |> 
+  filter(grepl("rot_crop", prms.estimate_names)) |>
+  separate(prms.estimate_names, into = c("temp", "term"), sep = 8) |>
+  select(-temp) |>
+  mutate(group =  case_when(
+    term == "S-S-S-S-S-S" ~ "Soy Monoculture",
+    term == "CS_perfect_rotation" ~ "Perfect Rotation",
+    term %in% c("C-C-C-C-C-S", "C-C-C-C-S-C", "C-C-C-S-C-S", "C-C-S-C-S-C",
+                "S-S-S-S-S-C", "S-S-S-S-C-S", "S-S-S-C-S-C", "S-S-C-S-C-S") ~ 
+      "Transitioning",
+    .default = 'Other')) |>
+  ggplot(aes(x = reorder(term, -prms.y), y = prms.y)) +
+  geom_point(size = 2, aes(color = group)) +
+  geom_errorbar(aes(ymin = prms.ci_low, ymax = prms.ci_high, color = group), 
+                width = 0.2) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey60") +
+  coord_flip() +
+  xlab("Coefficient Estimate") + ylab("Crop sequence") +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5),
+        legend.title = element_blank(),
+        legend.position = "bottom")
+
+crop_rot |>
+  coefplot() |>
+  data.frame() |> 
+  filter(grepl("rot_crop", prms.estimate_names)) |>
+  separate(prms.estimate_names, into = c("temp", "term"), sep = 8) |>
+  select(-temp) |>
+  mutate(group =  case_when(
+    term == "S-S-S-S-S-S" ~ "Soy Monoculture",
+    term == "CS_perfect_rotation" ~ "Perfect Rotation",
+    term %in% c("C-C-C-C-C-S", "C-C-C-C-S-C", "C-C-C-S-C-S", "C-C-S-C-S-C",
+                "S-S-S-S-S-C", "S-S-S-S-C-S", "S-S-S-C-S-C", "S-S-C-S-C-S") ~ 
+      "Transitioning",
+    .default = 'Other')) |>
+  filter(group != "Other") |>
+  ggplot(aes(x = reorder(term, -prms.y), y = prms.y)) +
+  geom_point(size = 2, aes(color = group)) +
+  geom_errorbar(aes(ymin = prms.ci_low, ymax = prms.ci_high, color = group), 
+                width = 0.2) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey60") +
+  coord_flip() +
+  xlab("Coefficient Estimate") + ylab("Crop sequence") +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5),
+        legend.title = element_blank(),
+        legend.position = "bottom")
+
+crop_rot |>
+  augment(newdata = crop_long |> 
+            filter(rot_crop %in% corn_soy_patterns$pattern) |>
+            mutate(rot_crop = gsub("1", "C", gsub("5", "S", rot_crop)),
+                   rot_crop = ifelse(rot_crop %in% c("C-S-C-S-C-S", "S-C-S-C-S-C"), 
+                                     "CS_perfect_rotation", rot_crop),
+                   rot_crop = factor(rot_crop),
+                   rot_crop = relevel(rot_crop, ref = "C-C-C-C-C-C"))) |>
+  rename(yield_pred = .fitted) |>
+  mutate(yield_res = yield-yield_pred,
+         var_yield = yield_res^2) ->
+  crop_res
+
+var_formula <- paste("var_yield ~ rot_crop+", 
+                     paste("pr_", 6:8, collapse = "+", sep = ""), 
+                     "+", paste("cGDD_", 6:8, "m", collapse = "+", sep = ""), 
+                     "+", paste("tmmx_", 6:8, collapse = "+", sep = ""), 
+                     "+", paste("tmmn_", 6:8, collapse = "+", sep = ""), 
+                     "+", paste("soil_", 6:8, collapse = "+", sep = ""), 
+                     "+", paste("vpd_", 6:8, collapse = "+", sep = ""),
+                     "+nccpi3all_mean+rootznaws_mean+soc0_100_mean|tile_field_ID+year") |>
+  as.formula()
+
+crop_res |>
+  feols(var_formula, data = _, cluster = ~COUNTY_FIPS) ->
+  crop_var
+
+etable(crop_var, 
+       dict = dict,
+       drop = c("pr_", "cGDD_", "tmmx_", "tmmn_", "soil_", "vpd_", "Constant",
+                "nccpi3all_mean", "rootznaws_mean", "soc0_100_mean"))
+
+crop_var |>
+  coefplot() |>
+  data.frame() |> 
+  filter(grepl("rot_crop", prms.estimate_names)) |>
+  separate(prms.estimate_names, into = c("temp", "term"), sep = 8) |>
+  select(-temp) |>
+  mutate(group =  case_when(
+    term == "S-S-S-S-S-S" ~ "Soy Monoculture",
+    term == "CS_perfect_rotation" ~ "Perfect Rotation",
+    term %in% c("C-C-C-C-C-S", "C-C-C-C-S-C", "C-C-C-S-C-S", "C-C-S-C-S-C",
+                "S-S-S-S-S-C", "S-S-S-S-C-S", "S-S-S-C-S-C", "S-S-C-S-C-S") ~ 
+      "Transitioning",
+    .default = 'Other')) |>
+  ggplot(aes(x = reorder(term, -prms.y), y = prms.y)) +
+  geom_point(size = 2, aes(color = group)) +
+  geom_errorbar(aes(ymin = prms.ci_low, ymax = prms.ci_high, color = group), 
+                width = 0.2) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey60") +
+  coord_flip() +
+  xlab("Coefficient Estimate") + ylab("Crop sequence") +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5),
+        legend.title = element_blank(),
+        legend.position = "bottom")
+
+
+RCI_formula <- paste("yield~RCI+", 
+                     paste("pr_", 6:8, collapse = "+", sep = ""), 
+                     "+", paste("cGDD_", 6:8, "m", collapse = "+", sep = ""), 
+                     "+", paste("tmmx_", 6:8, collapse = "+", sep = ""), 
+                     "+", paste("tmmn_", 6:8, collapse = "+", sep = ""), 
+                     "+", paste("vpd_", 6:8, collapse = "+", sep = ""),
+                     "+", paste("soil_", 6:8, collapse = "+", sep = ""), 
+                     "+nccpi3all_mean+rootznaws_mean+soc0_100_mean|tile_field_ID+year") |>
+  as.formula()
+
+dict <- c("RCI1.41" = "RCI = 1.41", "RCI1.73" = "RCI = 1.73",
+          "RCI2" = "RCI = 2", "RCI2.24" = "RCI = 2.24",
+          "RCI2.45" = "RCI = 2.45", "RCI2.65" = "RCI = 2.65",
+          "RCI2.74" = "RCI = 2.74", "RCI2.83" = "RCI = 2.83",
+          "RCI3" = "RCI = 3","RCI3.24" = "RCI = 3.24", 
+          "RCI3.46" = "RCI = 3.46", "RCI3.67" = "RCI = 3.67", 
+          "RCI3.74" = "RCI = 3.74", "RCI4" = "RCI = 4",
+          "RCI4.24" = "RCI = 4.24", "RCI4.47" = "RCI = 4.47",
+          "RCI4.74" = "RCI = 4.74", "RCI5.2" = "RCI = 5.2")
+
+
+crop_long |>
+  mutate(RCI = factor(RCI)) |>
+  feols(RCI_formula, data = _, cluster = ~COUNTY_FIPS) ->
+  rci_cs
+
+etable(rci_cs, 
+       dict = dict,
+       drop = c("pr_", "cGDD_", "tmmx_", "tmmn_", "soil_", "vpd_", "Constant",
+                "nccpi3all_mean", "rootznaws_mean", "soc0_100_mean"))
+
+
+## Add third crop sequences
+# Ley
+expand.grid(crop_0 = c("1","5","6"), 
+            crop_1 = c("1","5","6"), 
+            crop_2 = c("1","5","6"), 
+            crop_3 = c("1","5","6"), 
+            crop_4 = c("1","5","6"),
+            crop_5 = c("1","5","6")) |>
+  data.frame() |>
+  mutate(pattern = paste(crop_5, crop_4, crop_3, crop_2, crop_1, 
+                         crop_0, sep = "-")) ->
+  cs_ley_patterns
+
+corn_fg_formula <- paste("corn_yield ~ rot_fg+", 
+                            paste("pr_", 6:8, collapse = "+", sep = ""), 
+                            "+", paste("cGDD_", 6:8, "m", collapse = "+", sep = ""), 
+                            "+", paste("tmmx_", 6:8, collapse = "+", sep = ""), 
+                            "+", paste("tmmn_", 6:8, collapse = "+", sep = ""), 
+                            "+", paste("soil_", 6:8, collapse = "+", sep = ""),
+                            "+", paste("vpd_", 6:8, collapse = "+", sep = ""),
+                            "+nccpi3all_mean+rootznaws_mean+soc0_100_mean|tile_field_ID+year") |>
+  as.formula()
+
+crop_df |>
+  filter(rot_fg %in% cs_ley_patterns$pattern) |>
+  mutate(rot_fg = gsub("1", "C", gsub("2", "S",gsub("6", "L", rot_fg))),  
+         rot_fg = factor(rot_fg),
+         rot_fg = relevel(rot_fg, ref = "C-C-C-C-C-C")) |>
+  feols(corn_fg_formula, data = _, cluster = ~COUNTY_FIPS) ->
+  corn_ley_rot
+
+etable(corn_ley_rot, 
+       drop = c("pr_", "cGDD_", "tmmx_", "tmmn_", "soil_", "vpd_", "Constant",
+                "nccpi3all_mean", "rootznaws_mean", "soc0_100_mean"))
+
+corn_ley_rot |> 
+  tidy() |> 
+  filter(grepl("rot_fg", term)) |> 
+  separate(term, into = c("temp", "term"), sep = 6) |>
+  select(-temp) |>
+  arrange(desc(estimate)) |>
+  data.frame()
+
+soy_fg_formula <- paste("soy_yield ~ rot_fg+", 
+                         paste("pr_", 6:8, collapse = "+", sep = ""), 
+                         "+", paste("cGDD_", 6:8, "m", collapse = "+", sep = ""), 
+                         "+", paste("tmmx_", 6:8, collapse = "+", sep = ""), 
+                         "+", paste("tmmn_", 6:8, collapse = "+", sep = ""), 
+                         "+", paste("soil_", 6:8, collapse = "+", sep = ""),
+                         "+", paste("vpd_", 6:8, collapse = "+", sep = ""),
+                         "+nccpi3all_mean+rootznaws_mean+soc0_100_mean|tile_field_ID+year") |>
+  as.formula()
+
+crop_df |>
+  filter(rot_fg %in% cs_ley_patterns$pattern) |>
+  mutate(rot_fg = gsub("1", "C", gsub("2", "S",gsub("6", "L", rot_fg))),  
+         rot_fg = factor(rot_fg),
+         rot_fg = relevel(rot_fg, ref = "S-S-S-S-S-S")) |>
+  feols(soy_fg_formula, data = _, cluster = ~COUNTY_FIPS) ->
+  soy_ley_rot
+
+etable(soy_ley_rot, 
+       drop = c("pr_", "cGDD_", "tmmx_", "tmmn_", "soil_", "vpd_", "Constant",
+                "nccpi3all_mean", "rootznaws_mean", "soc0_100_mean"))
+
+soy_ley_rot |> 
+  tidy() |> 
+  filter(grepl("rot_fg", term)) |> 
+  separate(term, into = c("temp", "term"), sep = 6) |>
+  select(-temp) |>
+  arrange(desc(estimate)) |>
+  data.frame()
+
+# Wheat: repalce all categories with 99
+## Durum Wheat: 22 
+## Spring Wheat: 23 
+## Winter Wheat: 24
+## Dbl Crop WinWht/Soybeans: 26
+
+# This specification crashes due to dimensionality!
+expand.grid(crop_0 = c("1","5","99"), 
+            crop_1 = c("1","5","99"), 
+            crop_2 = c("1","5","99"), 
+            crop_3 = c("1","5","99"), 
+            crop_4 = c("1","5","99"),
+            crop_5 = c("1","5","99")) |>
+  data.frame() |>
+  mutate(pattern = paste(crop_5, crop_4, crop_3, crop_2, crop_1, 
+                         crop_0, sep = "-")) ->
+  csw_patterns
+
+intersect(csw_patterns$pattern, corn_soy_patterns$pattern)
+
+crop_df |>
+  mutate(rot_crop = gsub("22", "99", gsub("23", "99", gsub("24", "99", gsub("26", "99", rot_crop))))) |>
+  filter(rot_crop %in% csw_patterns$pattern) |>
+  mutate(rot_crop = gsub("1", "C", gsub("5", "S", gsub("99", "W", rot_crop))),  
+         rot_crop = factor(rot_crop),
+         rot_crop = relevel(rot_crop, ref = "C-C-C-C-C-C")) |> 
+  tab(rot_crop) |> 
+  arrange(desc(Freq.)) -> 
+  rot_crop_wheat
+
+crop_df |>
+  mutate(rot_crop = gsub("22", "99", gsub("23", "99", gsub("24", "99", gsub("26", "99", rot_crop))))) |>
+  filter(rot_crop %in% csw_patterns$pattern) |>
+  mutate(rot_crop = gsub("1", "C", gsub("5", "S", gsub("99", "W", rot_crop))),  
+         rot_crop = factor(rot_crop),
+         rot_crop = relevel(rot_crop, ref = "C-C-C-C-C-C")) |>
+  feols(corn_yield_formula, data = _, cluster = ~COUNTY_FIPS) ->
+  corn_w_rot
+
+etable(corn_w_rot, 
+       drop = c("pr_", "cGDD_", "tmmx_", "tmmn_", "soil_", "vpd_", "Constant",
+                "nccpi3all_mean", "rootznaws_mean", "soc0_100_mean"))
+
+
+## Add frequency tables or rotations
+## Add extra RCI column
+## Order coefficient effects of crop sequences from monoculture to perfect rotation
