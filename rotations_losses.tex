@@ -99,36 +99,46 @@
 	%\tableofcontents
     \newpage
 	
-	\section{Introduction}
-	\label{sec:intro}
+\section{\label{sec:intro}Introduction}
 
-    This article investigates the relationship between longer-term rotation patterns and crop yields. 
-	
-	\emph{Research Question}: How do long-term crop rotation patterns affect corn yields?
+Crop rotations are among the most widely studied agronomic practices in temperate agriculture, yet their role in federal crop insurance rating has remained largely unexplored. The United States Federal Crop Insurance Program (FCIP) covers more than 90 percent of planted corn and soybean acres in the Midwest, with annual indemnities exceeding \$19 billion in recent years. Premium rates are calculated based on each farm's Actual Production History (APH), a rolling 10-year average yield that forms the actuarial basis for coverage. This design is intentionally farm-specific but blind to the practices that generate the underlying yield record. A farmer who maintains a disciplined corn-soybean rotation — a practice well-documented to raise mean yields and reduce yield variability — pays the same actuarially implied premium as a neighboring farmer in continuous corn, conditional on the same APH. Whether this constitutes a pricing inefficiency, and how large the underlying yield differential actually is, are the central empirical questions of this paper.
+
+We study how long-term crop rotation sequences affect the mean and variance of corn and soybean yields using a large, satellite-based, field-level panel dataset for Illinois covering 2003 to 2022. Combining yield data from two independent remote-sensing sources — the Scalable Satellite-Based Crop Yield Mapper (SCYM; \cite{lobell2015}) and the Quantile Loss Domain Adversarial Neural Networks estimator (QDANN; \cite{Ma2024}) — with field-level crop sequence histories from the USDA Cropland Data Layer (CDL), we estimate linear fixed effects models that separately identify rotation effects on the conditional mean and conditional variance of yields, following \cite{Just1979}. Field and year fixed effects absorb time-invariant land quality differences and common annual shocks, so identification comes from within-field variation in rotation sequences over time.
+
+Our main findings are three. First, a handful of rotation sequences significantly outperform corn monoculture in terms of both higher mean yields and lower yield variance, but these sequences share identifiable structural features — specifically, a soybean harvest within the past one to two years, no consecutive soybean years, and a moderate number of total soybean harvests in the six-year window. Second, the transition from continuous corn to a corn-soybean rotation is associated with lower yields until the rotation is well-established, suggesting that short-run APH effects would work against early adopters under the current rating system. Third, the Rotational Complexity Index (RCI) — the most natural scalar summary of rotation diversity — has a nonlinear and non-monotone relationship with both yield moments, which implies that linear RCI-based rating adjustments would be misspecified.
+
+These findings speak directly to two active policy debates. First, USDA's Risk Management Agency (RMA) has signaled interest in incorporating conservation practice information into crop insurance rating as part of broader efforts to align the FCIP with climate and conservation goals (USDA-RMA, 2023). Our results suggest that rotation history is an actuarially meaningful predictor of yield risk, but that its incorporation requires sequence-level or structural-feature-based characterization rather than a simple index. Second, the literature on conservation practice adoption has noted that the APH mechanism may inadvertently penalize rotations and cover cropping by recording short-run yield dips during practice transitions. Our estimated transition effects provide the first field-level evidence on the magnitude of this penalty for corn-soybean rotation sequences in Illinois.
+
+The paper proceeds as follows. Section 2 reviews the relevant literature on rotation effects and crop insurance rating. Section 3 describes our data sources and the construction of rotation sequences. Section 4 presents the econometric framework. Section 5 reports results. Section 6 discusses implications for insurance rating and concludes.
+
+\section{\label{sec:lit_review}Literature Review}
+\subsection{\label{subsec:agronomy}Agronomic and Economic Evidence on Crop Rotations}
+
+The yield benefits of crop rotation have been documented since at least the eighteenth century, but the modern econometric literature begins with efforts to quantify the "rotation effect" while controlling for confounding soil and weather conditions. In controlled experimental settings, the corn yield advantage from a preceding soybean year — the so-called soybean yield drag in reverse, or the corn yield bonus — has been estimated at 5 to 15 percent relative to continuous corn, depending on soil type and weather (Farmaha et al., 2012; Gentry et al., 2013). The mechanisms include improved nitrogen availability from soybean residue, reduced pathogen and pest pressure, and better soil structure from root diversity.
+
+The observational literature using field- or farm-level data is thinner, because isolating the causal effect of rotation from selection on land quality and farmer ability requires either experimental variation or credible panel designs. Burchfield, Crossley, and Nelson (2024) use county-level data across the US Midwest and find that rotational complexity as measured by the RCI is insufficient to generate detectable yield gains at the county scale, a result they attribute to the coarseness of county aggregation and the dominance of the corn-soybean binary in most counties. Socolar et al. (2021) find that biophysical and policy factors together predict simplified rotations, but do not estimate yield effects directly. Our paper contributes a field-level panel design that sidesteps the aggregation problem and identifies yield effects within fields over time.
+
+The risk effects of rotation have received less attention than mean effects, despite their direct relevance to insurance. Just and Pope (1979) introduced the flexible stochastic production framework that allows inputs to affect yield variance independently of the mean; applications to crop production have since appeared in Antle (1983), Shi, Chavas, and Lauer (2013), and Li, Rejesus, and Zheng (2021), among others. Wu, Davis, and Sohngen (2025) document that corn-soybean rotations reduce yield variability and increase soil organic carbon in the US Corn Belt, though they focus on carbon accounting rather than insurance implications. Our application of the Just-Pope framework to rotation sequences at field resolution, with field and year fixed effects absorbing the main confounders, is to our knowledge the first to estimate rotation effects on yield variance at this scale.
+
+2.2 Crop Insurance Rating and Conservation Practices
+
+Federal crop insurance in the United States operates under the Standard Reinsurance Agreement between private insurers and USDA-RMA, which sets actuarial standards for premium rate calculation. The dominant product, Revenue Protection, bases coverage on the APH yield and a harvest price guarantee. The APH is calculated as the simple average of up to ten years of farm-reported yields, subject to floor and exclusion provisions. Because the APH is farm-specific, it implicitly captures some of the variation in yields attributable to management practices, but with a ten-year lag and considerable noise.
+
+The theoretical case for incorporating conservation practice information into rates rests on adverse selection and moral hazard arguments. If rotation farmers systematically face lower actuarial risk than monoculture farmers at the same APH level, pooling them in the same rating cell produces cross-subsidization from rotation to monoculture farmers, reducing the incentive to rotate (Ramaswami, 1993; Babcock and Hennessy, 1996). The empirical question is whether the yield risk differential is large enough to be actuarially significant after controlling for APH. Our estimates of rotation effects on yield variance provide the necessary inputs to answer this question.
+
+Plastina et al. (2018) examine the interaction between cover cropping and APH, finding that the short-run yield drag from cover cropping reduces APH-based guarantees and thereby reduces the effective insurance incentive to adopt. Woodard (2016) makes a similar argument for sustainable practices more broadly. Both papers are theoretical or use aggregate data; our field-level panel provides direct evidence on the transition-period yield effects that drive this mechanism for crop rotations specifically.
+
+Recent RMA actions have moved toward practice-differentiated rating in specific contexts — notably, the Whole-Farm Revenue Protection product and pilot programs for cover crop and no-till discounts in select states. However, rotation-conditioned rates do not yet exist, and the actuarial literature providing the empirical foundation for such products is sparse. Ker and Goodwin (2000) and Woodard, Sherrick, and Schnitkey (2011) examine the statistical properties of APH-based rates, noting systematic biases from yield trend misspecification and sparse farm histories, but neither addresses rotation conditioning directly. This paper aims to fill part of that gap by establishing the yield-level facts that any rotation-conditioned rating system would need to confront.
+
+2.3 Remote Sensing of Crop Yields
+
+A practical challenge in studying field-level yield effects at scale is that farm-reported yield data from USDA surveys are available only at the county level and are not linkable to specific fields or rotation histories. Our approach relies instead on two satellite-based yield estimators that produce field-level predictions for the full Illinois corn belt over our sample period.
+
+SCYM (Lobell et al., 2015) uses a large ensemble of crop simulation runs to train a statistical model relating satellite observations to biomass, which is then converted to yield using harvest index assumptions. Its reported field-level R² against ground truth is approximately 35 percent. QDANN (Ma et al., 2024) extends this framework using domain-adversarial neural networks trained on county-level yield labels and adapted to field-level predictions via unsupervised domain adaptation, achieving a reported field-level R² of approximately 48 percent. The higher accuracy of QDANN reflects its ability to account for distributional shifts between the county-level training domain and the field-level prediction domain.
+
+We use both estimators as outcome measures throughout, treating QDANN as the preferred specification given its higher reported accuracy and its ability to characterize full conditional distributions rather than just conditional means. The consistency of our rotation effect estimates across the two estimators — which use entirely different modelling approaches and training data — serves as an informal validation of both the yield data and our econometric design.
     
-    \emph{Method}: We use linear fixed effects models to quantify the magnitude of the relationship between yields and rotational complexity.
-    
-    \emph{Data}: Yield (biomass) data from \cite{lobell2015} (SCYM) and \cite{Ma2024} (QDANN), Rotational complexity index, from \cite{socolar2021}, field-level crops (CDL), and weather variables (PRISM).
-    
-    \emph{Results}: The effect of rotations on yields depends critically on their timing; later soybean rotations and shorter gaps between soy harvests have more positive and significant effects on yields.
-    
-    However, more and less spaced-out soy harvests have negative and significant effects on corn yields.
-	
-	\subsection{Preliminaries}
-	\label{sec:pre}
-	
-	Interest in incorporating farm-level conservation practices into crop insurance rates?
-        \begin{itemize}
-            \item Cover cropping
-            \item No till farming
-            \item Crop rotations (corn and soybeans plus other crops)
-        \end{itemize}
-    
-    These practices are thought to reduce yield risk, but may adversely affect short-term yields and farmer premium rates through their APH.
-    
-    Potentially reduce practice adoption incentives
-    
-\subsection{Rotational Complexity Index (RCI)\label{subsec:rci}}	
+\section{Rotational Complexity Index (RCI)\label{sec:rci}}	
 Increased rotation shown to have agroecological benefits for farm production, particularly in the face of adverse weather events \citep{socolar2021, burchfield2024}. Rotations help maintain soil organic carbon and fertility and reduce yield variability \citep{wu2025}. 
 
 
