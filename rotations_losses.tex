@@ -138,8 +138,8 @@ SCYM (Lobell et al., 2015) uses a large ensemble of crop simulation runs to trai
 
 We use both estimators as outcome measures throughout, treating QDANN as the preferred specification given its higher reported accuracy and its ability to characterize full conditional distributions rather than just conditional means. The consistency of our rotation effect estimates across the two estimators — which use entirely different modelling approaches and training data — serves as an informal validation of both the yield data and our econometric design.
     
-\section{Rotational Complexity Index (RCI)\label{sec:rci}}	
-Increased rotation shown to have agroecological benefits for farm production, particularly in the face of adverse weather events \citep{socolar2021, burchfield2024}. Rotations help maintain soil organic carbon and fertility and reduce yield variability \citep{wu2025}. 
+\section{\label{sec:rci}Rotational Complexity Index (RCI)}	
+Increased rotation has been shown to have agroecological benefits for farm production, particularly in the face of adverse weather events \citep{socolar2021, burchfield2024}. Rotations help maintain soil organic carbon and fertility and reduce yield variability \citep{wu2025}. 
 
 
 Still, this effect is conditional on soil characteristics (higher yield boost in lower productivity areas).
@@ -164,13 +164,13 @@ Values of these indices can be incorporated into the rating system
 
     \begin{itemize}
         \item Show that RCI has a nonlinear effect on yield and yield risk.
-        \item Determine identifiable indicators in a 6-year corn soy. rotation that affect yield and yield risk.
+        \item Determine identifiable indicators in a 6-year corn-soy rotation that affect yield and yield risk.
         \item Develop a rotation score and rank 6-year rotations using score.
     \end{itemize}
 
-\subsection{Data Description\label{sec:data}}
+\subsection{\label{sec:data}Data Description}
 
-\textbf{Scalable Satellite-Based Crop Yield Mapper (SCYM) yield data}:  a method and system developed by researchers \citep{lobell2015} for estimating crop yields using satellite data across large agricultural areas without needing ground-based yield measurements for calibration. It relies on a large number of crop model simulations over a range of soil, climate, and management conditions daily to train a statistical model at a pixel level, which is used to predict field-level biomass that can be converted to yields.
+\textbf{Scalable Satellite-Based Crop Yield Mapper (SCYM) yield data}:  a method and system developed by researchers \citep{lobell2015} for estimating crop yields using satellite data across large agricultural areas without needing ground-based yield measurements for calibration. It relies on a large number of daily crop model simulations across a range of soil, climate, and management conditions to train a statistical model at the pixel level, which is used to predict field-level biomass that can be converted to yields.
     
 \textbf{Quantile Loss Domain Adversarial Neural Networks (QDANN) yield data}: QDANN is a machine-learning approach that combines three ideas:
     \begin{itemize}
