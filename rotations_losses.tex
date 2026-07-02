@@ -180,35 +180,28 @@ Soil characteristics come from gSSURGO, produced by the USDA Natural Resources C
 The estimation sample is constructed by merging the QDANN and SCYM yield rasters with the CDL rotation history sequences, GRIDMET and TerraClimate weather covariates, and gSSURGO soil variables at the 30-meter pixel level, then aggregating to field-tile
 units using the tile field identifier. Fields with missing values in any covariate, fewer than two observations after singleton removal, or rotation histories containing non-corn-soy plantings are excluded. Because the first outcome year requires a six-year CDL history, the panel runs from 2009 to 2022, yielding a maximum of 14 outcome years per field. Final sample sizes are 1,548,319 field-year observations (QDANN) and 1,411,846 (SCYM).
 	
-\section{Methods\label{sec:methods}}
+\section{Econometric Framework\label{sec:econ_framework}}
+\subsection{\label{subsec:stage_1}Conditional Mean: Stage 1}
+We model the conditional mean of corn yields as a two-way fixed effects regression following the linear panel framework:
 
-\cite{Just1979} propose a flexible stochastic specification that allows researchers to independently estimate how inputs affect both the average yield and the associated risk. They demonstrate that common models often overstate the precision of their results and fail to account for inputs that may actually reduce production risk. 
+\begin{equation}
+    y_{it}=\text{seq}_{it}'\tau+ W_{it}'\beta+\lambda_{k}+\gamma_{t}+\varepsilon_{it}
+\end{equation}
 
-Each year, a farmer decides which crop $c$ to grow ($c\in 
-\{corn, soy\}$) on the basis of their expected profits, which depend mostly on the expected harvest price and their expected yields. This decision is also motivated by intrinsic factors not observable by a researcher; these elements are usually called ``management ability''. To control for these idiosyncratic factors, we use repeated observations from the same field across years to estimate a fixed-effects model with field IDs as controls. Similarly, we want to control for the presence of (linear) time trends; therefore, we also include year fixed-effects.
+where $y_{it}$ is the yield of field $i$ year $t$ measured in bushels per acre; $\text{seq}_{it}$ is either a vector of rotation sequence indicators (with corn monoculture as the reference category) or a vector of factor RCI indicators (with the lowest observed RCI as the reference); $W_{it}$ is a vector of weather and soil controls described in Section 3.3; $\lambda_{k}$ is a county (FIPS) fixed effect; and $\gamma_{t}$ is a year fixed effect. The error term $\varepsilon_{it}$ is assumed to
+have mean zero conditional on the regressors.
 
-We model the conditional moments from the yield distribution as:
-\begin{equation*}
-yields_{it}=seq_{it}+W_{it}\beta_{it}+\lambda_{i}+\gamma_{t}+\varepsilon_{it}
-\end{equation*}
+County fixed effects absorb all time-invariant differences across counties in average yield levels — including persistent soil quality gradients, drainage infrastructure, and local agronomic practices. Year fixed effects absorb common shocks to all fields in a given year, including statewide weather events and aggregate commodity price signals that affect input use uniformly. Identification of the rotation effect $\hat{\tau}$ therefore comes from within-county, across-field variation in rotation sequences over time, conditional on the weather and soil controls. Standard errors are  clustered two-way at the field $\text{tile\_field\_ID}$) and year levels, following \cite{Cameron2015}, to account for both within-field serial correlation in the panel and cross-sectional dependence across fields in the same growing season driven by common weather shocks.
 
-Where:
-\begin{description}
-    \item[$yields_{it}$]: corn yields (in bushels per acre) of field $i$ in year$t$. 
-    \item[$seq_{it}$]: categorical variable for each rotation sequence, with monoculture as the base category.
-    \item[$W_{it}$]: set of control variables (precipitation, maximum, minimum growing season temperatures, Vapor Pressure Deficit, Palmer Drought Severity Index, National Commodity Crop Productivity Index, soil characteristics).
-    \item[$\lambda_{i}$, $\gamma_{t}$]: Field and year fixed effects.
-\end{description}
+We also estimate a parsimonious parameterization that replaces the sequence indicators with four structural rotation features:
 
+\begin{equation}
+    y_{it}=Z_{it}'\tau+ W_{it}'\beta+\lambda_{k}+\gamma_{t}+\varepsilon_{it}
+\end{equation}
 
-Let $\hat{u}_{1}$ be the associated error term, such that: $\hat{u}_{1}=y-X\hat{\beta}_{1}$, $X=\left[Z, W \right]$, then all higher moments can be estimated as:
-    \begin{equation*}
-        (\hat{u}_{1})^{i} = M_{i}(X,\beta_{i})+\varepsilon_{1}=X\beta_{i}+\varepsilon_{1}
-    \end{equation*}
-    
-Coefficients $\hat{\beta}_{1}$ can be consistently estimated using OLS with heteroskedasticity-consistent standard errors \citep{shi2013} or using bootstrap \citep{li2021}.
-    
-We can quantify the differential impacts of every rotation sequence on the risk by examining the coefficients in the regression of $X$ on $\hat{u}_{1}^{2}$ \citep{antle1983}.
+Where $Z_{it}=\left[\text{late\_soy}_{it}, \text{soy\_cons}_{it}, \text{soy\_gap}_{it},\text{nsoy}_{it}\right]$. These variables are defined as follows. $\text{late\_soy}_{it}$ is the soy lag, equal to the number of periods since the most recent soybean harvest
+in the six-year window (taking the value -1 if soybean was planted in year $t-1$, -2 if in year $t-2$, and so on).  $\text{soy\_cons}_{it}$ is a dummy equal to one if the rotation pattern contains two or more consecutive soybean years. $\text{soy\_gap}_{it}$ is the minimum number of years between any two soybean harvests in the window (equal to zero if consecutive soybean years occur). $\text{nsoy}_{it}$ is the total number of soybean harvests in the six-year window. Together these four variables capture the timing, spacing, and frequency of soybean in the rotation — the structural features most likely to drive the agronomic rotation effect through nitrogen availability and pest suppression mechanisms.
+
 
     \newpage
 	\begin{figure}[H]
