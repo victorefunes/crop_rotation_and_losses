@@ -181,6 +181,41 @@ The estimation sample is constructed by merging the QDANN and SCYM yield rasters
 units using the tile field identifier. Fields with missing values in any covariate, fewer than two observations after singleton removal, or rotation histories containing non-corn-soy plantings are excluded. Because the first outcome year requires a six-year CDL history, the panel runs from 2009 to 2022, yielding a maximum of 14 outcome years per field. Final sample sizes are 1,548,319 field-year observations (QDANN) and 1,411,846 (SCYM).
 	
 \section{Econometric Framework\label{sec:econ_framework}}
+\subsection{\label{subsec:just_pope}The Just-Pope Framework and Its Variants}
+The stochastic production function literature offers several approaches to jointly estimating the effects of inputs and management practices on the mean and variance of output. We briefly review the main variants to situate our estimator relative to the existing literature and motivate the specific implementation choices made here.
+
+\textbf{Original two-stage OLS/FGLS — \cite{Just1978, Just1979}}. 
+
+Just and Pope proposed a general stochastic production specification of the form:
+
+\begin{equation}
+    y = f(\mathbf{X},\alpha)+\sqrt{h(\mathbf{X},\beta)}\times \varepsilon
+\end{equation}
+
+where $f(\cdot)$ is the conditional mean function and $h(\cdot)$ is the conditional variance function, both functions of the same input vector $\mathbf{X}$. This formulation relaxes the multiplicative stochastic restriction that dominated prior work — which
+required inputs to be either uniformly risk-increasing or risk-neutral — and allows any input to independently raise or lower yield variance. From an econometric standpoint, the specification is a heteroskedastic regression model in which the variance of the production error is itself a function of inputs. The original estimation procedure uses two stages: OLS of the mean function to recover residuals, then OLS (or NLS for nonlinear mean functions) of the squared residuals on the variance function covariates.
+
+\textbf{Antle's flexible moment-based extension — \cite{antle1983, Antle2010}}. 
+
+\cite{antle1983} extended the Just-Pope framework to estimate higher moments of the output distribution beyond the mean and variance, showing that the first three moments of milk yield are statistically significant functions of inputs. This matters for
+insurance applications because indemnities are driven by left-tail probabilities, and mean-variance summaries may miss important skewness effects. \cite{Antle2010} later proposed partial-moment functions as a flexible way to characterize asymmetric input effects on output distributions. We do not implement the Antle extension here, but note that estimating skewness effects of rotation sequences on corn yields is a natural extension of our analysis.
+
+\textbf{Maximum likelihood and log-linear variance — \cite{Harvey1976, Saha1997}}. 
+
+Just-Pope functions have been traditionally estimated by feasible generalized least squares (FGLS). \cite{Saha1997} use Monte Carlo
+experiments to show that in small samples, even when the error distribution departs from normality, the maximum likelihood (ML) estimator is more efficient and less biased than FGLS, and that FGLS can seriously understate the risk effects of inputs. A related improvement is the log-linear variance specification proposed by \cite{Harvey1976}, which replaces the linear regression of $\hat{\varepsilon}^2$ on $\mathbf{X}$ with a regression of $\log \hat{\varepsilon}^2$ on $\mathbf{X}$, then exponentiates fitted values to obtain strictly positive variance estimates. This avoids the truncation problem that arises when the linear approximation produces negative fitted values for some cells. We implement the three-stage FGLS estimator with a linear variance specification and
+address the truncation problem by flooring negative fitted values at a small positive constant (see Section 4.2); we report the log-linear specification as a robustness check.
+
+\textbf{Joint estimation with risk preferences and technical efficiency — \cite{Kumbhakar2002}}.
+
+\cite{Kumbhakar2002} embeds the Just-Pope variance function inside a stochastic frontier model, jointly estimating production risk, risk preferences, and technical inefficiency without imposing parametric restrictions on the utility function. A limitation of the standard Just-Pope formulation is that it does not account for producers'  preferences, so that input elasticities are treated as invariant to risk perceptions. Kumbhakar's extension addresses this at the cost of additional distributional assumptions on the inefficiency term. We do not pursue this extension here, as our primary interest is in the population distribution of rotation effects rather than in individual farm efficiency.
+
+\textbf{Nonparametric extension — \cite{li2021}}. 
+
+The most flexible variant in the recent literature is the nonparametric production risk estimator of \cite{li2021}, in which both the mean function $f(\cdot)$ and the variance function $h(\cdot)$ are estimated using local polynomial regression rather than parametric functional forms. This allows the risk effect of any variable to vary continuously with a conditioning covariate — for example, the variance effect of a recent soybean placement varying smoothly with soil productivity. The LRZ estimator nests the parametric Just-Pope model as a special case in which the local polynomial slopes are constant. We implement the parametric Just-Pope estimator as our main specification and the LRZ nonparametric extension as a robustness check, allowing rotation effects to vary with NCCPI soil productivity, following the approach described in Section 4 of \cite{li2021}.
+
+Our main estimator follows the three-stage FGLS approach of \cite{Harvey1976} and \cite{Saha1997}, embedded in a panel fixed effects framework with two-way clustering for inference. The specific implementation is described in Sections 4.2 through 4.4 below.
+
 \subsection{\label{subsec:stage_1}Conditional Mean: Stage 1}
 We model the conditional mean of corn yields as a two-way fixed effects regression following the linear panel framework:
 
