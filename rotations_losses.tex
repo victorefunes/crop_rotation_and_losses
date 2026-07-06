@@ -294,8 +294,13 @@ show that score-based yield predictions recover most of the variation captured b
 
 Table 2 and Figure 1 report the estimated effects of each of the 31 non-monoculture six-year corn-soy sequences on corn yield mean, relative to corn monoculture. The full set of coefficient estimates reveals a striking pattern: rotation effects are heterogeneous across sequences and depend critically on the recent history of soybean placement rather than on the total number of soybean years in the window.
 
+Several sequences significantly outperform corn monoculture in mean corn yield. The highest-performing sequences in the QDANN specification — those with estimated mean yield premiums exceeding 4 bushels per acre — share a common structural feature: a soybean harvest in year $t-1$ or $t-2$ (immediately or one year prior to the outcome corn year), regardless of what was planted in years $t-3$ through $t-6$. For example, $S-S-C-S-S-C$ (soybeans in years 6, 5, 3, and 2, corn in years 4 and 1) carries an estimated premium of 4.61 bushels per acre relative to monoculture (Table 2, column 2), and $S-C-S-C-S-C$ (the near-perfect alternating rotation with an additional soy lag) carries 4.12 bushels per acre. Both SCYM and QDANN yield consistent rankings at the top of the sequence distribution.
+
 
     \newpage
+
+\input{tables/corn_stage1}
+    
 	\begin{figure}[H]
     \centering
     \includegraphics[scale = 0.55]{figures/corn_rot_plot.png}
