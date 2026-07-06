@@ -288,12 +288,13 @@ bh_note <- paste0(
 
 etable(
   corn_jp_s1, corn_jp_s1_lag1, corn_jp_s1_lag1_lag2, corn_jp_s1_index,
-  keep    = c("^[CS]-", "soy_lag", "rot_index"),
-  dict    = rot_dict,
-  notes   = bh_note,
-  title   = "Stage 1 — Corn yield: full sequences vs lag summary variables",
-  file    = "C:/Users/vf006/Box/crop_rotations_and_losses/tables/corn_stage1.tex",
-  replace = TRUE
+  keep     = c("^[CS]-", "soy_lag", "rot_index"),
+  dict     = rot_dict,
+  notes    = bh_note,
+  se.below = FALSE,
+  title    = "Stage 1 — Corn yield: full sequences vs lag summary variables",
+  file     = "C:/Users/vf006/Box/crop_rotations_and_losses/tables/corn_stage1.tex",
+  replace  = TRUE
 )
 
 
