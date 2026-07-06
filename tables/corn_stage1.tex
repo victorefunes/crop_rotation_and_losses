@@ -1,0 +1,31 @@
+
+\begingroup
+\centering
+\begin{tabular}{lcccc}
+   \tabularnewline \midrule \midrule
+   Dependent Variable: & \multicolumn{4}{c}{corn\_yield}\\
+   Model:            & (1)       & (2)           & (3)           & (4)\\  
+   \midrule
+   \emph{Variables}\\
+   soy\_lag1         &           & 2.601$^{***}$ & 3.169$^{***}$ &   \\   
+                     &           & (0.5260)      & (0.5554)      &   \\   
+   soy\_lag2         &           &               & 1.134$^{***}$ &   \\   
+                     &           &               & (0.1902)      &   \\   
+   rot\_index        &           &               &               & 0.2679$^{**}$\\   
+                     &           &               &               & (0.1101)\\   
+   \midrule
+   \emph{Fixed-effects}\\
+   tile\_field\_ID   & Yes       & Yes           & Yes           & Yes\\  
+   year              & Yes       & Yes           & Yes           & Yes\\  
+   \midrule
+   \emph{Fit statistics}\\
+   Observations      & 1,548,319 & 1,548,319     & 1,548,319     & 1,548,319\\  
+   R$^2$             & 0.86156   & 0.86142       & 0.86149       & 0.86097\\  
+   Within R$^2$      & 0.17219   & 0.17132       & 0.17173       & 0.16861\\  
+   \midrule \midrule
+   \multicolumn{5}{l}{\emph{Clustered (tile\_field\_ID \& year) standard-errors in parentheses}}\\
+   \multicolumn{5}{l}{\emph{Signif. Codes: ***: 0.01, **: 0.05, *: 0.1}}\\
+\end{tabular}
+\par\endgroup
+
+
