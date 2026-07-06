@@ -190,7 +190,14 @@ print(pca_rot$rotation[, 1])
 rot_features <- rot_features |>
   mutate(rot_index = pca_rot$x[, 1])
 
-autoplot(pca_rot, data = corn_soy_patterns, loadings = TRUE, loadings.label = TRUE) 
+autoplot(pca_rot, data = corn_soy_patterns, loadings = TRUE, loadings.label = TRUE) +
+  labs(title = "PCA of corn-soy rotation features") +
+  theme_bw() +
+  theme(legend.position = "none") ->
+  rot_pca_plot  
+
+ggsave("C:/Users/vf006/Box/crop_rotations_and_losses/figures/rot_pca_plot.png", rot_pca_plot,
+       width = 9, height = 7, dpi = 300)
 
 # ── Stage 1: conditional mean (corn) ─────────────────────────────────────────
 # Identical specification to corn_rot above, but two-way clustered.
@@ -251,10 +258,17 @@ corn_jp_s1_index <- feols(
   cluster = ~tile_field_ID + year
 )
 
+rot_names  <- grep("^rot_crop", names(coef(corn_jp_s1)), value = TRUE)
+rot_labels <- chartr("15", "CS", sub("^rot_crop", "", rot_names))
+rot_dict   <- setNames(rot_labels, rot_names)
+
 etable(
   corn_jp_s1, corn_jp_s1_lag1, corn_jp_s1_lag1_lag2, corn_jp_s1_index,
-  keep  = c("rot_crop", "soy_lag", "rot_index"),
-  title = "Stage 1 — Corn yield: full sequences vs lag summary variables"
+  keep    = c("rot_crop", "soy_lag", "rot_index"),
+  dict    = rot_dict,
+  title   = "Stage 1 — Corn yield: full sequences vs lag summary variables",
+  file    = "tables/corn_stage1.tex",
+  replace = TRUE
 )
 
 
