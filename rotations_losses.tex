@@ -228,6 +228,10 @@ have mean zero conditional on the regressors.
 
 County fixed effects absorb all time-invariant differences across counties in average yield levels — including persistent soil quality gradients, drainage infrastructure, and local agronomic practices. Year fixed effects absorb common shocks to all fields in a given year, including statewide weather events and aggregate commodity price signals that affect input use uniformly. Identification of the rotation effect $\hat{\tau}$ therefore comes from within-county, across-field variation in rotation sequences over time, conditional on the weather and soil controls. Standard errors are  clustered two-way at the field $\text{tile\_field\_ID}$) and year levels, following \cite{Cameron2015}, to account for both within-field serial correlation in the panel and cross-sectional dependence across fields in the same growing season driven by common weather shocks.
 
+\textbf{Principal components analysis of rotation features}. To motivate the choice of four structural features as a sufficient summary of the 64 binary rotation sequences, we conduct a principal components analysis (PCA) of the RCI-level rotation feature space. Figure [PCA] shows a biplot of the first two principal components of the rotation feature matrix, with each point representing one of the 18 distinct RCI values observed in the Illinois corn-soy sample and the red arrows representing loadings of four candidate summary variables: $n\_\text{soy}$ (number of soybean harvests), $\text{no\_consec}$ (absence of consecutive soybean years), $\text{tight\_soy}$ (soybean placements clustered close together), and $\text{free\_soy}$ (soybean placements well-spaced across the window).
+
+
+
 We also estimate a parsimonious parameterization that replaces the sequence indicators with four structural rotation features:
 
 \begin{equation}
