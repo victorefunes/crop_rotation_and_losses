@@ -289,6 +289,12 @@ the nitrogen and pest-suppression benefits of rotation. Sequences that score abo
 The rotation score maps all 64 binary six-year corn-soy sequences onto [$K$] distinct score values, providing a parsimonious and interpretable basis for rating that collapses the combinatorial rotation space into a single actuarial variable. In Section 5.3 we
 show that score-based yield predictions recover most of the variation captured by the full sequence-indicator model, and in Section 6 we discuss how the score could be incorporated into APH-based rate adjustments.
 
+\section{\label{sec:results}Results}
+\subsection{\label{subsec:seq_effects}Sequence-Level Effects on Corn Yield Mean}
+
+Table 2 and Figure 1 report the estimated effects of each of the 31 non-monoculture six-year corn-soy sequences on corn yield mean, relative to corn monoculture. The full set of coefficient estimates reveals a striking pattern: rotation effects are heterogeneous across sequences and depend critically on the recent history of soybean placement rather than on the total number of soybean years in the window.
+
+
     \newpage
 	\begin{figure}[H]
     \centering
@@ -319,27 +325,27 @@ show that score-based yield predictions recover most of the variation captured b
     \label{fig:soy_var_plot}
     \end{figure}
 	
-	\section{Results}
-	\label{sec:results}
-    Only a few sequences outperform corn monoculture in terms of higher mean/lower variance.
+	%\section{Results}
+	%\label{sec:results}
+    %Only a few sequences outperform corn monoculture in terms of higher mean/lower variance.
     
-    Both SCYM and QDANN yield similar results. 
+    %Both SCYM and QDANN yield similar results. 
     
-    Higher performing sequences have common elements:
-    \begin{enumerate}
-        \item A recent soy rotation (year 1 or 2).
-        \item No consecutive soy years.
-        \item Low impact of older crops (first three years).
-        \item Perfect corn/soy rotation has positive but nonsignificant effects on yields, and reduces yield variance.
-    \end{enumerate}
+    %Higher performing sequences have common elements:
+    %\begin{enumerate}
+    %    \item A recent soy rotation (year 1 or 2).
+    %   \item No consecutive soy years.
+    %    \item Low impact of older crops (first three years).
+    %    \item Perfect corn/soy rotation has positive but nonsignificant effects on yields, and reduces yield variance.
+    %\end{enumerate}
 
-    We identified a set of rotation patterns that account for variations in first and second moments of corn yields.
-    \begin{enumerate}
-        \item Soy Lag: equal to the number of lagged periods a soy harvest was detected since the most recent year (e.g. if the latest soy harvest was the previous year, it takes a value equal to -1).
-        \item Consecutive soy years: Dummy equal to 1 if a rotation pattern had two or more consecutive soy harvests.
-        \item Soy gap: minimum number of years between two soy harvests (e.g. if two years of soy harvests occur, then the soy gap is 0).
-        \item Number of soy harvests: how many times in the last seven years was a soy harvest detected?
-    \end{enumerate}
+    %We identified a set of rotation patterns that account for variations in first and second moments of corn yields.
+    %\begin{enumerate}
+    %    \item Soy Lag: equal to the number of lagged periods a soy harvest was detected since the most recent year (e.g. if the latest soy harvest was the previous year, it takes a value equal to -1).
+    %    \item Consecutive soy years: Dummy equal to 1 if a rotation pattern had two or more consecutive soy harvests.
+    %    \item Soy gap: minimum number of years between two soy harvests (e.g. if two years of soy harvests occur, then the soy gap is 0).
+    %    \item Number of soy harvests: how many times in the last seven years was a soy harvest detected?
+    %\end{enumerate}
 
 
     \newpage
