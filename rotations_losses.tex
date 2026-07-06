@@ -237,6 +237,42 @@ We also estimate a parsimonious parameterization that replaces the sequence indi
 Where $Z_{it}=\left[\text{late\_soy}_{it}, \text{soy\_cons}_{it}, \text{soy\_gap}_{it},\text{nsoy}_{it}\right]$. These variables are defined as follows. $\text{late\_soy}_{it}$ is the soy lag, equal to the number of periods since the most recent soybean harvest
 in the six-year window (taking the value -1 if soybean was planted in year $t-1$, -2 if in year $t-2$, and so on).  $\text{soy\_cons}_{it}$ is a dummy equal to one if the rotation pattern contains two or more consecutive soybean years. $\text{soy\_gap}_{it}$ is the minimum number of years between any two soybean harvests in the window (equal to zero if consecutive soybean years occur). $\text{nsoy}_{it}$ is the total number of soybean harvests in the six-year window. Together these four variables capture the timing, spacing, and frequency of soybean in the rotation — the structural features most likely to drive the agronomic rotation effect through nitrogen availability and pest suppression mechanisms.
 
+\subsection{\label{subsec:stage_2}Conditional Variance: Stage 2 (Just-Pope Framework)}
+
+To separately identify the effect of rotations on yield risk, we follow \cite{Just1979} and \cite{antle1983} in estimating a second-stage regression of squared first-stage residuals on the same regressors. Let $\hat{u}_{it} = y_{it} - \hat{y}_{it}$ denote
+the residual from the stage-1 conditional mean regression. The second moment is then estimated as:
+
+\begin{equation}
+    \hat{u}_{it}^2 = \text{seq}_{it}'\pi + W_{it}'\delta + \lambda_k + \gamma_t + \nu_{it}
+\end{equation}
+
+Coefficients $\hat{\pi}$ identify the differential effect of each rotation sequence on the conditional variance of yields, relative to the monoculture reference. A negative coefficient indicates that a given sequence compresses yield variance relative to monoculture — a risk-reducing effect directly relevant to insurance pricing. A positive coefficient indicates that the sequence raises variance, increasing actuarial risk at any given mean yield level.
+
+The squared residual $\hat{u}_{it}^2$ is a noisy proxy for the true conditional variance, since it combines the variance signal with idiosyncratic estimation error from stage 1. To improve estimation efficiency, we implement a three-stage Feasible Generalized Least Squares (FGLS) estimator following \cite{Harvey1976}. In stage 2a, we estimate an initial OLS regression of $\hat{u}_{it}^2$ on the full covariate vector to obtain fitted values $\hat{h}_{it}$, which serve as estimates of the conditional variance function. In stage 2b, we re-estimate the variance regression by Weighted Least Squares (WLS), weighting each observation by $1/\hat{h}_{it}$ where $\hat{h}{it}= \max(\hat{h}_{it}^{\text{OLS}},\ \varepsilon)$ with $\varepsilon = 10^{-6}$ to prevent degenerate weights from negative linear approximations to the variance function. The FGLS estimator is more efficient than the OLS second-stage estimator because it downweights observations whose squared residuals are expected to be highly variable — those from rotation sequences with high estimated conditional variance.
+
+\subsection{\label{subsec:bootstrap}Inference: Three-Stage Bootstrap}
+
+Both the OLS and FGLS stage-2 estimators face a generated-regressor problem: the dependent variable $\hat{u}_{it}^2$ is constructed from first-stage estimates and therefore contains estimation error that standard second-stage standard errors do not account for. In the FGLS case, the weights $\hat{h}_{it}$ are themselves estimated, introducing a third source of uncertainty. We address the generated-regressor problem for both estimators by implementing a pairs cluster bootstrap that wraps all three stages, propagating first-stage uncertainty through to the final variance estimates.
+
+The bootstrap procedure proceeds as follows. In each of $B = 999$ iterations, we draw a bootstrap sample by resampling $n$ fields with replacement from the $n$ unique fields in the estimation sample, where the bootstrap weight of field $j$ equals the number of times it was drawn. Rather than physically duplicating rows — which at approximately 1.55 million observations would exhaust available memory — we implement a frequency-weight bootstrap that assigns each field a bootstrap weight equal to its draw count and passes this weight to all three estimation stages via the \texttt{weights} argument of the regression function. Fields not drawn receive weight zero and are excluded from that iteration. Within each iteration, stages 1, 2a, and 2b are re-estimated on the weighted sample, and the stage-2b coefficient vector is stored. Bootstrap standard errors are computed as the standard deviation of the stored coefficient draws across $B$ iterations, and 95 percent confidence intervals are constructed as the 2.5th and 97.5th percentiles of the bootstrap distribution. All fixed effects and clustering are maintained within each bootstrap iteration.
+
+This bootstrap design has two important properties. First, by resampling at the field level, it respects the within-field serial correlation in the panel — all years of a given field enter the bootstrap sample together or not at all. Second, by wrapping all
+three stages in a single loop, the bootstrap correctly accounts for the covariance between the stage-1 residuals and the stage-2 weights, which a naive two-step bootstrap that treats stage-1 as fixed would miss.
+
+\subsection{\label{subsec:rot_score}Rotation Score}
+The four structural feature coefficients from the parsimonious stage-1 model admit a natural rotation scoring rule. For each field-year observation, we define the rotation score as:
+
+\begin{equation}
+    \text{score}_{it} = \hat{\tau}_1 \cdot \text{late\_soy}_{it} + \hat{\tau}_2 \cdot \text{soy\_cons}_{it} + \hat{\tau}_3 \cdot \text{soy\_gap}_{it} + \hat{\tau}_4 \cdot n\text{soy}_{it}
+\end{equation}
+
+where $\hat{\tau}_1, \ldots, \hat{\tau}_4$ are the QDANN stage-1 estimates from Table 1. The score summarizes, in units of predicted yield deviation from monoculture, the information contained in the six-year rotation history relevant to the conditional mean of corn yields. By construction, corn monoculture — which has no soybean years in the window — scores zero. The perfect alternating corn-soybean rotation scores approximately 2.59 bushels per acre above monoculture under the QDANN specification.
+
+Rotation sequences that score below zero have structural features that are predicted to lower mean yields relative to continuous corn; these sequences typically involve multiple consecutive soybean years or very infrequent soybean harvests that deplete
+the nitrogen and pest-suppression benefits of rotation. Sequences that score above zero have structural features associated with higher mean yields, particularly a recent soybean harvest and adequate spacing between soybean years.
+
+The rotation score maps all 64 binary six-year corn-soy sequences onto [$K$] distinct score values, providing a parsimonious and interpretable basis for rating that collapses the combinatorial rotation space into a single actuarial variable. In Section 5.3 we
+show that score-based yield predictions recover most of the variation captured by the full sequence-indicator model, and in Section 6 we discuss how the score could be incorporated into APH-based rate adjustments.
 
     \newpage
 	\begin{figure}[H]
