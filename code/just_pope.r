@@ -258,16 +258,41 @@ corn_jp_s1_index <- feols(
   cluster = ~tile_field_ID + year
 )
 
+# BH Correction
+# Extract p-values for rot_crop coefficients from stage 1
+pvals_corn <- broom::tidy(corn_jp_s1) |>
+  filter(grepl("rot_crop", term)) |>
+  arrange(p.value)
+
+# Apply Benjamini-Hochberg correction
+pvals_corn <- pvals_corn |>
+  mutate(
+    p_adj_bh    = p.adjust(p.value, method = "BH"),
+    sig_raw     = p.value  < 0.05,
+    sig_bh      = p_adj_bh < 0.05
+  )
+
+cat("Significant at 5% (unadjusted):    ", sum(pvals_corn$sig_raw), "\n")
+cat("Significant at 5% FDR (BH):        ", sum(pvals_corn$sig_bh),  "\n")
+
 rot_names  <- grep("^rot_crop", names(coef(corn_jp_s1)), value = TRUE)
 rot_labels <- chartr("15", "CS", sub("^rot_crop", "", rot_names))
 rot_dict   <- setNames(rot_labels, rot_names)
 
+bh_note <- paste0(
+  "Benjamini-Hochberg FDR correction across ", nrow(pvals_corn),
+  " rotation-sequence coefficients: ",
+  sum(pvals_corn$sig_raw), " significant at 5\\% (unadjusted); ",
+  sum(pvals_corn$sig_bh),  " significant at 5\\% FDR."
+)
+
 etable(
   corn_jp_s1, corn_jp_s1_lag1, corn_jp_s1_lag1_lag2, corn_jp_s1_index,
-  keep    = c("rot_crop", "soy_lag", "rot_index"),
+  keep    = c("^[CS]-", "soy_lag", "rot_index"),
   dict    = rot_dict,
+  notes   = bh_note,
   title   = "Stage 1 — Corn yield: full sequences vs lag summary variables",
-  file    = "tables/corn_stage1.tex",
+  file    = "C:/Users/vf006/Box/crop_rotations_and_losses/tables/corn_stage1.tex",
   replace = TRUE
 )
 
