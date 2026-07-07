@@ -300,6 +300,22 @@ etable(
 
 gc()
 
+corn_jp_s1 |> 
+  tidy() |> 
+  filter(grepl("rot_crop", term)) |> 
+  separate(term, into = c("temp", "term"), sep = 8) |>
+  arrange(estimate) |>
+  dwplot(style = "dotwhisker",
+         dist_args = list(color = "black", alpha = 0.75),
+         vline = geom_vline(
+           xintercept = 0, 
+           colour = "grey60", 
+           linetype = 2)) +
+  theme_bw() +
+  theme(legend.position = "none") + 
+  xlab("Coefficient Estimate") + ylab("") +
+  theme(plot.title = element_text(face = "bold", hjust = 0.5))
+
 # ── Stage 2: conditional variance (corn) ──────────────────────────────────────
 # Add squared residuals to the data, then regress on same RHS.
 # Note: we attach residuals by row index — safe because feols drops NAs
