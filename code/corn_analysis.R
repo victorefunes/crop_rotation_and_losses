@@ -26,6 +26,8 @@
 ##   nccpi_corn_map     — Spatial map of NCCPI corn (2016)
 ## ============================================================================
 
+setwd("C:/Users/vf006/Box/crop_rotations_and_losses/code")
+
 source("rotation_setup.R")
 
 # ── Load corn data ────────────────────────────────────────────────────────────
@@ -64,7 +66,7 @@ corn_jp_data <- corn_df |>
     rot_crop  = relevel(rot_crop, ref = "C-C-C-C-C-C")
   ) |>
   filter(!is.na(corn_yield)) |>
-  filter(if_all(all_of(all_controls_fgls), ~ !is.na(.))) |>
+  filter(if_all(all_of(all_controls_cols), ~ !is.na(.))) |>
   mutate(vpd_name = case_when(
     vpdmax_7 >= 0   & vpdmax_7 < 1.9  ~ "normal",
     vpdmax_7 >= 1.9 & vpdmax_7 <= 2.1 ~ "somewhat dry",

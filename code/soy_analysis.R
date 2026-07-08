@@ -23,6 +23,8 @@
 ##   nccpi_soy_map      — Spatial map of NCCPI soybean (2016)
 ## ============================================================================
 
+setwd("C:/Users/vf006/Box/crop_rotations_and_losses/code")
+
 source("rotation_setup.R")
 
 # ── Load soy data ─────────────────────────────────────────────────────────────
@@ -47,7 +49,7 @@ soy_jp_data <- soy_df |>
     rot_crop = relevel(rot_crop, ref = "S-S-S-S-S-S")
   ) |>
   filter(!is.na(soy_yield)) |>
-  filter(if_all(all_of(all_controls_fgls), ~ !is.na(.))) |>
+  filter(if_all(all_of(all_controls_cols), ~ !is.na(.))) |>
   mutate(vpd_name = case_when(
     vpdmax_7 >= 0   & vpdmax_7 < 1.9  ~ "normal",
     vpdmax_7 >= 1.9 & vpdmax_7 <= 2.1 ~ "somewhat dry",
