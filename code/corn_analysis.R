@@ -391,6 +391,80 @@ feols(fml_z_corn_var, data = corn_jp_data,
 #)
 #cat("Corn Z-vector models saved.\n")  
 
+# ── Figure: score_yield — Response of yields to rotation score values ─────────
+# Replicates slides 17-18 of the AAEA presentation.
+# Constructs the rotation score from Z-vector coefficients, then plots
+# mean and variance coefficients by score bin.
+
+# Step 1: compute rotation score for each sequence using Z-vector coefficients
+z_coefs <- coef(corn_z_s1)
+
+score_df <- corn_jp_data |>
+  group_by(rot_crop) |>
+  summarise(
+    late_soy  = mean(late_soy,  na.rm = TRUE),
+    soy_gap   = mean(soy_gap,   na.rm = TRUE),
+    soy_cons  = mean(soy_cons,  na.rm = TRUE),
+    nsoy      = mean(nsoy,      na.rm = TRUE),
+    .groups = "drop"
+  ) |>
+  mutate(
+    score = z_coefs["late_soy"] * late_soy +
+            z_coefs["soy_gap"]  * soy_gap  +
+            z_coefs["soy_cons"] * soy_cons +
+            z_coefs["nsoy"]     * nsoy
+  )
+
+# Step 2: join score onto sequence-level mean and variance coefficients
+corn_s1_coef <- broom::tidy(corn_z_s1) |>
+  filter(grepl("rot_crop", term)) |>
+  transmute(rot_crop = gsub("rot_crop", "", term),
+            mean_est = estimate, mean_se = std.error)
+
+corn_s2_coef <- broom::tidy(corn_z_s2) |>
+  filter(grepl("rot_crop", term)) |>
+  transmute(rot_crop = gsub("rot_crop", "", term),
+            var_est  = estimate, var_se  = std.error)
+
+score_plot_df <- score_df |>
+  left_join(corn_s1_coef, by = "rot_crop") |>
+  left_join(corn_s2_coef, by = "rot_crop") |>
+  arrange(score)
+
+# Step 3: plot — two panels (mean left, variance right), sorted by score
+p_mean <- ggplot(score_plot_df,
+                 aes(x = mean_est, y = reorder(factor(round(score, 2)), score))) +
+  geom_point(colour = "#e05c5c", size = 2) +
+  geom_errorbarh(aes(xmin = mean_est - 1.96 * mean_se,
+                     xmax = mean_est + 1.96 * mean_se),
+                 orientation = "y", height = 0, colour = "#e05c5c") +
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "grey60") +
+  labs(x = "Coefficient Estimate", y = "Rotation score",
+       title = "Mean") +
+  theme_bw()
+
+p_var <- ggplot(score_plot_df,
+                aes(x = var_est, y = reorder(factor(round(score, 2)), score))) +
+  geom_point(colour = "#5c9ee0", size = 2) +
+  geom_errorbarh(aes(xmin = var_est - 1.96 * var_se,
+                     xmax = var_est + 1.96 * var_se),
+                 orientation = "y", height = 0, colour = "#5c9ee0") +
+  geom_vline(xintercept = 0, linetype = "dashed", colour = "grey60") +
+  labs(x = "Coefficient Estimate", y = NULL,
+       title = "Variance") +
+  theme_bw()
+
+score_yield <- p_mean + p_var +
+  patchwork::plot_annotation(
+    title   = "Effect of rotation score on yields",
+    caption = "Reference: corn monoculture (score = 0). Two-way clustering: field + year.\nLeft panel: stage-1 mean coefficients. Right panel: stage-2 variance coefficients."
+  )
+
+ggsave(paste0(fig_dir, "score_yield.png"), score_yield,
+       width = 12, height = 8, dpi = 300)
+
+cat("score_yield figure saved.\n")
+
 # ── 5. Just-Pope stage 2 — corn ───────────────────────────────────────────────
 # Table: tab:corn_jp_var | Figures: corn_var_plot, corn_coeff_plot, corn_jp_plot
 
