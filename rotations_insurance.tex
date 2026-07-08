@@ -1,0 +1,502 @@
+\documentclass[12pt,letterpaper]{article}
+\usepackage{amsmath, amssymb, amsthm}
+\newtheorem{theorem}{Proposition}
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+\usepackage{graphicx}
+\usepackage{setspace}
+\usepackage{pdflscape}
+\usepackage{booktabs, threeparttable, tabularx, makecell, siunitx}
+\DeclareMathOperator*{\rint}{\ThisStyle{\rotatebox{15}{$\SavedStyle\!\int\!$}}}
+\usepackage{indentfirst}
+\usepackage{xurl}
+%\usepackage{caption}
+%\usepackage{subcaption}
+\usepackage{subfig}
+\usepackage[colorlinks=true,linkcolor=black,urlcolor=blue,citecolor=black]{hyperref}
+\usepackage{float}
+\usepackage{pgfplots}
+\usepackage[affil-it]{authblk}
+\pgfplotsset{compat=1.16}
+\usepackage{dcolumn}
+\usepackage[osf]{mathpazo}
+\usepackage{afterpage}
+\usepackage[makeroom]{cancel}
+\usepackage{listings}
+\usepackage{lscape}
+\usepackage[left=2cm,right=2cm,top=1.5cm,bottom=1.5cm]{geometry}
+%\usepackage[margin=0.5in]{geometry}
+\usepackage{enumitem}
+\BeforeBeginEnvironment{tabular}{\footnotesize}% Adjust tabular font size to \small
+\usepackage{authblk}
+% siunitx setup
+\sisetup{table-number-alignment=center, table-figures-integer=2, table-figures-decimal=1}
+% Theorem, Lemma, etc
+\theoremstyle{plain}
+%\newtheorem{theorem}{Theorem}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{claim}{Claim}[theorem]
+\newtheorem{axiom}[theorem]{Axiom}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{fact}[theorem]{Fact}
+\newtheorem{hypothesis}[theorem]{Hypothesis}
+\newtheorem{assumption}[theorem]{Assumption}
+\newtheorem{proposition}[theorem]{Proposition}
+\newtheorem{criterion}[theorem]{Criterion}
+\theoremstyle{definition}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{example}[theorem]{Example}
+\newtheorem{problem}[theorem]{Problem}
+\newtheorem{principle}[theorem]{Principle}
+
+\usepackage{graphicx, color}
+\usepackage{booktabs}
+\graphicspath{{fig/}}
+
+\usepackage[square,sort,comma,numbers]{natbib}
+\bibliographystyle{apalike}
+\bibpunct{(}{)}{,}{a}{,}{,}
+
+
+%\usepackage[linesnumbered,ruled,vlined,commentsnumbered]{algorithm2e} % use algorithm2e for typesetting algorithms
+\usepackage{algorithm, algpseudocode} % use algorithm and algorithmicx for typesetting algorithms
+\usepackage{mathrsfs} % for \mathscr command
+
+
+\title{Challenges of Incorporating Rotation Information into Crop Insurance Rates}
+ 
+\author[1]{Victor Funes-Leal}
+\author[2]{Lawson Connor}
+\author[3]{Eunchun Park}
+\affil[1,2,3]{Department of Agricultural Economics and Agribusiness, University of Arkansas}
+\date{}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+\noindent
+We investigate how long-term crop rotation patterns affect corn and soybean yields using a large, satellite-based, field-level panel dataset for Illinois covering 2009 to 2022. Combining yield data from two independent remote-sensing estimators - the Scalable Satellite-Based Crop Yield Mapper (SCYM) and the Quantile Loss Domain Adversarial Neural Networks estimator (QDANN) - with field-level crop sequence histories from the USDA Cropland Data Layer, we estimate linear fixed effects models that separately identify rotation effects on the conditional mean and variance of yields, following \citet{justPope1979}. Our findings show that rotation effects depend critically on the timing and spacing of soybean placements rather than on overall rotation diversity as measured by the Rotational Complexity Index. A soybean harvest within the past two years raises corn yields by 2.85-3.55 bushels per acre; consecutive soybean years reduce yields by more than 4 bushels per acre and sharply increase yield variance. We develop a rotation score based on four structural sequence features that maps all 64 possible six-year corn-soy sequences onto a scalar rating scale. The Rotational Complexity Index has a nonlinear and non-monotone relationship with yields, implying that linear RCI-based insurance premium adjustments would be misspecified. These findings provide the empirical foundation for rotation-conditioned federal crop insurance rates.
+ 
+\medskip\noindent
+\textbf{Keywords:} crop rotation, crop insurance, Just-Pope production risk, yield variance, rotational complexity, Illinois, satellite yields.
+ 
+\medskip\noindent
+\textbf{JEL Codes:} Q12, Q18, G22, C23.
+\end{abstract}
+ 
+\newpage
+\setcounter{page}{1}
+	
+\section{\label{sec:intro}Introduction}
+
+Crop rotations are among the most widely studied agronomic practices in temperate agriculture, yet their role in federal crop insurance rating has remained largely unexplored. The United States Federal Crop Insurance Program (FCIP) covers more than 90 percent of planted corn and soybean acres in the Midwest, with annual indemnities exceeding \$19 billion in recent years. Premium rates are calculated based on each farm's Actual Production History (APH), a rolling 10-year average yield that forms the actuarial basis for coverage. This design is intentionally farm-specific but blind to the practices that generate the underlying yield record. A farmer who maintains a disciplined corn-soybean rotation - a practice well-documented to raise mean yields and reduce yield variability - pays the same actuarially implied premium as a neighboring farmer in continuous corn, conditional on the same APH. Whether this constitutes a pricing inefficiency, and how large the underlying yield differential actually is, are the central empirical questions of this paper.
+ 
+We study how long-term crop rotation sequences affect the mean and variance of corn yields using a large, satellite-based, field-level panel dataset for Illinois covering 2003 to 2022. Combining yield data from two independent remote-sensing sources - the Scalable Satellite-Based Crop Yield Mapper \citep[SCYM;][]{lobell2015} and the Quantile Loss Domain Adversarial Neural Networks estimator \citep[QDANN;][]{ma2024} - with field-level crop sequence histories from the USDA Cropland Data Layer (CDL), we estimate linear fixed effects models that separately identify rotation effects on the conditional mean and conditional variance of yields, following \citet{Just1979}. County and year fixed effects absorb spatial sorting across counties and common annual shocks, so that identification comes from within-county variation in rotation sequences across fields over time.
+ 
+Our main findings are three. First, a handful of rotation sequences significantly outperform corn monoculture in terms of higher mean yields, but these sequences share identifiable structural features - specifically, a soybean harvest within the past one to two years, no consecutive soybean years, and a moderate number of total soybean harvests in the six-year window. Second, we construct a rotation score from these four structural features that maps all 64 possible six-year corn-soy sequences onto a scalar index. The score ranges from approximately $-11$ for the most soybean-intensive sequences to $+4$ for sequences with recent and well-spaced soy harvests, with corn monoculture normalized to zero and the perfect alternating rotation scoring 2.59. Third, the Rotational Complexity Index (RCI) - the most natural scalar summary of rotation diversity - has a nonlinear and non-monotone relationship with both yield moments, which implies that linear RCI-based rating adjustments would be misspecified.
+ 
+These findings speak directly to two active policy debates. First, USDA's Risk Management Agency (RMA) has signaled interest in incorporating conservation practice information into crop insurance rating as part of broader efforts to align the FCIP with climate and conservation goals. Our results suggest that rotation history is an actuarially meaningful predictor of yield risk, but that its incorporation requires sequence-level or structural-feature-based characterization rather than a simple index. Second, the literature on conservation practice adoption has noted that the APH mechanism may inadvertently discourage rotations and cover cropping by recording short-run yield dips during practice transitions \citep{Connor2022}. Our estimated transition effects provide direct evidence on the magnitude and persistence of this penalty for corn-soybean rotation sequences in Illinois, and our rotation
+score provides a tractable rating instrument that could condition premiums on rotation history.
+ 
+The paper proceeds as follows. Section~\ref{sec:litreview} reviews the relevant literature on rotation effects and crop insurance rating. Section~\ref{sec:data} describes our data sources and the construction of rotation sequences. Section~\ref{sec:methods} presents the econometric framework. Section~\ref{sec:results} reports results. Section~\ref{sec:conclusions} discusses implications for insurance rating and concludes.
+
+\section{\label{sec:litreview}Literature Review}
+\subsection{\label{subsec:agronomy}Agronomic and Economic Evidence on Crop Rotations}
+
+The yield benefits of crop rotation have been documented extensively in the agronomic literature. In controlled experimental settings, the corn yield advantage from a preceding soybean year has been estimated at 5 to 15 percent relative to continuous
+corn, depending on soil type, nitrogen fertilization rate, and weather conditions \citep{Gentry2015, Farmaha2016}. The primary mechanisms include improved nitrogen availability from soybean residue - particularly net soil nitrogen mineralization that reduces the nitrogen demand of subsequent corn - reduced pathogen and pest pressure, and differences in residue decomposition that affect soil temperature and structure at planting \citep{Gentry2015}.
+ 
+The observational literature using field- or farm-level data is thinner, because isolating the causal effect of rotation from selection on land quality and farmer ability requires either experimental variation or credible panel designs. \citet{burchfield2024} use county-level data across the US Midwest and find that rotational complexity as measured by the RCI is insufficient to generate detectable yield gains at the county scale, a result they attribute to the coarseness of county aggregation and the dominance of the corn-soybean binary in most counties. \citet{socolar2021} find that biophysical and policy factors together predict simplified rotations, with proximity to ethanol infrastructure among the key predictors of monoculture adoption - a finding consistent with the spatial patterns documented by \citet{pates2021} using remote sensing data. Our paper contributes a field-level panel for Illinois that sidesteps the aggregation problem and identifies yield effects within counties across fields over time.
+ 
+The determinants of rotation choice are themselves the subject of a growing literature, motivated in part by the expansion of ethanol refining capacity in the Corn Belt. \citet{pates2021} show, using CDL satellite data, that fields near ethanol plants shifted significantly toward corn monoculture following plant openings. \citet{Pates2025} extend this analysis, accounting for remote sensing misclassification error. \citet{cheu2025} document analogous effects on cover crop adoption, showing that local commodity demand shocks systematically crowd out conservation practices. These findings motivate our use of Illinois - the state with the highest ethanol refining capacity and the greatest variation in local grain market access - as our primary study area.
+ 
+The risk effects of rotation have received less attention than mean effects, despite their direct relevance to insurance. \citet{Just1979} introduced the flexible stochastic production framework that allows inputs to affect yield variance independently of the mean; applications to crop production have since appeared in \citet{antle1983}, \citet{shi2013}, and \citet{li2021}, among
+others. \citet{wu2025} document that crop rotations reduce yield variability and maintain soil organic carbon in the US Corn Belt, with larger reductions in variance on lower-productivity soils. Our application of the Just-Pope framework to rotation sequences provides the first large-scale estimates of the effects of rotation on yield variance at field resolution.
+
+\subsection{\label{subsec:insurance_rating} Crop Insurance Rating and Conservation Practices}
+
+Federal crop insurance in the United States operates under the Standard Reinsurance Agreement between private insurers and USDA-RMA, which sets actuarial standards for premium rate calculation. The dominant product, Revenue Protection, bases coverage on the APH yield and a harvest price guarantee. The APH is calculated as the simple average of up to ten years of farm-reported yields, subject to floor and exclusion provisions. Because the APH is farm-specific, it implicitly captures some of the variation in yields attributable to management practices, but with a ten-year lag and considerable noise.
+
+The theoretical case for incorporating conservation practice information into rates rests on adverse selection and moral hazard arguments. If rotation farmers systematically face lower actuarial risk than monoculture farmers at the same APH level, pooling them in the same rating cell produces cross-subsidization from rotation to monoculture farmers, reducing the incentive to rotate \citep{Ramaswami1993, Babcock1996}. The empirical question is whether the yield risk differential is large enough to be actuarially significant after controlling for APH. Our estimates of rotation effects on yield variance provide the necessary inputs to answer this question.
+
+The APH mechanism creates specific disincentives for practice adoption because short-run yield effects during transitions are recorded in the yield history. \cite{Connor2022} find evidence that crop insurance participation reduces incentives to use cover crops in Indiana corn and soybean production, consistent with the view that APH-based coverage discourages practices that temporarily reduce yields. The evidence is not uniform, however — \cite{Fleckenstein2020} find that crop insurance is not a barrier to conservation adoption among Midwest corn producers, suggesting that the magnitude of the disincentive varies across practices and contexts. This ambiguity motivates direct measurement of the transition-period yield effects that drive the APH mechanism for crop rotations specifically, which our field-level panel provides.
+
+\cite{Woodard2011} examine the statistical properties of APH-based rates using the Loss Cost Ratio ratemaking approach and find estimated premium biases substantially above actuarially fair levels for Illinois corn. \cite{Ker2000} demonstrate that nonparametric rating methods can improve on parametric alternatives for crop yield distributions, a finding relevant to the design of any rotation-conditioned rate that must characterize yield distributions conditional on rotation history. Neither paper addresses rotation conditioning directly. This paper aims to fill part of that gap by establishing the yield-level facts that any rotation-conditioned rating system would need to confront, and by proposing a rotation score that maps naturally into existing rating frameworks.
+
+\subsection{\label{subsec:remote_sensing}Remote Sensing of Crop Yields}
+
+Farm-reported yield data from USDA surveys are available only at the county level and cannot be linked to specific fields or rotation histories. Our approach relies on two satellite-based yield estimators that produce field-level predictions for Illinois over our sample period, combined with annual crop classification maps from the CDL to construct six-year rotation histories at the field level.
+
+SCYM \citep{lobell2015} uses a large ensemble of crop-simulation runs to train a statistical model that relates satellite observations to biomass. Its reported field-level accuracy is approximately 35 percent ($R^2$). QDANN \citep{Ma2024} achieves a reported field-level accuracy of approximately 48 percent ($R^2$) using domain-adversarial neural networks and unsupervised domain adaptation. We use both estimators as outcome measures throughout, treating QDANN as the preferred specification. This approach follows \citet{Pates2025} and \citet{socolar2021} in using CDL-derived rotation sequences as the primary measure of cropping history.
+    
+\subsection{\label{subsec:rci}Rotational Complexity Index (RCI)}	
+We measure rotation diversity using the Rotational Complexity Index (RCI) developed by \cite{socolar2021}. The RCI was designed to capture both the richness and the turnover of crop sequences at the field level — two properties that prior diversity measures based on crop frequency or short observation windows failed to represent simultaneously. \cite{socolar2021} applied the index to 1.5 million fields across eight US Midwest states using six-year CDL sequences, establishing it as the standard field-scale measure of rotational complexity in the Corn Belt literature.
+
+The RCI adapts the rotational diversity index of \cite{Tiemann2016}), which quantifies rotation diversity as a function of rotation length $l$ and number of crops $n$ $d = \sqrt{nl}$, to accommodate large-scale remotely sensed data where true rotation length is unobserved. Rather than trying to identify rotations of a known length, \cite{socolar2021} observe a fixed six-year sequence of crops in each field and replace rotation length with two species turnover terms. The resulting index is:
+
+\begin{equation}
+    RCI = \sqrt{n\times \dfrac{T_{1}+T_{2}+T_{p}}{2}}
+\end{equation}
+
+Where $T_{1}$ is the one-year turnover, equal to the number of years in which the crop differs from the prior year; $T_{2}$ is the two-year turnover, equal to the number of years in which the crop differs from the crop grown two years prior; and $T_{p}$ is a pseudo-turnover term equal to the number of times a perennial crop (such as alfalfa or pasture) appears in two consecutive years. The $T_{p}$ term ensures that consecutive perennial plantings are not penalized for low turnover, reflecting the agronomic understanding that perennials provide soil health benefits even when repeated. 
+
+The index has several properties relevant to our application. First, corn monoculture — a field planted in corn every year of the six-year window — receives $n=1, T_{1}=T_{2}=T_{p}=0$, and therefore $\text{RCI} = 0$. Second, across the US Midwest study area \cite{socolar2021} document 19 unique RCI values ranging from monoculture ($RCI = 0$) to maximum diversity ($RCI = 5.2$), with a notable mass at $RCI = 2.24$, the value corresponding to a perfect alternating corn-soybean rotation (CSCSCS). In our Illinois corn-soy sample, the observed RCI values range from 1.41 to 4.74, since sequences containing only corn and soybean cannot achieve the crop richness ($n \geq 3$) or perennial turnover ($T_{p} > 0$) needed to reach the upper end of the full index.
+
+Third, and most important for our application, the RCI is not monotonically related to yield outcomes, as we show in Section~\ref{sec:results}, posing a direct challenge to linear RCI-based insurance rating. Because the index takes the square root of the product of crop richness and turnover, two sequences with the same RCI value can have very different agronomic properties — for example, a sequence with two crops and high turnover may score identically to one with three crops and lower turnover, yet have substantially different effects on nitrogen availability and pest pressure. A field transitioning from monoculture to a corn-soybean rotation may pass through intermediate RCI values that reflect agronomically suboptimal sequences, such as consecutive soybean years that accumulate soybean cyst nematode pressure. \cite{burchfield2024} find that rotational complexity as measured by the RCI is currently insufficient to observe yield gains in major crops at the county scale, a result consistent with the nonlinearity we document at the field level: a higher RCI does not uniformly predict higher yields, because the index aggregates sequence properties with heterogeneous and sometimes opposing effects on corn yields.
+
+This nonlinearity presents a direct challenge for insurance rating. A linear premium adjustment based on the continuous RCI would systematically misprice fields in intermediate rotation patterns — overcharging fields with high RCI values that feature agronomically suboptimal sequencing, and undercharging fields with moderate RCI values that nonetheless achieve strong yield outcomes through well-timed soybean placement. Our use of factor RCI — treating each of the 18 distinct observed values as a separate indicator rather than imposing a linear functional form — is motivated by this concern. 
+
+\section{\label{sec:data}Data Description}
+
+Here we describe the panel construction in full, as it forms the empirical foundation for the yield effect estimates that feed into that simulation.
+
+\subsection{\label{subsec:yield}Yield Data}
+We use two independent satellite-based yield estimators as outcome measures, both derived from Landsat satellite imagery processed at 30-meter spatial resolution.
+
+The first is SCYM (Scalable Satellite-Based Crop Yield Mapper), developed by \cite{lobell2015}. SCYM uses a large ensemble of crop simulation runs spanning a range of soil, climate, and management conditions to train a pixel-level statistical model that predicts field-level biomass from Landsat reflectance, which is then converted to grain yield using harvest index assumptions. The model does not require ground-based yield measurements for calibration, making it applicable across the full spatial extent of the CDL raster. 
+
+The second estimator is QDANN (Quantile Loss Domain Adversarial Neural Networks), developed by \cite{Ma2024}. QDANN combines three methodological elements: a domain-adversarial neural network architecture that learns features invariant to the shift between training and target domains; quantile regression via pinball loss that targets the full conditional distribution rather than just the conditional mean; and unsupervised domain adaptation that transfers a model trained on labeled county-level NASS yield data to unlabeled field-level predictions without requiring field-level ground truth. The domain adaptation step is particularly important for our application, as it explicitly accounts for distributional differences between the county-level training domain and the 30-meter field-level prediction domain. 
+
+We treat QDANN as the preferred specification given its higher reported accuracy, its ability to characterize the full conditional yield distribution rather than just the conditional mean, and its explicit design for field-level inference. SCYM results are reported alongside throughout as a robustness check. The consistency of rotation effect estimates across the two estimators — which use entirely different modeling approaches, training objectives, and domain adaptation strategies — serves as an informal validation of both yield datasets and the econometric design; here we additionally validate those yield moments against the independent SCYM series.
+
+Figure~\ref{fig:corn_yield_map} shows the spatial distribution of QDANN corn yields across Illinois in 2016, and  Figure~\ref{fig:rci_map} shows the corresponding distribution of RCI values. The maps reveal the expected geographic concentration of high-productivity, high-rotation-complexity fields in the central Illinois Corn Belt.
+
+\subsection{\label{subsec:rot_seq}Crop History and Rotation Sequences}
+Field-level crop histories come from the USDA Cropland Data Layer (CDL), an annual raster product produced by NASS that classifies each 30-meter pixel into a crop or land-cover category using satellite imagery and agricultural survey reference data. CDL has been available annually since 2008 for the full contiguous United States and since 2003 for Illinois. We use annual CDL data from 2003 to 2022 for Illinois, providing up to 20 years of rotation history for each field.
+
+For each field-pixel and outcome year $t$, we construct a six-year rolling rotation sequence by recording the CDL-classified crop in each of years $t-1$ through $t-6$, classifying each year as corn (CDL code 1), soybean (CDL code 5), or other. We restrict the analysis to field-year observations satisfying three conditions: corn is the outcome crop in year $t$; the six-year history consists entirely of corn or soybean plantings with no years classified as other crops, fallow, or non-agricultural land cover; and the field appears in at least two consecutive years in the panel after singleton removal. The first two restrictions ensure that rotation sequences are clean binary strings over $\{corn, soybean\}$ and that the RCI and sequence indicators are well-defined. The third removes fields that appear in only one year and therefore contribute no identifying variation. After these restrictions, the estimation sample contains 1,548,319 field-year observations for QDANN and 1,411,846 for SCYM, the difference reflecting variation in the spatial coverage of the two estimators across Illinois counties.
+
+We characterize rotation histories in two complementary ways. The first is the full sequence of crop codes over the six-year window, which yields $2^6 = 64$ distinct binary sequences, of which 32 end in corn and are included in the corn yield regressions. Corn monoculture (coded $C-C-C-C-C-C$) serves as the reference category. The second characterization uses the RCI of \citet{socolar2021}, described in Section~\ref{sec:rci}.
+
+\subsection{\label{subsec:w_controls}Weather Controls}
+Monthly precipitation totals, vapor pressure deficit (VPD), and a soil moisture index are derived from GRIDMET \citep{abatzoglou2013}, which is available at approximately 4-kilometer spatial resolution. We aggregate each variable to monthly totals or means for June, July, and August. Following \citet{SchlenkerRoberts2009}, we replace monthly mean temperature with growing degree days (GDD) accumulated between 8\textdegree C and 29\textdegree C, and extreme degree days (EDD) accumulated above 29\textdegree C. Climate water deficit data come from TerraClimate \citep{abatzoglou2018}.
+
+\subsection{\label{subsec:soil_controls}Soil Controls}
+Soil characteristics come from gSSURGO, produced by the USDA Natural Resources Conservation Service at 30-meter resolution. We extract three field-level measures: the National Commodity Crop Productivity Index (NCCPI), root zone available water storage (AWC), and soil organic carbon stock (SOC) in the 0-100-centimeter depth zone. NCCPI and SOC are collinear with county fixed effects and are dropped from the preferred specification; AWC is retained. Figure~\ref{fig:nccpi_corn_map} shows the spatial distribution of NCCPI across Illinois.
+
+\subsection{\label{subsec:smaple_const}Sample Construction and Summary Statistics}
+The estimation sample is constructed by merging the QDANN and SCYM yield rasters with CDL rotation sequences, GRIDMET and TerraClimate weather covariates, and gSSURGO soil variables at the 30-meter pixel level. Final sample sizes are 1,548,319 field-year observations (QDANN) and 1,411,846 (SCYM).
+
+\begin{table}[H]
+  \centering
+  \caption{Summary statistics by rotation type}
+  \label{tab:summary}
+  \begin{threeparttable}
+    \input{tables/summary_stats_by_rotation.tex}
+    \begin{tablenotes}
+      \small
+      \item Notes: Means and standard deviations (in parentheses) for QDANN corn yields and key covariates, by rotation type. Corn monoculture = C-C-C-C-C-C; Perfect rotation = alternating C-S sequence; Transitioning = sequences with RCI between 1.41 and 2.00.
+    \end{tablenotes}
+  \end{threeparttable}
+\end{table}
+	
+\section{Econometric Framework\label{sec:econ_framework}}
+\subsection{\label{subsec:just_pope}The Just-Pope Framework and Its Variants}
+The stochastic production function literature offers several approaches to jointly estimating the effects of inputs and management practices on the mean and variance of output. We briefly review the main variants to situate our estimator relative to the existing literature and motivate the specific implementation choices made here.
+
+\textbf{Original two-stage OLS/FGLS — \cite{Just1978, Just1979}}. 
+
+Just and Pope proposed a general stochastic production specification of the form:
+
+\begin{equation}
+    y = f(\mathbf{X},\alpha)+\sqrt{h(\mathbf{X},\beta)}\times \varepsilon
+\end{equation}
+
+where $f(\cdot)$ is the conditional mean function and $h(\cdot)$ is the conditional variance function, both functions of the same input vector $\mathbf{X}$. This formulation relaxes the multiplicative stochastic restriction that dominated prior work — which
+required inputs to be either uniformly risk-increasing or risk-neutral — and allows any input to independently raise or lower yield variance. From an econometric standpoint, the specification is a heteroskedastic regression model in which the variance of the production error is itself a function of inputs. The original estimation procedure uses two stages: OLS of the mean function to recover residuals, then OLS (or NLS for nonlinear mean functions) of the squared residuals on the variance function covariates.
+
+\textbf{Antle's flexible moment-based extension — \cite{antle1983, Antle2010}}. 
+
+\cite{antle1983} extended the Just-Pope framework to estimate higher moments of the output distribution beyond the mean and variance, showing that the first three moments of milk yield are statistically significant functions of inputs. This matters for
+insurance applications because indemnities are driven by left-tail probabilities, and mean-variance summaries may miss important skewness effects. \cite{Antle2010} later proposed partial-moment functions as a flexible way to characterize asymmetric input effects on output distributions. We do not implement the Antle extension here, but note that estimating skewness effects of rotation sequences on corn yields is a natural extension of our analysis.
+
+\textbf{Maximum likelihood and log-linear variance — \cite{Harvey1976, Saha1997}}. 
+
+Just-Pope functions have been traditionally estimated by feasible generalized least squares (FGLS). \cite{Saha1997} use Monte Carlo
+experiments to show that in small samples, even when the error distribution departs from normality, the maximum likelihood (ML) estimator is more efficient and less biased than FGLS, and that FGLS can seriously understate the risk effects of inputs. A related improvement is the log-linear variance specification proposed by \cite{Harvey1976}, which replaces the linear regression of $\hat{\varepsilon}^2$ on $\mathbf{X}$ with a regression of $\log \hat{\varepsilon}^2$ on $\mathbf{X}$, then exponentiates fitted values to obtain strictly positive variance estimates. This avoids the truncation problem that arises when the linear approximation produces negative fitted values for some cells. We implement the three-stage FGLS estimator with a linear variance specification and
+address the truncation problem by flooring negative fitted values at a small positive constant (see Section 4.2); we report the log-linear specification as a robustness check.
+
+\textbf{Joint estimation with risk preferences and technical efficiency — \cite{Kumbhakar2002}}.
+
+\cite{Kumbhakar2002} embeds the Just-Pope variance function inside a stochastic frontier model, jointly estimating production risk, risk preferences, and technical inefficiency without imposing parametric restrictions on the utility function. A limitation of the standard Just-Pope formulation is that it does not account for producers'  preferences, so that input elasticities are treated as invariant to risk perceptions. Kumbhakar's extension addresses this at the cost of additional distributional assumptions on the inefficiency term. We do not pursue this extension here, as our primary interest is in the population distribution of rotation effects rather than in individual farm efficiency.
+
+\textbf{Nonparametric extension — \cite{li2021}}. 
+
+The most flexible variant in the recent literature is the nonparametric production risk estimator of \cite{li2021}, in which both the mean function $f(\cdot)$ and the variance function $h(\cdot)$ are estimated using local polynomial regression rather than parametric functional forms. This allows the risk effect of any variable to vary continuously with a conditioning covariate — for example, the variance effect of a recent soybean placement varying smoothly with soil productivity. The LRZ estimator nests the parametric Just-Pope model as a special case in which the local polynomial slopes are constant. We implement the parametric Just-Pope estimator as our main specification and the LRZ nonparametric extension as a robustness check, allowing rotation effects to vary with NCCPI soil productivity, following the approach described in Section 4 of \cite{li2021}.
+
+Our main estimator follows the three-stage FGLS approach of \cite{Harvey1976} and \cite{Saha1997}, embedded in a panel fixed effects framework with two-way clustering for inference. The specific implementation is described in Sections 4.2 through 4.4 below.
+
+\subsection{\label{subsec:stage_1}Conditional Mean: Stage 1}
+We model the conditional mean of corn yields as a two-way fixed effects regression following the linear panel framework:
+
+\begin{equation}
+    y_{it}=\text{seq}_{it}'\tau+ W_{it}'\beta+\lambda_{k}+\gamma_{t}+\varepsilon_{it}
+\end{equation}
+
+where $y_{it}$ is the yield of field $i$ year $t$ measured in bushels per acre; $\text{seq}_{it}$ is either a vector of rotation sequence indicators (with corn monoculture as the reference category) or a vector of factor RCI indicators (with the lowest observed RCI as the reference); $W_{it}$ is a vector of weather and soil controls described in Section 3.3; $\lambda_{k}$ is a county (FIPS) fixed effect; and $\gamma_{t}$ is a year fixed effect. The error term $\varepsilon_{it}$ is assumed to
+have mean zero conditional on the regressors.
+
+County fixed effects absorb all time-invariant differences across counties in average yield levels — including persistent soil quality gradients, drainage infrastructure, and local agronomic practices. Year fixed effects absorb common shocks to all fields in a given year, including statewide weather events and aggregate commodity price signals that affect input use uniformly. Identification of the rotation effect $\hat{\tau}$ therefore comes from within-county, across-field variation in rotation sequences over time, conditional on the weather and soil controls. Standard errors are  clustered two-way at the field $\text{tile\_field\_ID}$) and year levels, following \cite{Cameron2015}, to account for both within-field serial correlation in the panel and cross-sectional dependence across fields in the same growing season driven by common weather shocks.
+
+\textbf{Principal components analysis of rotation features}. To motivate the choice of four structural features as a sufficient summary of the 64 binary rotation sequences, we conduct a principal components analysis (PCA) of the RCI-level rotation feature space. Figure \ref{fig:rot_pca_plot} shows a biplot of the first two principal components of the rotation feature matrix, with each point representing one of the 18 distinct RCI values observed in the Illinois corn-soy sample and the red arrows representing loadings of four candidate summary variables: $n\_\text{soy}$ (number of soybean harvests), $\text{no\_consec}$ (absence of consecutive soybean years), $\text{tight\_soy}$ (soybean placements clustered close together), and $\text{free\_soy}$ (soybean placements well-spaced across the window).
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[scale = 0.55]{figures/rot_pca_plot.png}
+    \caption{First two principal components of feature matrix}
+    \label{fig:rot_pca_plot}
+    \end{figure}
+
+The first principal component (PC1) explains 83.3 percent of the total variance in the rotation feature space, and the second (PC2) explains an additional 9.6 percent, so that together the first two components account for approximately 93 percent of all variation across RCI levels. This near-complete dimensionality reduction confirms that the 18 distinct RCI values in our sample are well characterized by a very small number of underlying dimensions, thereby validating the parsimonious Z-vector parameterization relative to the full sequence-indicator model.
+
+The biplot loadings reveal the structure of these dimensions. PC1 is dominated by $\text{tight\_soy}$ and $\text{free\_soy}$, which load in similar directions along the horizontal axis — both are primarily measures of soybean frequency and spacing that increase with the number of soybean years in the window. $n\_\text{soy}$ loads strongly in the upper-right quadrant, nearly orthogonal to PC1, indicating that the total number of soybean harvests captures a dimension of variation largely independent of how those harvests are spaced. $\text{no\_consec}$ loads toward the upper left, reflecting that the absence of consecutive soybean years is associated with lower total soybean frequency (fewer soybean years means fewer opportunities for consecutive placements). The near-orthogonality of $n\_\text{soy}$ and $\text{no\_consec}$ in the biplot confirms that these two variables are capturing distinct dimensions of rotation structure that would be conflated in a scalar index such as the RCI.
+
+The PCA results motivate our Z-vector parameterization in two ways. First, the high proportion of variance explained by the first two components implies that four well-chosen variables suffice to characterize the rotation feature space, without information loss relative to the full 64-sequence indicator model. Second, the biplot loadings directly suggest which variables belong in the Z-vector: variables that span both principal component axes (covering the dominant sources of variation) rather than variables that are collinear along a single axis.
+
+We also estimate a parsimonious parameterization that replaces the sequence indicators with four structural rotation features:
+
+\begin{equation}
+    y_{it}=Z_{it}'\tau+ W_{it}'\beta+\lambda_{k}+\gamma_{t}+\varepsilon_{it}
+\end{equation}
+
+Where $Z_{it}=\left[\text{late\_soy}_{it}, \text{soy\_cons}_{it}, \text{soy\_gap}_{it},\text{nsoy}_{it}\right]$. These variables are defined as follows. $\text{late\_soy}_{it}$ is the soy lag, equal to the number of periods since the most recent soybean harvest
+in the six-year window (taking the value -1 if soybean was planted in year $t-1$, -2 if in year $t-2$, and so on).  $\text{soy\_cons}_{it}$ is a dummy equal to one if the rotation pattern contains two or more consecutive soybean years. $\text{soy\_gap}_{it}$ is the minimum number of years between any two soybean harvests in the window (equal to zero if consecutive soybean years occur). $\text{nsoy}_{it}$ is the total number of soybean harvests in the six-year window. Together these four variables capture the timing, spacing, and frequency of soybean in the rotation — the structural features most likely to drive the agronomic rotation effect through nitrogen availability and pest suppression mechanisms.
+
+\subsection{\label{subsec:stage_2}Conditional Variance: Stage 2 (Just-Pope Framework)}
+
+To separately identify the effect of rotations on yield risk, we follow \cite{Just1979} and \cite{antle1983} in estimating a second-stage regression of squared first-stage residuals on the same regressors. Let $\hat{u}_{it} = y_{it} - \hat{y}_{it}$ denote
+the residual from the stage-1 conditional mean regression. The second moment is then estimated as:
+
+\begin{equation}
+    \hat{u}_{it}^2 = \text{seq}_{it}'\pi + W_{it}'\delta + \lambda_k + \gamma_t + \nu_{it}
+\end{equation}
+
+Coefficients $\hat{\pi}$ identify the differential effect of each rotation sequence on the conditional variance of yields, relative to the monoculture reference. A negative coefficient indicates that a given sequence compresses yield variance relative to monoculture — a risk-reducing effect directly relevant to insurance pricing. A positive coefficient indicates that the sequence raises variance, increasing actuarial risk at any given mean yield level.
+
+The squared residual $\hat{u}_{it}^2$ is a noisy proxy for the true conditional variance, since it combines the variance signal with idiosyncratic estimation error from stage 1. To improve estimation efficiency, we implement a three-stage Feasible Generalized Least Squares (FGLS) estimator following \cite{Harvey1976}. In stage 2a, we estimate an initial OLS regression of $\hat{u}_{it}^2$ on the full covariate vector to obtain fitted values $\hat{h}_{it}$, which serve as estimates of the conditional variance function. In stage 2b, we re-estimate the variance regression by Weighted Least Squares (WLS), weighting each observation by $1/\hat{h}_{it}$ where $\hat{h}{it}= \max(\hat{h}_{it}^{\text{OLS}},\ \varepsilon)$ with $\varepsilon = 10^{-6}$ to prevent degenerate weights from negative linear approximations to the variance function. The FGLS estimator is more efficient than the OLS second-stage estimator because it downweights observations whose squared residuals are expected to be highly variable — those from rotation sequences with high estimated conditional variance.
+
+\subsection{\label{subsec:bootstrap}Inference: Three-Stage Bootstrap}
+
+Both the OLS and FGLS stage-2 estimators face a generated-regressor problem: the dependent variable $\hat{u}_{it}^2$ is constructed from first-stage estimates and therefore contains estimation error that standard second-stage standard errors do not account for. In the FGLS case, the weights $\hat{h}_{it}$ are themselves estimated, introducing a third source of uncertainty. We address the generated-regressor problem for both estimators by implementing a pairs cluster bootstrap that wraps all three stages, propagating first-stage uncertainty through to the final variance estimates.
+
+The bootstrap procedure proceeds as follows. In each of $B = 999$ iterations, we draw a bootstrap sample by resampling $n$ fields with replacement from the $n$ unique fields in the estimation sample, where the bootstrap weight of field $j$ equals the number of times it was drawn. Rather than physically duplicating rows — which at approximately 1.55 million observations would exhaust available memory — we implement a frequency-weight bootstrap that assigns each field a bootstrap weight equal to its draw count and passes this weight to all three estimation stages via the \texttt{weights} argument of the regression function. Fields not drawn receive weight zero and are excluded from that iteration. Within each iteration, stages 1, 2a, and 2b are re-estimated on the weighted sample, and the stage-2b coefficient vector is stored. Bootstrap standard errors are computed as the standard deviation of the stored coefficient draws across $B$ iterations, and 95 percent confidence intervals are constructed as the 2.5th and 97.5th percentiles of the bootstrap distribution. All fixed effects and clustering are maintained within each bootstrap iteration.
+
+This bootstrap design has two important properties. First, by resampling at the field level, it respects the within-field serial correlation in the panel — all years of a given field enter the bootstrap sample together or not at all. Second, by wrapping all
+three stages in a single loop, the bootstrap correctly accounts for the covariance between the stage-1 residuals and the stage-2 weights, which a naive two-step bootstrap that treats stage-1 as fixed would miss.
+
+\subsection{\label{subsec:rot_score}Rotation Score}
+The four structural feature coefficients from the parsimonious stage-1 model admit a natural rotation scoring rule. For each field-year observation, we define the rotation score as:
+
+\begin{equation}
+    \text{score}_{it} = \hat{\tau}_1 \cdot \text{late\_soy}_{it} + \hat{\tau}_2 \cdot \text{soy\_cons}_{it} + \hat{\tau}_3 \cdot \text{soy\_gap}_{it} + \hat{\tau}_4 \cdot n\text{soy}_{it}
+\end{equation}
+
+where $\hat{\tau}_1, \ldots, \hat{\tau}_4$ are the QDANN stage-1 estimates from Table 1. The score summarizes, in units of predicted yield deviation from monoculture, the information contained in the six-year rotation history relevant to the conditional mean of corn yields. By construction, corn monoculture — which has no soybean years in the window — scores zero. The perfect alternating corn-soybean rotation scores approximately 2.59 bushels per acre above monoculture under the QDANN specification.
+
+Rotation sequences that score below zero have structural features that are predicted to lower mean yields relative to continuous corn; these sequences typically involve multiple consecutive soybean years or very infrequent soybean harvests that deplete
+the nitrogen and pest-suppression benefits of rotation. Sequences that score above zero have structural features associated with higher mean yields, particularly a recent soybean harvest and adequate spacing between soybean years.
+
+The rotation score maps all 64 binary six-year corn-soy sequences onto [$K$] distinct score values, providing a parsimonious and interpretable basis for rating that collapses the combinatorial rotation space into a single actuarial variable. In Section 5.3 we
+show that score-based yield predictions recover most of the variation captured by the full sequence-indicator model, and in Section 6 we discuss how the score could be incorporated into APH-based rate adjustments.
+
+\section{\label{sec:results}Results}
+\subsection{\label{subsec:seq_effects}Sequence-Level Effects on Corn Yield Mean}
+
+Table 2 and Figure 1 report the estimated effects of each of the 31 non-monoculture six-year corn-soy sequences on corn yield mean, relative to corn monoculture. The full set of coefficient estimates reveals a striking pattern: rotation effects are heterogeneous across sequences and depend critically on the recent history of soybean placement rather than on the total number of soybean years in the window.
+
+Several sequences significantly outperform corn monoculture in mean corn yield. The highest-performing sequences in the QDANN specification — those with estimated mean yield premiums exceeding 4 bushels per acre — share a common structural feature: a soybean harvest in year $t-1$ or $t-2$ (immediately or one year prior to the outcome corn year), regardless of what was planted in years $t-3$ through $t-6$. For example, $S-S-C-S-S-C$ (soybeans in years 6, 5, 3, and 2, corn in years 4 and 1) carries an estimated premium of 4.61 bushels per acre relative to monoculture (Table 2, column 2), and $S-C-S-C-S-C$ (the near-perfect alternating rotation with an additional soy lag) carries 4.12 bushels per acre. Both SCYM and QDANN yield consistent rankings at the top of the sequence distribution.
+
+
+    \newpage
+
+\input{tables/corn_stage1}
+    
+	\begin{figure}[H]
+    \centering
+    \includegraphics[scale = 0.55]{figures/corn_rot_plot.png}
+    \caption{Response of corn yields to rotation sequences}
+    \label{fig:corn_rot_plot}
+    \end{figure}
+
+    \begin{figure}[H]
+    \centering
+    \includegraphics[scale = 0.55]{figures/soy_rot_plot.png}
+    \caption{Response of soybean yields to rotation sequences}
+    \label{fig:soy_rot_plot}
+    \end{figure}
+
+    \newpage
+	\begin{figure}[H]
+    \centering
+    \includegraphics[scale = 0.55]{figures/corn_var_plot.png}
+    \caption{Response of the standard deviation of corn yields to rotation sequences}
+    \label{fig:corn_var_plot}
+    \end{figure}
+
+    \begin{figure}[H]
+    \centering
+    \includegraphics[scale = 0.55]{figures/soy_var_plot.png}
+    \caption{Response of standard deviation of soybean yields to rotation sequences}
+    \label{fig:soy_var_plot}
+    \end{figure}
+	
+	%\section{Results}
+	%\label{sec:results}
+    %Only a few sequences outperform corn monoculture in terms of higher mean/lower variance.
+    
+    %Both SCYM and QDANN yield similar results. 
+    
+    %Higher performing sequences have common elements:
+    %\begin{enumerate}
+    %    \item A recent soy rotation (year 1 or 2).
+    %   \item No consecutive soy years.
+    %    \item Low impact of older crops (first three years).
+    %    \item Perfect corn/soy rotation has positive but nonsignificant effects on yields, and reduces yield variance.
+    %\end{enumerate}
+
+    %We identified a set of rotation patterns that account for variations in first and second moments of corn yields.
+    %\begin{enumerate}
+    %    \item Soy Lag: equal to the number of lagged periods a soy harvest was detected since the most recent year (e.g. if the latest soy harvest was the previous year, it takes a value equal to -1).
+    %    \item Consecutive soy years: Dummy equal to 1 if a rotation pattern had two or more consecutive soy harvests.
+    %    \item Soy gap: minimum number of years between two soy harvests (e.g. if two years of soy harvests occur, then the soy gap is 0).
+    %    \item Number of soy harvests: how many times in the last seven years was a soy harvest detected?
+    %\end{enumerate}
+
+
+    \newpage
+    \begin{figure}[H]
+    \centering
+    \includegraphics[scale = 0.55]{figures/corn_rci_plot.png}
+    \caption{Changes on RCI and corn yields}
+    \label{fig:corn_rci_plot} 
+    \end{figure}
+
+    \begin{figure}[H]
+    \centering
+    \includegraphics[scale = 0.55]{figures/soy_rci_plot.png}
+    \caption{Changes in RCI and soybean yields}
+    \label{fig:soy_rci_plot} 
+    \end{figure}
+
+    We model average yields as a linear FE model:
+    \begin{equation*}
+        y_{it}=Z\tau_{it}+W_{it}\beta_{it}+\lambda_{k}+\gamma_{t}+\varepsilon_{it}
+    \end{equation*}
+    
+    Where: $Z = \left[late\_soy, soy\_cons,soy\_gap, nsoy\right]$
+    
+    \input{tables/yield_models}
+
+   % All four variables can be used to construct a \textbf{rotation score}:
+   % \begin{equation*}
+    %score_{it}=\hat{\beta}_{1}late\_soy_{it}+\hat{\beta}_{2}soy\_cons_{it}+\hat{\beta}_{3}soy\_gap_{it}+\hat{\beta}_{4}nsoy_{it}
+    %\end{equation*}
+    
+    %This score summarizes the information from the four variables and allows us to classify the 64 rotation patterns into a smaller set of values.
+    
+    %Score values for corn monoculture are 0, and for perfect rotation, 2.59.
+    
+    %We predict yields based on rotation score and summarize our findings.
+
+    %\begin{figure}[H]
+    %\centering
+    %\includegraphics[scale = 0.75]{figures/rot_score.png}
+    %\caption{Response of yields to rotation sequences}
+    %\label{fig:rot_score} 
+    %\end{figure}
+
+    %\begin{figure}[H]
+    %\centering
+    %\includegraphics[scale = 0.65]{figures/mean_var_score.png}
+    %\caption{Response of yields to score values}
+    %\label{fig:rot_score} 
+    %\end{figure}
+    
+	\newpage
+	\bibliography{bibliography.bib}
+
+    \newpage
+\clearpage
+\appendix
+ 
+\section{Rotation Patterns and Coefficient Tables}
+\label{app:full_tables}
+ 
+\begin{table}[H]
+  \centering
+  \caption{Just-Pope factor RCI: corn yield moments}
+  \label{tab:corn_rci_jp}
+  \begin{threeparttable}
+    \input{tables/corn_rci_jp.tex}
+    \begin{tablenotes}
+      \small
+      \item Notes: Column (1) reports stage-1 mean coefficients; column (2)
+      reports stage-2 OLS variance coefficients. Reference: RCI = 1.41.
+      Corn-soy fields only. Two-way clustering at field and year level.
+    \end{tablenotes}
+  \end{threeparttable}
+\end{table}
+ 
+\begin{table}[H]
+  \centering
+  \caption{Just-Pope factor RCI: soybean yield moments}
+  \label{tab:soy_rci_jp}
+  \begin{threeparttable}
+    \input{tables/soy_rci_jp.tex}
+    \begin{tablenotes}
+      \small
+      \item Notes: See Table~\ref{tab:corn_rci_jp} notes. Dependent variable
+      is soybean yield.
+    \end{tablenotes}
+  \end{threeparttable}
+\end{table}
+ 
+\begin{table}[H]
+  \centering
+  \caption{Effect of weather (VPD) and rotation sequences on corn yields}
+  \label{tab:corn_rot_vpd}
+  \begin{threeparttable}
+    \input{tables/corn_rot_vpd.tex}
+    \begin{tablenotes}
+      \small
+      \item Notes: VPD bins defined as: normal ($<$1.9 kPa), somewhat dry
+      (1.9--2.1 kPa), dry ($>$2.1 kPa). All bins measured in July (peak
+      corn stress period). Reference: normal VPD, corn monoculture.
+    \end{tablenotes}
+  \end{threeparttable}
+\end{table}
+ 
+\begin{table}[H]
+  \centering
+  \caption{Effect of weather (VPD) and rotation sequences on soybean yields}
+  \label{tab:soy_rot_vpd}
+  \begin{threeparttable}
+    \input{tables/soy_rot_vpd.tex}
+    \begin{tablenotes}
+      \small
+      \item Notes: See Table~\ref{tab:corn_rot_vpd} notes. Dependent variable
+      is soybean yield.
+    \end{tablenotes}
+  \end{threeparttable}
+\end{table}
+ 
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\textwidth]{figures/soy_yield_map}
+  \caption{QDANN soybean yields across Illinois, 2016.}
+  \label{fig:soy_yield_map}
+  \floatfoot{\footnotesize Notes: Spatial distribution of QDANN field-level
+  soybean yield estimates for Illinois in 2016. Source: \citet{maQDANN2024}.}
+\end{figure}
+ 
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\textwidth]{figures/nccpi_soy_map}
+  \caption{National Commodity Crop Productivity Index (soybeans) across Illinois.}
+  \label{fig:nccpi_soy_map}
+  \floatfoot{\footnotesize Notes: NCCPI soybean values at 30-meter resolution.
+  Source: gSSURGO, USDA-NRCS.}
+\end{figure}
+	
+\end{document}
