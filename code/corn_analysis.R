@@ -79,6 +79,64 @@ cat("Corn analysis sample:", nrow(corn_jp_data), "rows\n")
 # Free raw data — no longer needed
 rm(corn_df); gc()
 
+# ── Summary statistics table ──────────────────────────────────────────────────
+# Table: tab:summary — means and SDs by rotation type
+# Produced here because corn_jp_data contains all needed variables.
+# Written to tables/summary_stats.tex for \input{} in the manuscript.
+
+corn_jp_data |>
+  mutate(rotation_type = case_when(
+    as.character(rot_crop) == "C-C-C-C-C-C"               ~ "Corn monoculture",
+    as.character(rot_crop) %in% c("S-C-S-C-S-C",
+                                   "C-S-C-S-C-S")         ~ "Perfect rotation",
+    RCI >= 1.41 & RCI <= 2.00                              ~ "Transitioning",
+    TRUE                                                   ~ "Other"
+  )) |>
+  filter(rotation_type != "Other") |>
+  group_by(rotation_type) |>
+  summarise(
+    N               = n(),
+    `Corn yield`    = sprintf("%.1f (%.1f)", mean(corn_yield, na.rm=TRUE),
+                                              sd(corn_yield,   na.rm=TRUE)),
+    `RCI`           = sprintf("%.2f (%.2f)", mean(RCI,         na.rm=TRUE),
+                                              sd(RCI,          na.rm=TRUE)),
+    `Precip (Jun)`  = sprintf("%.1f (%.1f)", mean(pr_6,        na.rm=TRUE),
+                                              sd(pr_6,         na.rm=TRUE)),
+    `GDD (Jul)`     = sprintf("%.0f (%.0f)", mean(cGDD_7m,     na.rm=TRUE),
+                                              sd(cGDD_7m,      na.rm=TRUE)),
+    `EDD (Jul)`     = sprintf("%.1f (%.1f)", mean(EDD_7,       na.rm=TRUE),
+                                              sd(EDD_7,        na.rm=TRUE)),
+    `VPD (Jul)`     = sprintf("%.2f (%.2f)", mean(vpd_7,       na.rm=TRUE),
+                                              sd(vpd_7,        na.rm=TRUE)),
+    `AWC (mm)`      = sprintf("%.0f (%.0f)", mean(rootznaws_mean, na.rm=TRUE),
+                                              sd(rootznaws_mean,  na.rm=TRUE))
+  ) |>
+  mutate(rotation_type = factor(rotation_type,
+                                 levels = c("Corn monoculture",
+                                            "Perfect rotation",
+                                            "Transitioning"))) |>
+  arrange(rotation_type) |>
+  rename(`Rotation type` = rotation_type) |>
+  kable(format  = "latex",
+        booktabs = TRUE,
+        caption = "Summary statistics by rotation type",
+        label   = "summary",
+        align   = c("l","r","r","r","r","r","r","r","r")) |>
+  kable_styling(latex_options = c("hold_position", "scale_down")) |>
+  footnote(general = paste0(
+    "Means with standard deviations in parentheses. ",
+    "Corn yield in bushels per acre (QDANN). ",
+    "Precipitation in mm; GDD and EDD in degree-days; ",
+    "VPD in kPa; AWC in mm. ",
+    "Perfect rotation = alternating C-S sequence (S-C-S-C-S-C or C-S-C-S-C-S). ",
+    "Transitioning = sequences with RCI between 1.41 and 2.00. ",
+    "Sample: Illinois field-year observations, 2009--2022."
+  ),
+  general_title = "Notes:") |>
+  save_kable(file = paste0(tab_dir, "summary_stats.tex"))
+
+cat("Summary statistics table saved.\n")
+
 # ── 1. OLS mean model ─────────────────────────────────────────────────────────
 # Table: tab:corn_rot | Figure: corn_rot_plot
 
