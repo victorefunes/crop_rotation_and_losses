@@ -245,6 +245,65 @@ etable(soy_jp_s1,
 
 rm(soy_rot_nc, soy_rot); gc()
 
+# ── Z-vector model (confirmatory spec) ───────────────────────────────────────
+# Table: tab:zvector — Effect of rotation patterns on yields
+# This is the paper's main result table (Table 1 in the draft PDF).
+# Four structural features: late_soy, soy_gap, soy_cons, nsoy
+# Run on both corn and soy data, both mean and variance stages.
+# NOTE: requires late_soy, soy_gap, soy_cons, nsoy to be in corn_jp_data.
+# These must be constructed before this chunk runs.
+
+# Construct Z-vector variables if not already present
+# late_soy: negative integer = how many periods ago was the last soy harvest
+soy_jp_data <- soy_jp_data |>
+  mutate(
+    # Parse rotation sequence to find last soy year
+    seq_vec   = strsplit(as.character(rot_crop), "-"),
+    late_soy  = sapply(seq_vec, function(v) {
+      soy_pos <- which(rev(v) == "S")   # positions from most recent (1=t-1)
+      if (length(soy_pos) == 0) 0L else -min(soy_pos)
+    }),
+    soy_cons  = sapply(seq_vec, function(v) {
+      runs <- rle(v)
+      as.integer(any(runs$lengths[runs$values == "S"] >= 2))
+    }),
+    soy_gap   = sapply(seq_vec, function(v) {
+      pos <- which(v == "S")
+      if (length(pos) < 2) 0L else min(diff(pos))
+    }),
+    nsoy      = sapply(seq_vec, function(v) sum(v == "S"))
+  ) |>
+  select(-seq_vec)
+
+# Z-vector stage 1 — soy mean
+fml_z_soy_mean <- make_jp_formula("soy_yield",
+                                    "late_soy + soy_gap + soy_cons + nsoy",
+                                    all_controls_fgls)
+
+feols(fml_z_soy_mean, data = soy_jp_data,
+      cluster = ~tile_field_ID + year) -> soy_z_s1
+
+# Z-vector stage 2 — soy variance
+soy_jp_data <- soy_z_s1 |>
+  augment(newdata = soy_jp_data) |>
+  mutate(resid_sq_z = (soy_yield - .fitted)^2) |>
+  select(-starts_with("."))
+
+fml_z_soy_var <- make_jp_formula("resid_sq_z",
+                                   "late_soy + soy_gap + soy_cons + nsoy",
+                                   all_controls_fgls)
+
+feols(fml_z_soy_var, data = soy_jp_data,
+      cluster = ~tile_field_ID + year) -> soy_z_s2
+
+# ── Save Z-vector models for tables_combined.R ────────────────────────────────
+#saveRDS(
+#  list(s1 = soy_z_s1, s2 = soy_z_s2),
+#  file     = "C:/Users/vf006/Documents/soy_z_models.rds",
+#  compress = "bzip2"
+#)
+#cat("Soy Z-vector models saved.\n")        
+
 # ── 5. Just-Pope stage 2 — soy ────────────────────────────────────────────────
 # Table: tab:soy_jp_var | Figures: soy_var_plot, soy_coeff_plot, soy_jp_plot
 

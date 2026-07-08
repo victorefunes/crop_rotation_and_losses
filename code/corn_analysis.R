@@ -332,6 +332,65 @@ etable(corn_jp_s1, corn_jp_s1_lag1, corn_jp_s1_lag2, corn_jp_s1_idx,
 rm(corn_jp_s1_lag1, corn_jp_s1_lag2, corn_jp_s1_idx, corn_rot_nc, corn_rot)
 gc()
 
+# ── Z-vector model (confirmatory spec) ───────────────────────────────────────
+# Table: tab:zvector — Effect of rotation patterns on yields
+# This is the paper's main result table (Table 1 in the draft PDF).
+# Four structural features: late_soy, soy_gap, soy_cons, nsoy
+# Run on both corn and soy data, both mean and variance stages.
+# NOTE: requires late_soy, soy_gap, soy_cons, nsoy to be in corn_jp_data.
+# These must be constructed before this chunk runs.
+
+# Construct Z-vector variables if not already present
+# late_soy: negative integer = how many periods ago was the last soy harvest
+corn_jp_data <- corn_jp_data |>
+  mutate(
+    # Parse rotation sequence to find last soy year
+    seq_vec   = strsplit(as.character(rot_crop), "-"),
+    late_soy  = sapply(seq_vec, function(v) {
+      soy_pos <- which(rev(v) == "S")   # positions from most recent (1=t-1)
+      if (length(soy_pos) == 0) 0L else -min(soy_pos)
+    }),
+    soy_cons  = sapply(seq_vec, function(v) {
+      runs <- rle(v)
+      as.integer(any(runs$lengths[runs$values == "S"] >= 2))
+    }),
+    soy_gap   = sapply(seq_vec, function(v) {
+      pos <- which(v == "S")
+      if (length(pos) < 2) 0L else min(diff(pos))
+    }),
+    nsoy      = sapply(seq_vec, function(v) sum(v == "S"))
+  ) |>
+  select(-seq_vec)
+
+# Z-vector stage 1 — corn mean
+fml_z_corn_mean <- make_jp_formula("corn_yield",
+                                    "late_soy + soy_gap + soy_cons + nsoy",
+                                    all_controls_fgls)
+
+feols(fml_z_corn_mean, data = corn_jp_data,
+      cluster = ~tile_field_ID + year) -> corn_z_s1
+
+# Z-vector stage 2 — corn variance
+corn_jp_data <- corn_z_s1 |>
+  augment(newdata = corn_jp_data) |>
+  mutate(resid_sq_z = (corn_yield - .fitted)^2) |>
+  select(-starts_with("."))
+
+fml_z_corn_var <- make_jp_formula("resid_sq_z",
+                                   "late_soy + soy_gap + soy_cons + nsoy",
+                                   all_controls_fgls)
+
+feols(fml_z_corn_var, data = corn_jp_data,
+      cluster = ~tile_field_ID + year) -> corn_z_s2
+
+# ── Save Z-vector models for tables_combined.R ────────────────────────────────
+#saveRDS(
+#  list(s1 = corn_z_s1, s2 = corn_z_s2),
+#  file     = "C:/Users/vf006/Documents/corn_z_models.rds",
+#  compress = "bzip2"
+#)
+#cat("Corn Z-vector models saved.\n")  
+
 # ── 5. Just-Pope stage 2 — corn ───────────────────────────────────────────────
 # Table: tab:corn_jp_var | Figures: corn_var_plot, corn_coeff_plot, corn_jp_plot
 
