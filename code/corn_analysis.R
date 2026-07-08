@@ -347,7 +347,7 @@ feols(fml_corn_var, data = corn_jp_data, cluster = ~tile_field_ID+year) -> corn_
 # Table: tab:corn_jp_var
 etable(corn_jp_s2,
        tex      = TRUE,
-       keep     = "rot_crop",
+       keep     = "^[CS]-",
        dict     = rot_dict,
        se.below = FALSE,
        style.tex = style.tex("aer"),
