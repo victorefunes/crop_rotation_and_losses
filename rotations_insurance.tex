@@ -15,7 +15,7 @@
 \usepackage{subcaption}
 \usepackage{subfig}
 \usepackage[colorlinks=true,linkcolor=black,urlcolor=blue,citecolor=black]{hyperref}
-\usepackage{float}
+%\usepackage{float}
 \usepackage{floatrow}
 \usepackage{pgfplots}
 \usepackage[affil-it]{authblk}
@@ -75,6 +75,7 @@
 \date{}
 
 \begin{document}
+
 \maketitle
 \begin{abstract}
 \noindent
@@ -137,7 +138,7 @@ We measure rotation diversity using the Rotational Complexity Index (RCI) develo
 The RCI adapts the rotational diversity index of \cite{Tiemann2016}), which quantifies rotation diversity as a function of rotation length $l$ and number of crops $n$ $d = \sqrt{nl}$, to accommodate large-scale remotely sensed data where true rotation length is unobserved. Rather than trying to identify rotations of a known length, \cite{socolar2021} observe a fixed six-year sequence of crops in each field and replace rotation length with two species turnover terms. The resulting index is:
 
 \begin{equation}
-    RCI = \sqrt{n\times \dfrac{T_{1}+T_{2}+T_{p}}{2}}
+    RCI = \sqrt{n\times \dfrac{T_{1}+T_{2}+T_{p}}{2}}\label{eq:rci}
 \end{equation}
 
 Where $T_{1}$ is the one-year turnover, equal to the number of years in which the crop differs from the prior year; $T_{2}$ is the two-year turnover, equal to the number of years in which the crop differs from the crop grown two years prior; and $T_{p}$ is a pseudo-turnover term equal to the number of times a perennial crop (such as alfalfa or pasture) appears in two consecutive years. The $T_{p}$ term ensures that consecutive perennial plantings are not penalized for low turnover, reflecting the agronomic understanding that perennials provide soil health benefits even when repeated. 
@@ -168,7 +169,7 @@ Field-level crop histories come from the USDA Cropland Data Layer (CDL), an annu
 
 For each field-pixel and outcome year $t$, we construct a six-year rolling rotation sequence by recording the CDL-classified crop in each of years $t-1$ through $t-6$, classifying each year as corn (CDL code 1), soybean (CDL code 5), or other. We restrict the analysis to field-year observations satisfying three conditions: corn is the outcome crop in year $t$; the six-year history consists entirely of corn or soybean plantings with no years classified as other crops, fallow, or non-agricultural land cover; and the field appears in at least two consecutive years in the panel after singleton removal. The first two restrictions ensure that rotation sequences are clean binary strings over $\{corn, soybean\}$ and that the RCI and sequence indicators are well-defined. The third removes fields that appear in only one year and therefore contribute no identifying variation. After these restrictions, the estimation sample contains 1,548,319 field-year observations for QDANN and 1,411,846 for SCYM, the difference reflecting variation in the spatial coverage of the two estimators across Illinois counties.
 
-We characterize rotation histories in two complementary ways. The first is the full sequence of crop codes over the six-year window, which yields $2^6 = 64$ distinct binary sequences, of which 32 end in corn and are included in the corn yield regressions. Corn monoculture (coded $C-C-C-C-C-C$) serves as the reference category. The second characterization uses the RCI of \citet{socolar2021}, described in Section~\ref{sec:rci}.
+We characterize rotation histories in two complementary ways. The first is the full sequence of crop codes over the six-year window, which yields $2^6 = 64$ distinct binary sequences, of which 32 end in corn and are included in the corn yield regressions. Corn monoculture (coded $C-C-C-C-C-C$) serves as the reference category. The second characterization uses the RCI of \citet{socolar2021}, described in Section~\ref{subsec:rci}.
 
 \subsection{\label{subsec:w_controls}Weather Controls}
 Monthly precipitation totals, vapor pressure deficit (VPD), and a soil moisture index are derived from GRIDMET \citep{abatzoglou2013}, which is available at a spatial resolution of approximately 4 kilometers. We aggregate each variable to monthly totals or means for June, July, and August. Following \citet{SchlenkerRoberts2009}, we replace monthly mean temperature with growing degree days (GDD) accumulated between 8\textdegree C and 29\textdegree C, and extreme degree days (EDD) accumulated above 29\textdegree C. Climate water deficit data come from TerraClimate \citep{abatzoglou2018}.
@@ -232,7 +233,7 @@ Our main estimator follows the three-stage FGLS approach of \cite{Harvey1976} an
 We model the conditional mean of corn yields as a two-way fixed effects regression following the linear panel framework:
 
 \begin{equation}
-    y_{it}=\text{seq}_{it}'\tau+ W_{it}'\beta+\lambda_{k}+\gamma_{t}+\varepsilon_{it}
+    y_{it}=\text{seq}_{it}'\tau+ W_{it}'\beta+\lambda_{k}+\gamma_{t}+\varepsilon_{it}\label{eq:stage1}
 \end{equation}
 
 where $y_{it}$ is the yield of field $i$ year $t$ measured in bushels per acre; $\text{seq}_{it}$ is either a vector of rotation sequence indicators (with corn monoculture as the reference category) or a vector of factor RCI indicators (with the lowest observed RCI as the reference); $W_{it}$ is a vector of weather and soil controls described in Section 3.3; $\lambda_{k}$ is a county (FIPS) fixed effect; and $\gamma_{t}$ is a year fixed effect. The error term $\varepsilon_{it}$ is assumed to
@@ -271,7 +272,7 @@ To separately identify the effect of rotations on yield risk, we follow \cite{Ju
 the residual from the stage-1 conditional mean regression. The second moment is then estimated as:
 
 \begin{equation}
-    \hat{u}_{it}^2 = \text{seq}_{it}'\pi + W_{it}'\delta + \lambda_k + \gamma_t + \nu_{it}
+    \hat{u}_{it}^2 = \text{seq}_{it}'\pi + W_{it}'\delta + \lambda_k + \gamma_t + \nu_{it}\label{eq:stage2}
 \end{equation}
 
 Coefficients $\hat{\pi}$ identify the differential effect of each rotation sequence on the conditional variance of yields, relative to the monoculture reference. A negative coefficient indicates that a given sequence compresses yield variance relative to monoculture — a risk-reducing effect directly relevant to insurance pricing. A positive coefficient indicates that the sequence raises variance, increasing actuarial risk at any given mean yield level.
