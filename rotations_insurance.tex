@@ -292,7 +292,7 @@ three stages in a single loop, the bootstrap correctly accounts for the covarian
 The four structural feature coefficients from the parsimonious stage-1 model admit a natural rotation scoring rule. For each field-year observation, we define the rotation score as:
 
 \begin{equation}
-    \text{score}_{it} = \hat{\tau}_1 \cdot \text{late\_soy}_{it} + \hat{\tau}_2 \cdot \text{soy\_cons}_{it} + \hat{\tau}_3 \cdot \text{soy\_gap}_{it} + \hat{\tau}_4 \cdot n\text{soy}_{it}
+    \text{score}_{it} = \hat{\tau}_1 \cdot \text{late\_soy}_{it} + \hat{\tau}_2 \cdot \text{soy\_cons}_{it} + \hat{\tau}_3 \cdot \text{soy\_gap}_{it} + \hat{\tau}_4 \cdot n\text{soy}_{it}\label{eq:score}
 \end{equation}
 
 where $\hat{\tau}_1, \ldots, \hat{\tau}_4$ are the QDANN stage-1 estimates from Table 1. The score summarizes, in units of predicted yield deviation from monoculture, the information contained in the six-year rotation history relevant to the conditional mean of corn yields. By construction, corn monoculture — which has no soybean years in the window — scores zero. The perfect alternating corn-soybean rotation scores approximately 2.59 bushels per acre above monoculture under the QDANN specification.
@@ -567,7 +567,25 @@ Crop rotation history contains actuarially significant information about both th
   Source: gSSURGO, USDA-NRCS.}
 \end{figure}
  
-
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figures/score_yield}
+  \caption{Response of corn yields to rotation score values.}
+  \label{fig:score_yield}
+  \floatfoot{\footnotesize Notes: Each row corresponds to one of the 14 distinct
+  rotation score values, sorted in ascending order on the vertical axis. The
+  rotation score is computed from equation~\eqref{eq:score} using the four
+  Z-vector coefficients from Table~\ref{tab:zvector}: $\text{score}_{it} =
+  \hat{\tau}_1 \cdot \text{late\_soy}_{it} + \hat{\tau}_2 \cdot
+  \text{soy\_cons}_{it} + \hat{\tau}_3 \cdot \text{soy\_gap}_{it} +
+  \hat{\tau}_4 \cdot n\text{soy}_{it}$. Left panel: stage-1 coefficient on mean
+  corn yield (bushels per acre) from equation~\eqref{eq:stage1} with full
+  rotation sequence indicators. Right panel: stage-2 OLS coefficient on
+  conditional yield variance from equation~\eqref{eq:stage2}. Horizontal bars
+  are 95\% confidence intervals. Reference: corn monoculture (score $= 0$).
+  Two-way clustering at field and year level. Source: QDANN yield estimates,
+  \citet{Ma2024}; CDL rotation histories, USDA-NASS.}
+\end{figure}
  
 \begin{figure}[H]
   \centering
