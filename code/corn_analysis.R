@@ -202,15 +202,16 @@ ggsave(paste0(fig_dir, "corn_rot_plot.png"), corn_rot_plot,
 # ── 2. RCI models — corn ──────────────────────────────────────────────────────
 # Table: tab:corn_rci | Figure: corn_rci_plot
 
-corn_rci_formula <- make_jp_formula("corn_yield", "RCI", all_controls)
+corn_rci_nc <- make_jp_formula("corn_yield", "RCI", NULL)
+corn_rci_cs <- make_jp_formula("corn_yield", "RCI", all_controls)
 
 corn_jp_data |>
   mutate(RCI = factor(RCI)) |>
-  feols(corn_rci_formula, data = _, cluster = ~COUNTY_FIPS) -> corn_rci_all
+  feols(corn_rci_nc, data = _, cluster = ~COUNTY_FIPS) -> corn_rci_all
 
 corn_jp_data |>
   mutate(RCI = factor(RCI)) |>
-  feols(corn_rci_formula, data = _, cluster = ~COUNTY_FIPS) -> corn_rci_cs
+  feols(corn_rci_cs, data = _, cluster = ~COUNTY_FIPS) -> corn_rci_cs
 
 etable(corn_rci_all, corn_rci_cs,
        tex      = TRUE,

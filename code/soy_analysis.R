@@ -126,15 +126,16 @@ ggsave(paste0(fig_dir, "soy_rot_plot.png"), soy_rot_plot,
 # ── 2. RCI models — soy ───────────────────────────────────────────────────────
 # Table: tab:soy_rci | Figure: soy_rci_plot
 
-soy_rci_formula <- make_jp_formula("soy_yield", "RCI", all_controls)
+soy_rci_nc <- make_jp_formula("soy_yield", "RCI", NULL)
+soy_rci_cs <- make_jp_formula("soy_yield", "RCI", all_controls)
 
 soy_jp_data |>
   mutate(RCI = factor(RCI)) |>
-  feols(soy_rci_formula, data = _, cluster = ~COUNTY_FIPS) -> soy_rci_all
+  feols(soy_rci_nc, data = _, cluster = ~COUNTY_FIPS) -> soy_rci_all
 
 soy_jp_data |>
   mutate(RCI = factor(RCI)) |>
-  feols(soy_rci_formula, data = _, cluster = ~COUNTY_FIPS) -> soy_rci_cs
+  feols(soy_rci_cs, data = _, cluster = ~COUNTY_FIPS) -> soy_rci_cs
 
 etable(soy_rci_all, soy_rci_cs,
        tex      = TRUE,
