@@ -242,7 +242,7 @@ ggsave(paste0(fig_dir, "rot_pca_plot.png"), rot_pca_plot,
 # ── Bootstrap function (shared) ───────────────────────────────────────────────
 
 boot_jp_fgls <- function(dt, fml_mean, fml_var, fml_var_b,
-                          B = 499, seed = 42) {
+                          B = 499, seed = 42, n_workers = NULL) {
   dt <- as.data.table(dt)
 
   # Remove singletons iteratively until stable
@@ -254,10 +254,25 @@ boot_jp_fgls <- function(dt, fml_mean, fml_var, fml_var_b,
   }
   cat("Rows after singleton removal:", nrow(dt), "\n")
 
+  # Keep only the columns the formulas actually reference. dt gets broadcast
+  # to every bootstrap worker process below, so trimming unused columns here
+  # (e.g. RCI, rotation lag dummies) bounds peak memory across workers.
+  required_cols <- unique(c(all.vars(fml_mean), all.vars(fml_var),
+                             all.vars(fml_var_b), "tile_field_ID", "year"))
+  dt <- dt[, .SD, .SDcols = intersect(required_cols, names(dt))]
+  cat("Columns kept for bootstrap:", ncol(dt), "\n")
+
+  # nthreads: threads used *within* one feols call (shared memory, cheap).
+  # n_workers: separate R processes for the parallel bootstrap below — each
+  # holds its own full copy of dt, so this is the memory-multiplying knob.
+  # Default to half the cores rather than detectCores()-1 to leave headroom;
+  # lower it further (or slim dt more) if you still see out-of-memory errors.
   n_threads <- parallel::detectCores() - 1L
+  if (is.null(n_workers)) n_workers <- max(1L, parallel::detectCores() %/% 2L)
   set.seed(seed)
-  fields   <- unique(dt$tile_field_ID)
-  n_fields <- length(fields)
+  fields    <- unique(dt$tile_field_ID)
+  n_fields  <- length(fields)
+  field_idx <- match(dt$tile_field_ID, fields)
 
   # Point estimates on full data
   s1 <- feols(fml_mean, data = dt,
@@ -277,53 +292,58 @@ boot_jp_fgls <- function(dt, fml_mean, fml_var, fml_var_b,
                cluster  = c("tile_field_ID", "year"),
                nthreads = n_threads, warn = FALSE, notes = FALSE)
 
-  coef_hat  <- coef(s2b)
-  coef_boot <- matrix(NA, nrow = B, ncol = length(coef_hat),
-                      dimnames = list(NULL, names(coef_hat)))
+  coef_hat <- coef(s2b)
 
-  for (b in seq_len(B)) {
-    cat("\rBootstrap iteration", b, "of", B, "  ")
-
-    drawn     <- table(sample(fields, n_fields, replace = TRUE))
-    drawn_tbl <- data.table(tile_field_ID = names(drawn),
-                            boot_w        = as.numeric(drawn))
-    dt[drawn_tbl, boot_w := i.boot_w, on = "tile_field_ID"]
-    dt[is.na(boot_w), boot_w := 0L]
+  # ── Bootstrap, parallelized across iterations (one core per draw) ──────────
+  boot_one <- function(b, dt, n_fields, field_idx, fml_mean, fml_var_b) {
+    draws  <- tabulate(sample.int(n_fields, n_fields, replace = TRUE), n_fields)
+    boot_w <- draws[field_idx]
+    keep   <- boot_w > 0
 
     tryCatch({
-      dt_b <- dt[boot_w > 0]
+      dt_b <- dt[keep]
+      dt_b[, boot_w := boot_w[keep]]
 
       b1 <- feols(fml_mean, data = dt_b, weights = ~boot_w,
-                  vcov = "iid", nthreads = n_threads,
-                  warn = FALSE, notes = FALSE)
+                  vcov = "iid", nthreads = 1, warn = FALSE, notes = FALSE)
       dt_b[, resid_sq_b := NA_real_]
       dt_b[obs(b1), resid_sq_b := residuals(b1)^2]
 
       b2a <- feols(fml_var_b, data = dt_b, weights = ~boot_w,
-                   vcov = "iid", nthreads = n_threads,
-                   warn = FALSE, notes = FALSE)
+                   vcov = "iid", nthreads = 1, warn = FALSE, notes = FALSE)
       dt_b[, h_hat_b    := NA_real_]
       dt_b[obs(b2a), h_hat_b := pmax(fitted(b2a), 1e-6)]
       dt_b[, combined_w := boot_w / h_hat_b]
 
       b2b <- feols(fml_var_b, data = dt_b, weights = ~combined_w,
-                   vcov = "iid", nthreads = n_threads,
-                   warn = FALSE, notes = FALSE)
+                   vcov = "iid", nthreads = 1, warn = FALSE, notes = FALSE)
 
-      coef_boot[b, ] <- coef(b2b)
-
+      coef(b2b)
     }, error = function(e) {
-      cat("\nBootstrap iteration", b, "failed:", conditionMessage(e), "\n")
+      cat("Bootstrap iteration", b, "failed:", conditionMessage(e), "\n")
+      NULL
     })
-
-    dt[, boot_w := NULL]
-
-    if (b %% 100 == 0) {
-      saveRDS(coef_boot, paste0("boot_progress_", b, ".rds"))
-      gc()
-    }
   }
-  cat("\n")
+
+  cl <- parallel::makeCluster(n_workers)
+  on.exit(try(parallel::stopCluster(cl), silent = TRUE), add = TRUE)
+  parallel::clusterEvalQ(cl, { library(data.table); library(fixest) })
+  parallel::clusterSetRNGStream(cl, seed)
+
+  cat("Running", B, "bootstrap iterations on", n_workers, "workers...\n")
+  boot_results <- parallel::parLapply(
+    cl, seq_len(B), boot_one,
+    dt = dt, n_fields = n_fields, field_idx = field_idx,
+    fml_mean = fml_mean, fml_var_b = fml_var_b
+  )
+  cat("Bootstrap complete.\n")
+
+  coef_boot <- matrix(NA_real_, nrow = B, ncol = length(coef_hat),
+                       dimnames = list(NULL, names(coef_hat)))
+  for (b in seq_len(B)) {
+    res <- boot_results[[b]]
+    if (!is.null(res)) coef_boot[b, names(res)] <- res
+  }
 
   boot_se <- apply(coef_boot, 2, sd,       na.rm = TRUE)
   boot_ci <- apply(coef_boot, 2, quantile, probs = c(0.025, 0.975), na.rm = TRUE)
