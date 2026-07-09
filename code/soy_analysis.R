@@ -177,6 +177,9 @@ rm(soy_rci_all, soy_rci_cs); gc()
 # ── 3. VPD interaction models — soy ──────────────────────────────────────────
 # Tables: tab:soy_rot_vpd, tab:soy_rci_vpd
 
+feols(soy_yield ~ rot_crop + vpd_name | tile_field_ID + year,
+      data = soy_jp_data, cluster = ~COUNTY_FIPS) -> soy_rot_vpd_nc
+
 soy_vpd_formula     <- make_jp_formula("soy_yield", "rot_crop + vpd_name",
                                         all_controls)
 soy_rci_vpd_formula <- make_jp_formula("soy_yield",  "RCI * vpd_name",
@@ -211,7 +214,8 @@ etable(soy_rci_vpd,
        label    = "tab:soy_rci_vpd",
        file     = paste0(tab_dir, "soy_rci_vpd.tex"))
 
-rm(soy_rot_vpd, soy_rci_vpd); gc()
+#rm(soy_rot_vpd, soy_rci_vpd); 
+gc()
 
 # ── 4. Just-Pope stage 1 — soy ────────────────────────────────────────────────
 # Table: tab:soy_jp_mean
@@ -298,11 +302,13 @@ feols(fml_z_soy_var, data = soy_jp_data,
 
 # ── Save Z-vector models for tables_combined.R ────────────────────────────────
 #saveRDS(
-#  list(s1 = soy_z_s1, s2 = soy_z_s2),
+#  list(z_s1        = soy_z_s1,
+#       z_s2        = soy_z_s2,
+#       rot_vpd_nc  = soy_rot_vpd_nc,
+#       rot_vpd     = soy_rot_vpd),
 #  file     = "C:/Users/vf006/Documents/soy_z_models.rds",
 #  compress = "bzip2"
-#)
-#cat("Soy Z-vector models saved.\n")        
+#)  
 
 # ── 5. Just-Pope stage 2 — soy ────────────────────────────────────────────────
 # Table: tab:soy_jp_var | Figures: soy_var_plot, soy_coeff_plot, soy_jp_plot

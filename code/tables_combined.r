@@ -40,10 +40,15 @@ if (length(missing) > 0) {
 corn_z <- readRDS(corn_rds)
 soy_z  <- readRDS(soy_rds)
 
-corn_z_s1 <- corn_z$s1
-corn_z_s2 <- corn_z$s2
-soy_z_s1  <- soy_z$s1
-soy_z_s2  <- soy_z$s2
+corn_z_s1       <- corn_z$z_s1
+corn_z_s2       <- corn_z$z_s2
+corn_rot_vpd_nc <- corn_z$rot_vpd_nc
+corn_rot_vpd    <- corn_z$rot_vpd
+
+soy_z_s1        <- soy_z$z_s1
+soy_z_s2        <- soy_z$z_s2
+soy_rot_vpd_nc  <- soy_z$rot_vpd_nc
+soy_rot_vpd     <- soy_z$rot_vpd
 
 cat("Corn Z-vector stage 1 obs:", nobs(corn_z_s1), "\n")
 cat("Corn Z-vector stage 2 obs:", nobs(corn_z_s2), "\n")
@@ -88,6 +93,36 @@ etable(corn_z_s1, corn_z_s2, soy_z_s1, soy_z_s2,
        file = paste0(tab_dir, "zvector.tex"))
 
 cat("Z-vector table saved to:", paste0(tab_dir, "zvector.tex"), "\n")
+
+
+# ── Table: tab:rot_vpd — Rotation x VPD, corn and soy combined ───────────────
+# Four columns: corn (no controls), corn (with controls),
+#               soy  (no controls), soy  (with controls)
+# Standard errors reported below each coefficient (se.below = TRUE)
+
+etable(
+  corn_rot_vpd_nc, corn_rot_vpd,   # corn: no controls, with controls
+  soy_rot_vpd_nc,  soy_rot_vpd,    # soy:  no controls, with controls
+  tex       = TRUE,
+  dict      = c(dict_corn, dict_soy, dict_vpd),
+  headers   = list(
+    "Corn yields" = 2,              # span first two columns
+    "Soy yields"  = 2               # span last two columns
+  ),
+  keep_raw  = c(names(dict_corn), names(dict_soy),
+                "vpd_namesomewhat dry", "vpd_namedry"),
+  drop      = c("pr_", "cGDD_", "EDD_", "soil_", "vpd_6", "vpd_7", "vpd_8",
+                "rootznaws", "Constant"),
+  se.below  = TRUE,                 # SEs on separate row below coefficient
+  style.tex = style.tex("aer"),
+  replace   = TRUE,
+  title     = "Effect of weather and rotation sequences on corn and soybean yields",
+  label     = "tab:rot_vpd",
+  extralines = list(
+    "_Controls" = c("No", "Yes", "No", "Yes")
+  ),
+  file = paste0(tab_dir, "rot_vpd.tex")
+)
 
 # ── Sanity check: compare to draft PDF Table 1 ────────────────────────────────
 # Expected values from draft (QDANN mean column):
