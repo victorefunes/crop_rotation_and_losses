@@ -78,6 +78,7 @@ etable(soy_rot_nc, soy_rot,
        headers  = c("No controls", "With controls"),
        drop     = c("pr_", "cGDD_", "EDD_", "soil_", "vpd_",
                     "rootznaws", "Constant"),
+       placement = "H",
        style.tex = style.tex("aer"),
        replace  = TRUE, se.below = FALSE,
        title    = "Rotation patterns and soybean yields",
@@ -140,6 +141,7 @@ etable(soy_rci_all, soy_rci_cs,
        dict     = dict_rci,
        headers  = c("All crops", "Corn and soybeans only"),
        keep     = "RCI",
+       placement = "H",
        style.tex = style.tex("aer"),
        replace  = TRUE, se.below = FALSE,
        title    = "Rotation Complexity and soybean yields",
@@ -197,6 +199,7 @@ etable(soy_rot_vpd,
        dict     = c(dict_soy, dict_vpd),
        drop     = c("pr_", "cGDD_", "EDD_", "soil_", "vpd_",
                     "rootznaws", "Constant"),
+       placement = "H",
        style.tex = style.tex("aer"),
        replace  = TRUE,
        title    = "Effect of weather and rotation sequences on soybean yields",
@@ -208,6 +211,7 @@ etable(soy_rci_vpd,
        dict     = dict_vpd,
        drop     = c("pr_", "cGDD_", "EDD_", "soil_", "vpd_",
                     "rootznaws", "Constant"),
+       placement = "H",
        style.tex = style.tex("aer"),
        replace  = TRUE,
        title    = "RCI x drought interaction effects on soybean yields",
@@ -241,6 +245,7 @@ etable(soy_jp_s1,
        dict     = soy_rot_dict,
        notes    = bh_note_soy,
        se.below = FALSE,
+       placement = "H",
        style.tex = style.tex("aer"),
        replace  = TRUE,
        title    = "Stage 1 — Soybean yield conditional mean",
@@ -327,6 +332,7 @@ etable(soy_jp_s2,
        keep     = "rot_crop",
        dict     = soy_rot_dict,
        se.below = FALSE,
+       placement = "H",
        style.tex = style.tex("aer"),
        replace  = TRUE,
        title    = "Stage 2 — Soybean yield conditional variance (OLS)",
@@ -464,6 +470,7 @@ etable(soy_rci_jp_s1, soy_rci_jp_s2,
        dict     = dict_rci,
        headers  = c("Mean", "Variance"),
        se.below = FALSE,
+       placement = "H",
        style.tex = style.tex("aer"),
        replace  = TRUE,
        title    = "Just-Pope: factor RCI and soybean yield moments",
@@ -504,12 +511,27 @@ etable(soy_jp_s1, soy_jp_s2a, soy_jp_s2b,
 
 rm(soy_jp_s2a); gc()
 
-gc()
+source("save_models_lean.R")
 boot_soy <- boot_jp_fgls(soy_jp_data, fml_mean, fml_var, fml_var_b,
-                          B = 499, seed = 42)
-saveRDS(boot_soy,
-        "C:/Users/vf006/Documents/boot_soy.rds",
-        compress = "xz")
+                          B = 499, seed = 42, n_workers = 4)
+
+saveRDS(
+  list(
+    z_s1        = lean_feols(soy_z_s1),
+    z_s2        = lean_feols(soy_z_s2),
+    jp_s1       = lean_feols(soy_jp_s1),
+    jp_s2       = lean_feols(soy_jp_s2),
+    rot_vpd_nc  = lean_feols(soy_rot_vpd_nc),
+    rot_vpd     = lean_feols(soy_rot_vpd),
+    boot        = lean_boot(boot_soy),
+    z_coefs     = coef(soy_z_s1)
+  ),
+  file     = "C:/Users/vf006/Documents/soy_z_models.rds",
+  compress = "bzip2"
+)
+cat("Soy lean models saved. File size:",
+    round(file.size("C:/Users/vf006/Documents/soy_z_models.rds") / 1e6, 1),
+    "MB\n")
 
 rm(soy_jp_data, soy_jp_s1, soy_jp_s2b, boot_soy); gc()
 

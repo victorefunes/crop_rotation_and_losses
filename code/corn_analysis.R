@@ -123,16 +123,16 @@ corn_jp_data |>
         label   = "summary",
         align   = c("l","r","r","r","r","r","r","r","r")) |>
   kable_styling(latex_options = c("hold_position", "scale_down")) |>
-  footnote(general = paste0(
-    "Means with standard deviations in parentheses. ",
-    "Corn yield in bushels per acre (QDANN). ",
-    "Precipitation in mm; GDD and EDD in degree-days; ",
-    "VPD in kPa; AWC in mm. ",
-    "Perfect rotation = alternating C-S sequence (S-C-S-C-S-C or C-S-C-S-C-S). ",
-    "Transitioning = sequences with RCI between 1.41 and 2.00. ",
-    "Sample: Illinois field-year observations, 2009--2022."
-  ),
-  general_title = "Notes:") |>
+  #footnote(general = paste0(
+  #  "Means with standard deviations in parentheses. ",
+  #  "Corn yield in bushels per acre (QDANN). ",
+  #  "Precipitation in mm; GDD and EDD in degree-days; ",
+  #  "VPD in kPa; AWC in mm. ",
+  #  "Perfect rotation = alternating C-S sequence (S-C-S-C-S-C or C-S-C-S-C-S). ",
+  #  "Transitioning = sequences with RCI between 1.41 and 2.00. ",
+  #  "Sample: Illinois field-year observations, 2009--2022."
+  #),
+  #general_title = "Notes:") |>
   save_kable(file = paste0(tab_dir, "summary_stats.tex"))
 
 cat("Summary statistics table saved.\n")
@@ -154,6 +154,7 @@ etable(corn_rot_nc, corn_rot,
        headers  = c("No controls", "With controls"),
        drop     = c("pr_", "cGDD_", "EDD_", "soil_", "vpd_",
                     "rootznaws", "Constant"),
+       placement = "H",
        style.tex = style.tex("aer"),
        replace  = TRUE, se.below = FALSE,
        title    = "Rotation patterns and corn yields",
@@ -216,6 +217,7 @@ etable(corn_rci_all, corn_rci_cs,
        dict     = dict_rci,
        headers  = c("All crops", "Corn and soybeans only"),
        keep     = "RCI",
+       placement = "H",
        style.tex = style.tex("aer"),
        replace  = TRUE, se.below = FALSE,
        title    = "Rotation Complexity and corn yields",
@@ -273,6 +275,7 @@ etable(corn_rot_vpd,
        dict     = c(dict_corn, dict_vpd),
        drop     = c("pr_", "cGDD_", "EDD_", "soil_", "vpd_",
                     "rootznaws", "Constant"),
+       placement = "H",
        style.tex = style.tex("aer"),
        replace  = TRUE,
        title    = "Effect of weather and rotation sequences on corn yields",
@@ -284,6 +287,7 @@ etable(corn_rci_vpd,
        dict     = dict_vpd,
        drop     = c("pr_", "cGDD_", "EDD_", "soil_", "vpd_",
                     "rootznaws", "Constant"),
+       placement = "H",
        style.tex = style.tex("aer"),
        replace  = TRUE,
        title    = "RCI x drought interaction effects on corn yields",
@@ -327,6 +331,7 @@ etable(corn_jp_s1, corn_jp_s1_lag1, corn_jp_s1_lag2, corn_jp_s1_idx,
        dict     = rot_dict,
        notes    = bh_note_corn,
        se.below = FALSE,
+       placement = "H",
        style.tex = style.tex("aer"),
        replace  = TRUE,
        title    = "Stage 1 — Corn yield: full sequences vs lag summary variables",
@@ -415,6 +420,7 @@ etable(corn_jp_s2,
        keep     = "^[CS]-",
        dict     = rot_dict,
        se.below = FALSE,
+       placement = "H",
        style.tex = style.tex("aer"),
        replace  = TRUE,
        title    = "Stage 2 — Corn yield conditional variance (OLS)",
@@ -641,6 +647,7 @@ etable(corn_rci_jp_s1, corn_rci_jp_s2,
        dict     = dict_rci,
        headers  = c("Mean", "Variance"),
        se.below = FALSE,
+       placement = "H",
        style.tex = style.tex("aer"),
        replace  = TRUE,
        title    = "Just-Pope: factor RCI and corn yield moments",
@@ -715,12 +722,41 @@ etable(corn_jp_s1, corn_jp_s2a, corn_jp_s2b,
 
 rm(corn_jp_s2a); gc()
 
-gc()
+source("save_models_lean.R")
 boot_corn <- boot_jp_fgls(corn_jp_data, fml_mean, fml_var, fml_var_b,
-                           B = 499, seed = 42)
-saveRDS(boot_corn,
-        "C:/Users/vf006/Documents/boot_corn.rds",
-        compress = "xz")
+                           B = 499, seed = 42, n_workers = 4)
+
+saveRDS(
+  list(
+    # Z-vector models — lean extracts only
+    z_s1         = lean_feols(corn_z_s1),
+    z_s2         = lean_feols(corn_z_s2),
+    # Full sequence models needed for score_yield figure
+    jp_s1        = lean_feols(corn_jp_s1),
+    jp_s2        = lean_feols(corn_jp_s2),
+    # VPD models
+    rot_vpd_nc   = lean_feols(corn_rot_vpd_nc),
+    rot_vpd      = lean_feols(corn_rot_vpd),
+    # Bootstrap — lean strips embedded data from feols objects inside
+    boot         = lean_boot(boot_corn),
+    # Score construction inputs — just the coefficient vector
+    z_coefs      = coef(corn_z_s1),
+    # Score data frame — sequence-level feature averages (small)
+    score_df     = corn_jp_data |>
+                     group_by(rot_crop) |>
+                     summarise(late_soy = mean(late_soy, na.rm = TRUE),
+                               soy_gap  = mean(soy_gap,  na.rm = TRUE),
+                               soy_cons = mean(soy_cons, na.rm = TRUE),
+                               nsoy     = mean(nsoy,     na.rm = TRUE),
+                               .groups  = "drop")
+  ),
+  file     = "C:/Users/vf006/Documents/corn_z_models.rds",
+  compress = "bzip2"
+)
+
+cat("Corn lean models saved. File size:",
+    round(file.size("C:/Users/vf006/Documents/corn_z_models.rds") / 1e6, 1),
+    "MB\n")
 
 rm(corn_jp_data, corn_jp_s1, corn_jp_s2b, boot_corn); gc()
 
