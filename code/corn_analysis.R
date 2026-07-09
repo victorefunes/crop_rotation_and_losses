@@ -216,7 +216,7 @@ corn_jp_data |>
 etable(corn_rci_all, corn_rci_cs,
        tex      = TRUE,
        dict     = dict_rci,
-       headers  = c("All crops", "Corn and soybeans only"),
+       headers  = c("No controls", "Weather and soil controls"),
        keep     = "RCI",
        placement = "H",
        style.tex = style.tex("aer"),
