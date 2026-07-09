@@ -162,7 +162,35 @@ The second estimator is QDANN (Quantile Loss Domain Adversarial Neural Networks)
 
 We treat QDANN as the preferred specification given its higher reported accuracy, its ability to characterize the full conditional yield distribution rather than just the conditional mean, and its explicit design for field-level inference. SCYM results are reported alongside throughout as a robustness check. The consistency of rotation effect estimates across the two estimators — which use entirely different modeling approaches, training objectives, and domain adaptation strategies — serves as an informal validation of both yield datasets and the econometric design; here we additionally validate those yield moments against the independent SCYM series.
 
-Figure~\ref{fig:corn_yield_map} shows the spatial distribution of QDANN corn yields across Illinois in 2016, and  Figure~\ref{fig:rci_map} shows the corresponding distribution of RCI values. The maps reveal the expected geographic concentration of high-productivity, high-rotation-complexity fields in the central Illinois Corn Belt.
+Figure~\ref{fig:corn_yield_map} shows the spatial distribution of QDANN corn yields across Illinois in 2016, Figure~\ref{fig:soy_yield_map} shows the corresponding soybean yield distribution, and Figure~\ref{fig:rci_map} shows the distribution of RCI values. The maps reveal the expected geographic concentration of high-productivity, high-rotation-complexity fields in the central Illinois Corn Belt.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\textwidth]{figures/corn_yield_map}
+  \caption{QDANN corn yields across Illinois, 2016.}
+  \label{fig:corn_yield_map}
+  \floatfoot{\footnotesize Notes: Spatial distribution of QDANN field-level corn
+  yield estimates for Illinois in 2016. Source: \citet{Ma2024}.}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\textwidth]{figures/soy_yield_map}
+  \caption{QDANN soybean yields across Illinois in 2016.}
+  \label{fig:soy_yield_map}
+  \floatfoot{\footnotesize Notes: Spatial distribution of QDANN field-level soybean
+  yield estimates for Illinois in 2016. Source: \citet{Ma2024}.}
+\end{figure}
+ 
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\textwidth]{figures/rci_map}
+  \caption{Rotational Complexity Index across Illinois, 2016.}
+  \label{fig:rci_map}
+  \floatfoot{\footnotesize Notes: Spatial distribution of RCI values computed from
+  six-year CDL crop histories at 30-meter resolution. Source: \citet{socolar2021};
+  CDL data from USDA-NASS.}
+\end{figure}
 
 \subsection{\label{subsec:rot_seq}Crop History and Rotation Sequences}
 Field-level crop histories come from the USDA Cropland Data Layer (CDL), an annual raster product produced by NASS that classifies each 30-meter pixel into a crop or land-cover category using satellite imagery and agricultural survey reference data. CDL has been available annually since 2008 for the full contiguous United States and since 2003 for Illinois. We use annual CDL data from 2003 to 2022 for Illinois, providing up to 20 years of rotation history for each field.
@@ -186,11 +214,11 @@ The estimation sample is constructed by merging the QDANN and SCYM yield rasters
   %\label{tab:summary}
   %\begin{threeparttable}
     \input{tables/summary_stats.tex}
-    \begin{tablenotes}
+    \begin{minipage}{\textwidth}
       \footnotesize
-      \item Notes: Means and standard deviations (in parentheses) for QDANN corn yields and key covariates, by rotation type.      
+      Notes: Means and standard deviations (in parentheses) for QDANN corn yields and key covariates, by rotation type.      
       Corn monoculture = C-C-C-C-C-C; Perfect rotation = alternating C-S sequence; Transitioning = sequences with RCI between 1.41 and 2.00.
-    \end{tablenotes}
+    \end{minipage}
   %\end{threeparttable}
 %\end{table}
 	
@@ -248,11 +276,7 @@ County fixed effects absorb all time-invariant differences across counties in av
   \includegraphics[width=0.75\textwidth]{figures/rot_pca_plot}
   \caption{PCA biplot of corn-soy rotation features.}
   \label{fig:rot_pca_plot}
-  \floatfoot{\footnotesize Notes: Biplot of the first two principal components
-  across the 18 distinct RCI values observed in the Illinois corn-soy sample.
-  PC1 explains 83.3\% and PC2 explains 9.6\% of total variance. Red arrows show
-  loadings of four rotation summary features: $n\_\text{soy}$, $\text{no\_consec}$,
-  $\text{tight\_soy}$, and $\text{free\_soy}$.}
+  \floatfoot{\footnotesize Notes: Biplot of the first two principal components across the 18 distinct RCI values observed in the Illinois corn-soy sample. PC1 explains 83.3\% of the total variance, and PC2 explains 9.6\%. Red arrows show loadings of four rotation summary features: $n\_\text{soy}$, $\text{no\_consec}$, $\text{tight\_soy}$, and $\text{free\_soy}$.}
 \end{figure}
 
 We also estimate a parsimonious parameterization that replaces the sequence indicators with four structural rotation features:
@@ -277,7 +301,7 @@ the residual from the stage-1 conditional mean regression. The second moment is 
 
 Coefficients $\hat{\pi}$ identify the differential effect of each rotation sequence on the conditional variance of yields, relative to the monoculture reference. A negative coefficient indicates that a given sequence compresses yield variance relative to monoculture — a risk-reducing effect directly relevant to insurance pricing. A positive coefficient indicates that the sequence raises variance, increasing actuarial risk at any given mean yield level.
 
-The squared residual $\hat{u}_{it}^2$ is a noisy proxy for the true conditional variance, since it combines the variance signal with idiosyncratic estimation error from stage 1. To improve estimation efficiency, we implement a three-stage Feasible Generalized Least Squares (FGLS) estimator following \cite{Harvey1976}. In stage 2a, we estimate an initial OLS regression of $\hat{u}_{it}^2$ on the full covariate vector to obtain fitted values $\hat{h}_{it}$, which serve as estimates of the conditional variance function. In stage 2b, we re-estimate the variance regression by Weighted Least Squares (WLS), weighting each observation by $1/\hat{h}_{it}$ where $\hat{h}{it}= \max(\hat{h}_{it}^{\text{OLS}},\ \varepsilon)$ with $\varepsilon = 10^{-6}$ to prevent degenerate weights from negative linear approximations to the variance function. The FGLS estimator is more efficient than the OLS second-stage estimator because it downweights observations whose squared residuals are expected to be highly variable — those from rotation sequences with high estimated conditional variance.
+The squared residual $\hat{u}_{it}^2$ is a noisy proxy for the true conditional variance, since it combines the variance signal with idiosyncratic estimation error from stage 1. To improve estimation efficiency, we implement a three-stage Feasible Generalized Least Squares (FGLS) estimator following \cite{Harvey1976}. In stage 2a, we estimate an initial OLS regression of $\hat{u}_{it}^2$ on the full set of covariates to obtain fitted values $\hat{h}_{it}$, which serve as estimates of the conditional variance function. In stage 2b, we re-estimate the variance regression by Weighted Least Squares (WLS), weighting each observation by $1/\hat{h}_{it}$ where $\hat{h}{it}= \max(\hat{h}_{it}^{\text{OLS}},\ \varepsilon)$ with $\varepsilon = 10^{-6}$ to prevent degenerate weights from negative linear approximations to the variance function. The FGLS estimator is more efficient than the OLS second-stage estimator because it downweights observations whose squared residuals are expected to be highly variable — those from rotation sequences with high estimated conditional variance.
 
 \subsection{\label{subsec:bootstrap}Inference: Three-Stage Bootstrap}
 
@@ -295,18 +319,43 @@ The four structural feature coefficients from the parsimonious stage-1 model adm
     \text{score}_{it} = \hat{\tau}_1 \cdot \text{late\_soy}_{it} + \hat{\tau}_2 \cdot \text{soy\_cons}_{it} + \hat{\tau}_3 \cdot \text{soy\_gap}_{it} + \hat{\tau}_4 \cdot n\text{soy}_{it}\label{eq:score}
 \end{equation}
 
-where $\hat{\tau}_1, \ldots, \hat{\tau}_4$ are the QDANN stage-1 estimates from Table 1. The score summarizes, in units of predicted yield deviation from monoculture, the information contained in the six-year rotation history relevant to the conditional mean of corn yields. By construction, corn monoculture — which has no soybean years in the window — scores zero. The perfect alternating corn-soybean rotation scores approximately 2.59 bushels per acre above monoculture under the QDANN specification.
+where $\hat{\tau}_1, \ldots, \hat{\tau}_4$ are the QDANN stage-1 estimates from Table 1. The score summarizes, in units of predicted yield deviation from monoculture, the information contained in the six-year rotation history relevant to the conditional mean of corn yields. By construction, corn monoculture — which has no soybean years in the window — scores zero. The perfect alternating corn-soybean rotation yields approximately 2.59 bushels per acre more than monoculture under the QDANN specification.
 
 Rotation sequences that score below zero have structural features that are predicted to lower mean yields relative to continuous corn; these sequences typically involve multiple consecutive soybean years or very infrequent soybean harvests that deplete
 the nitrogen and pest-suppression benefits of rotation. Sequences that score above zero have structural features associated with higher mean yields, particularly a recent soybean harvest and adequate spacing between soybean years.
 
-The rotation score maps all 64 binary six-year corn-soy sequences onto [$K$] distinct score values, providing a parsimonious and interpretable basis for rating that collapses the combinatorial rotation space into a single actuarial variable. In Section 5.3 we
-show that score-based yield predictions recover most of the variation captured by the full sequence-indicator model, and in Section 6 we discuss how the score could be incorporated into APH-based rate adjustments.
+%The rotation score maps all 64 binary six-year corn-soy sequences onto [$K$] distinct score values, providing a parsimonious and interpretable basis for rating that collapses the combinatorial rotation space into a single actuarial variable. In Section 5.3 we
+%show that score-based yield predictions recover most of the variation captured by the full sequence-indicator model, and in Section 6 we discuss how the score could be incorporated into APH-based rate adjustments.
 
 \section{\label{sec:results}Results}
 \subsection{\label{subsec:seq_effects}Sequence-Level Effects on Corn Yield Mean}
  
-Table~\ref{tab:corn_rot} and Figure~\ref{fig:corn_rot_plot} report the estimated effects of each of the 31 non-monoculture six-year corn-soy sequences on corn yield mean, relative to corn monoculture. Rotation effects are heterogeneous and depend critically on the recent history of soybean placement rather than on the total number of soybean years in the window.
+Table~\ref{tab:corn_rot} and Figure~\ref{fig:corn_rot_plot} report the estimated effects of each of the 31 non-monoculture six-year corn-soy sequences on the mean corn yield, relative to corn monoculture. Rotation effects are heterogeneous and depend critically on the recent history of soybean placement rather than on the total number of soybean years in the window.
+
+\begin{table}[H]
+  \centering
+  %\caption{Rotation patterns and corn yields}
+  %\label{tab:corn_rot}
+  \begin{threeparttable}
+    \input{tables/corn_rot.tex}
+    \begin{minipage}{\textwidth}
+      \small
+      Notes: Dependent variable is QDANN corn yield in bushels per acre. Reference category: corn monoculture (C-C-C-C-C-C). Column (1) excludes weather and soil controls; column (2) includes full control vector. County and year fixed effects included throughout. Stars indicate BH-FDR adjusted significance: $^{***}$FDR$<$0.01, $^{**}$FDR$<$0.05, $^{*}$FDR$<$0.10.
+    \end{minipage}
+  \end{threeparttable}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.90\textwidth]{figures/corn_rot_plot}
+  \caption{Response of corn yields to rotation sequences.}
+  \label{fig:corn_rot_plot}
+  \floatfoot{\footnotesize Notes: Point estimates and 95\% confidence intervals
+  from equation~\eqref{eq:stage1} with full controls. Reference: corn monoculture
+  (C-C-C-C-C-C). Two-way clustering at field and year level. Green: perfect
+  alternating rotation; blue: transitioning sequences; red: all others.}
+\end{figure}
+ 
  
 The highest-performing sequences in the QDANN specification - those with estimated mean yield premiums exceeding 4 bushels per acre - share a common structural feature: a soybean harvest in year $t-1$ or $t-2$, regardless of what was planted in years $t-3$ through $t-6$. For example, $S-S-C-S-S-C$ carries an estimated premium of 4.61 bushels per acre relative to monoculture Table~\ref{tab:corn_rot}, column 2), and $S-C-S-C-S-C$ carries 4.12 bushels per acre. Both SCYM and QDANN yield consistent rankings at the top of the distribution.
  
@@ -314,24 +363,198 @@ Sequences ending in two or more consecutive corn years generally show negative o
  
 \subsection{\label{subsec:var_effects}Sequence-Level Effects on Corn Yield Variance}
  
-Figure~\ref{fig:corn_var_plot} and the variance results in Table~\ref{tab:corn_jp_var} show the corresponding effects on the conditional variance of corn yields. Sequences that raise mean yields also tend to reduce yield variance, implying joint mean-variance dominance over monoculture. The most notable discrepancy between SCYM and QDANN is for sequences with a very recent soybean placement (year $t-1$): QDANN estimates a significant variance reduction of approximately 9 bushels-squared per acre-squared, while the SCYM estimate is positive and insignificant. This likely reflects SCYM's lower ability to characterize yield tails relative to QDANN's quantile-based training objective. Figure~\ref{fig:corn_jp_plot} summarizes the joint mean-variance results in a single scatter plot.
+Figure~\ref{fig:corn_var_plot} and the variance results in Table~\ref{tab:corn_jp_var} show the corresponding effects on the conditional variance of corn yields. Sequences that raise mean yields also tend to reduce yield variance, implying joint mean-variance dominance over monoculture. The most notable discrepancy between SCYM and QDANN is for sequences with a very recent soybean placement (year $t-1$): QDANN estimates a significant variance reduction of approximately 9 bushels-squared per acre-squared, while the SCYM estimate is positive and insignificant. This likely reflects SCYM's limited ability to characterize yield tails compared with QDANN's quantile-based training objective. Figure~\ref{fig:corn_jp_plot} summarizes the joint mean-variance results in a single scatter plot.
+
+\begin{table}[H]
+  \centering
+  \caption{Just-Pope stage 2: corn yield conditional variance}
+  \label{tab:corn_jp_var}
+  \begin{threeparttable}
+    \input{tables/corn_jp_var.tex}
+    \begin{minipage}{\textwidth}
+      \small
+      Notes: Dependent variable is squared first-stage residual from the corn yield mean regression. OLS estimates of stage-2 variance equation~\eqref{eq:stage2}. Reference: corn monoculture. County and year fixed effects included. Two-way clustering at field and year level.
+    \end{minipage}
+  \end{threeparttable}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.90\textwidth]{figures/corn_var_plot}
+  \caption{Response of the standard deviation of corn yields to rotation sequences.}
+  \label{fig:corn_var_plot}
+  \floatfoot{\footnotesize Notes: Point estimates and 95\% confidence intervals
+  from stage-2 OLS variance regression. Reference: corn monoculture. Two-way
+  clustering at field and year level.}
+\end{figure}
+
+Sequences that raise mean yields also tend to reduce yield variance, implying joint mean-variance dominance over monoculture. The most notable discrepancy between SCYM and QDANN is for sequences with a very recent soybean placement (year $t-1$): QDANN estimates a significant variance reduction of approximately 9 bushels-squared per acre-squared, while the SCYM estimate is positive and insignificant. This likely reflects SCYM's lower ability to characterize yield tails relative to QDANN's quantile-based training objective. Figure~\ref{fig:corn_jp_plot} summarizes the joint mean-variance results in a single scatter plot.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\textwidth]{figures/corn_jp_plot}
+  \caption{Just-Pope decomposition: corn rotation effects on mean and variance.}
+  \label{fig:corn_jp_plot}
+  \floatfoot{\footnotesize Notes: Each point represents one of the 31
+  non-monoculture rotation sequences. Horizontal axis: stage-1 coefficient
+  (effect on mean corn yield, bu/acre). Vertical axis: stage-2 OLS coefficient
+  (effect on yield variance). Error bars are 95\% confidence intervals.
+  Green: sequences with higher mean \textit{and} lower variance than monoculture
+  (unambiguously better). Orange: higher mean, higher variance (trade-off). Red:
+  lower mean. Grey: not significantly different from monoculture.}
+\end{figure}
  
 \subsection{Soybean Yield Effects}
+
+\begin{table}[H]
+  \centering
+  %\caption{Rotation patterns and soybean yields}
+  %\label{tab:soy_rot}
+  \begin{threeparttable}
+    \input{tables/soy_rot.tex}
+    \begin{minipage}{\textwidth}
+      \small
+      Notes: Dependent variable is QDANN soybean yield in bushels per
+      acre. Reference category: soy monoculture (S-S-S-S-S-S). See
+      Table~\ref{tab:corn_rot} notes for details on controls and clustering.
+    \end{minipage}
+  \end{threeparttable}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.90\textwidth]{figures/soy_rot_plot}
+  \caption{Response of soybean yields to rotation sequences.}
+  \label{fig:soy_rot_plot}
+  \floatfoot{\footnotesize Notes: See Figure~\ref{fig:corn_rot_plot} notes.
+  Reference: soy monoculture (S-S-S-S-S-S).}
+\end{figure}
  
-Table~\ref{tab:soy_rot} and Figure~\ref{fig:soy_rot_plot} report sequence-level effects on soybean yields. The pattern is qualitatively similar to the corn case but with smaller magnitudes - the highest-performing sequences carry premiums of 1.43 to 1.68 bushels per acre relative to soybean monoculture Table~\ref{tab:soy_rot}, column 2), compared to premiums of up to 4.61 bushels per acre for corn. This asymmetry is expected: the nitrogen-fixing benefit flows primarily from soybean to subsequent corn, not in reverse. Variance effects for soybean (Figure~\ref{fig:soy_var_plot}) are smaller in magnitude than the corn variance effects and are statistically significant mainly for sequences with recent corn placements.
+Table~\ref{tab:soy_rot} and Figure~\ref{fig:soy_rot_plot} report sequence-level effects on soybean yields. The pattern is qualitatively similar to the corn case but with smaller magnitudes - the highest-performing sequences carry premiums of 1.43 to 1.68 bushels per acre relative to soybean monoculture Table~\ref{tab:soy_rot}, column 2), compared to premiums of up to 4.61 bushels per acre for corn. This asymmetry is expected: the nitrogen-fixing benefit flows primarily from soybean to subsequent corn, not in the reverse direction. Variance effects for soybean (Figure~\ref{fig:soy_var_plot}) are smaller in magnitude than the corn variance effects and are statistically significant mainly for sequences with recent corn placements.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.90\textwidth]{figures/soy_var_plot}
+  \caption{Response of the standard deviation of soybean yields to rotation sequences.}
+  \label{fig:soy_var_plot}
+  \floatfoot{\footnotesize Notes: See Figure~\ref{fig:corn_var_plot} notes.
+  Reference: soy monoculture.}
+\end{figure}
+
  
 \subsection{Parsimonious Z-Vector Model}
+
+\begin{table}[H]
+  \centering
+  %\caption{Effect of rotation patterns on yields}
+  %\label{tab:zvector}
+  \begin{threeparttable}
+    \input{tables/zvector.tex}
+    \begin{minipage}{\textwidth}
+      \small
+      Notes: Dependent variable is corn yield in bushels per acre.
+      QDANN mean and SCYM mean report stage-1 coefficients; QDANN variance
+      and SCYM variance report stage-2 (OLS) coefficients on squared residuals.
+      Controls include monthly precipitation (quadratic), GDD, EDD, VPD, soil
+      moisture, and AWC for June--August. County and year fixed effects included.
+      Standard errors two-way clustered at field and year level.
+      $^{***}p<0.01$, $^{**}p<0.05$, $^{*}p<0.10$.
+    \end{minipage}
+  \end{threeparttable}
+\end{table}
  
-Table~\ref{tab:zvector} reports the parsimonious parameterization of rotation effects using the four structural features. The most recent soybean placement variable ($\text{late\_soy}$) carries the largest positive mean effect: 2.85 bushels per acre in the QDANN specification and 3.55 in the SCYM specification, both significant at the 1 percent level, a magnitude comparable to the upper range of controlled experiment estimates in \citet{Gentry2015} for Illinois fields.
+Table~\ref{tab:zvector} reports the parsimonious parameterization of rotation effects in terms of the four structural features. The most recent soybean placement variable ($\text{late\_soy}$) carries the largest positive mean effect: 2.85 bushels per acre in the QDANN specification and 3.55 in the SCYM specification, both significant at the 1 percent level, a magnitude comparable to the upper range of controlled experiment estimates in \citet{Gentry2015} for Illinois fields.
  
 The soy gap variable carries a positive and significant coefficient of 0.31 (QDANN) and 0.25 (SCYM), consistent with the agronomic view that well-spaced soybeans reduce pathogen and nematode carryover. The number of soybean harvests variable carries a negative and significant coefficient of $-0.98$ (QDANN) and $-1.08$ (SCYM): more soybean years, controlling for recency and spacing, are associated with lower corn yields, likely because a high soybean count implies clustering that generates consecutive placements. The consecutive soybean years dummy carries the largest negative mean effect: $-4.67$ bushels per acre (QDANN) and $-4.17$ (SCYM), both significant at the 1 percent level. The variance equation mirrors these signs: the most recent soybean placement reduces variance ($-9.02$, QDANN) while consecutive soybean years sharply increase it ($+79.18$, QDANN).
  
 \subsection{\label{subsec:rci_effects}Rotational Complexity Index Effects}
+
+\begin{table}[H]
+  \centering
+  %\caption{Rotation Complexity Index and corn yields}
+  %\label{tab:corn_rci}
+  \begin{threeparttable}
+    \input{tables/corn_rci.tex}
+    \begin{minipage}{\textwidth}
+      \small
+      Notes: RCI entered as a factor variable; reference category is
+      RCI = 1.41 (lowest observed value in the corn-soy subsample). Column (1)
+      includes all crop types; column (2) restricts to corn-soy fields only.
+      County and year fixed effects included.
+    \end{minipage}
+  \end{threeparttable}
+\end{table}
+
+\begin{table}[H]
+  \centering
+  %\caption{Rotation Complexity Index and soybean yields}
+  %\label{tab:soy_rci}
+  \begin{threeparttable}
+    \input{tables/soy_rci.tex}
+    \begin{minipage}{\textwidth}
+      \small
+      Notes: See Table~\ref{tab:corn_rci} notes. Dependent variable is
+      QDANN soybean yield in bushels per acre.
+    \end{minipage}
+  \end{threeparttable}
+\end{table}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\textwidth]{figures/corn_rci_plot}
+  \caption{Changes in RCI and corn yields.}
+  \label{fig:corn_rci_plot}
+  \floatfoot{\footnotesize Notes: Factor RCI coefficients from
+  equation~\eqref{eq:stage1} with corn-soy fields only. Reference: RCI = 1.41.
+  Two-way clustering at field and year level.}
+\end{figure}
  
-Tables~\ref{tab:corn_rci} and \ref{tab:soy_rci} and Figures~\ref{fig:corn_rci_plot} and \ref{fig:soy_rci_plot} report the effects of factor RCI on corn and soybean yields. For corn yields, the RCI-yield relationship is positive on average but strongly nonlinear and non-monotone. RCI values in the range 1.73-2.65 show positive and significant coefficients ranging from 1.64 to 2.95 bushels per acre in the corn-soy specification. Above RCI = 2.65, the coefficients remain positive but show no further systematic increase, and confidence intervals widen substantially. The RCI-yield curve is best described as concave and flattening beyond the perfect-rotation level, rather than monotonically increasing. Figure~\ref{fig:rci_plot} summarizes this nonlinearity for both yield moments simultaneously. For soybean yields, the pattern is qualitatively similar but even flatter, with the highest RCI levels ($\geq 4.47$)
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.85\textwidth]{figures/soy_rci_plot}
+  \caption{Changes in RCI and soybean yields.}
+  \label{fig:soy_rci_plot}
+  \floatfoot{\footnotesize Notes: See Figure~\ref{fig:corn_rci_plot} notes.
+  Dependent variable is soybean yield.}
+\end{figure}
+ 
+Tables~\ref{tab:corn_rci} and \ref{tab:soy_rci} and Figures~\ref{fig:corn_rci_plot} and \ref{fig:soy_rci_plot} report the effects of factor RCI on corn and soybean yields. For corn yields, the RCI-yield relationship is positive on average but strongly nonlinear and non-monotone. RCI values in the range 1.73-2.65 show positive and significant coefficients ranging from 1.64 to 2.95 bushels per acre in the corn-soy specification. Above RCI = 2.65, the coefficients remain positive but show no further systematic increase, and confidence intervals widen substantially. The RCI-yield curve is best described as concave and flattening beyond the perfect-rotation level, rather than monotonically increasing. Figure~\ref{fig:rci_plot} summarizes this nonlinearity for both yield moments simultaneously. 
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figures/rci_plot}
+  \caption{Nonlinear effect of RCI on corn yield mean and variance.}
+  \label{fig:rci_plot}
+  \floatfoot{\footnotesize Notes: Factor RCI coefficients from
+  equation~\eqref{eq:stage1} (mean, left panel) and equation~\eqref{eq:stage2}
+  (variance, right panel). Shaded area is 95\% confidence interval. Reference:
+  RCI = 1.41. Corn-soy fields only; two-way clustering at field and year level.}
+\end{figure}
+
+For soybean yields, the pattern is qualitatively similar but even flatter, with the highest RCI levels ($\geq 4.47$)
 showing insignificant or negative coefficients.
  
 \subsection{\label{subsec:rot_score_res}Rotation Score}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=\textwidth]{figures/score_yield}
+  \caption{Response of corn yields to rotation score values.}
+  \label{fig:score_yield}
+  \floatfoot{\footnotesize Notes: Each row corresponds to one of the 14 distinct
+  rotation score values, sorted in ascending order on the vertical axis. The
+  rotation score is computed from equation~\eqref{eq:score} using the four
+  Z-vector coefficients from Table~\ref{tab:zvector}: $\text{score}_{it} =
+  \hat{\tau}_1 \cdot \text{late\_soy}_{it} + \hat{\tau}_2 \cdot
+  \text{soy\_cons}_{it} + \hat{\tau}_3 \cdot \text{soy\_gap}_{it} +
+  \hat{\tau}_4 \cdot n\text{soy}_{it}$. Left panel: stage-1 coefficient on mean
+  corn yield (bushels per acre) from equation~\eqref{eq:stage1} with full
+  rotation sequence indicators. Right panel: stage-2 OLS coefficient on
+  conditional yield variance from equation~\eqref{eq:stage2}. Horizontal bars
+  are 95\% confidence intervals. Reference: corn monoculture (score $= 0$).
+  Two-way clustering at field and year level. Source: QDANN yield estimates,
+  \citet{Ma2024}; CDL rotation histories, USDA-NASS.}
+\end{figure}
  
 Figure~\ref{fig:score_yield} reports predicted corn yields as a function of the rotation score. Score values range from approximately $-11.18$ (most soybean-heavy sequences with consecutive soybean years) to $+3.91$ (sequences with a very recent and optimally spaced soybean placement), with corn monoculture normalized to zero and the perfect alternating rotation scoring $+2.59$. The score-yield relationship is strongly positive and approximately linear across the upper portion of the score distribution (scores above $-2$). The score collapses 64 binary rotation sequences into 14 distinct score values, with variance effects showing a monotone negative relationship with score across most of the distribution.
 
@@ -346,7 +569,7 @@ Second, the same structural features that raise mean yields also reduce yield va
  
 Third, the RCI has a nonlinear and non-monotone relationship with corn yields that cannot be captured by a linear premium adjustment. The RCI effect flattens beyond RCI = 2.24 and provides no reliable signal for distinguishing the highest-risk sequences from one another.
  
-Fourth, we develop a rotation score constructed from four structural sequence features that maps all 64 binary rotation sequences onto 14 distinct values. The score summarizes the actuarially relevant information in the rotation history and is linearly related to yield outcomes across most of its support, making it suitable as a direct input to a rating formula.
+Fourth, we develop a rotation score, constructed from four structural sequence features, that maps all 64 binary rotation sequences to 14 distinct values. The score summarizes the actuarially relevant information in the rotation history and is linearly related to yield outcomes across most of its support, making it suitable as a direct input to a rating formula.
  
 \subsection{\label{subsec:implications}Implications for Crop Insurance Rating}
  
@@ -365,118 +588,15 @@ Third, our analysis is restricted to Illinois corn-soy rotations. Generalizabili
 
 \section{\label{sec:conclusion}Conclusion}
  
-Crop rotation history contains actuarially significant information about both the mean and variance of corn and soybean yields that the current APH-based rating system does not exploit. The key driver is not rotational complexity per se but the timing and spacing of soybean placements within the most recent six years. Fields with a recent, well-spaced soybean harvest present lower yield risk than monoculture fields at the same APH level; fields with consecutive soybean years present higher risk. These effects are large enough to have actuarial significance and are robust across two independent yield estimators. The rotation score we develop provides a tractable, publicly available, field-level rating variable. Identifying how this score should be translated into premium adjustments - and how the transition penalty should be handled for adopting farmers - are the key remaining design questions for rotation-conditioned federal crop insurance.
+Crop rotation history contains actuarially significant information about both the mean and variance of corn and soybean yields that the current APH-based rating system does not exploit. The key driver is not rotational complexity per se but the timing and spacing of soybean placements within the most recent six years. Fields with a recent, well-spaced soybean harvest present lower yield risk than monoculture fields at the same APH level; fields with consecutive soybean years present higher risk. These effects are large enough to be actuarially significant and are robust across two independent yield estimators. The rotation score we develop provides a tractable, publicly available, field-level rating variable. Identifying how this score should be translated into premium adjustments - and how the transition penalty should be handled for adopting farmers - are the key remaining design questions for rotation-conditioned federal crop insurance.
 
 \newpage
 \bibliography{bibliography.bib}
 
 \newpage
-
 \appendix
 
-
-%% ── Tables ───────────────────────────────────────────────────────────────────
 \section*{Tables}
- 
-\begin{table}[H]
-  \centering
-  %\caption{Effect of rotation patterns on yields}
-  %\label{tab:zvector}
-  \begin{threeparttable}
-    \input{tables/zvector.tex}
-    \begin{tablenotes}
-      \small
-      \item Notes: Dependent variable is corn yield in bushels per acre.
-      QDANN mean and SCYM mean report stage-1 coefficients; QDANN variance
-      and SCYM variance report stage-2 (OLS) coefficients on squared residuals.
-      Controls include monthly precipitation (quadratic), GDD, EDD, VPD, soil
-      moisture, and AWC for June--August. County and year fixed effects included.
-      Standard errors two-way clustered at field and year level.
-      $^{***}p<0.01$, $^{**}p<0.05$, $^{*}p<0.10$.
-    \end{tablenotes}
-  \end{threeparttable}
-\end{table}
- 
-\begin{table}[H]
-  \centering
-  %\caption{Rotation patterns and corn yields}
-  %\label{tab:corn_rot}
-  \begin{threeparttable}
-    \input{tables/corn_rot.tex}
-    \begin{tablenotes}
-      \small
-      \item Notes: Dependent variable is QDANN corn yield in bushels per acre.
-      Reference category: corn monoculture (C-C-C-C-C-C). Column (1) excludes
-      weather and soil controls; column (2) includes full control vector.
-      County and year fixed effects included throughout.
-      Stars indicate BH-FDR adjusted significance: $^{***}$FDR$<$0.01,
-      $^{**}$FDR$<$0.05, $^{*}$FDR$<$0.10.
-    \end{tablenotes}
-  \end{threeparttable}
-\end{table}
- 
-\begin{table}[H]
-  \centering
-  %\caption{Rotation patterns and soybean yields}
-  %\label{tab:soy_rot}
-  \begin{threeparttable}
-    \input{tables/soy_rot.tex}
-    \begin{tablenotes}
-      \small
-      \item Notes: Dependent variable is QDANN soybean yield in bushels per
-      acre. Reference category: soy monoculture (S-S-S-S-S-S). See
-      Table~\ref{tab:corn_rot} notes for details on controls and clustering.
-    \end{tablenotes}
-  \end{threeparttable}
-\end{table}
- 
-\begin{table}[H]
-  \centering
-  %\caption{Just-Pope stage 2: corn yield conditional variance}
-  %\label{tab:corn_jp_var}
-  \begin{threeparttable}
-    \input{tables/corn_jp_var.tex}
-    \begin{tablenotes}
-      \small
-      \item Notes: Dependent variable is squared first-stage residual from
-      the corn yield mean regression. OLS estimates of stage-2 variance
-      equation~\eqref{eq:stage2}. Reference category: corn monoculture.
-      County and year fixed effects included. Two-way clustering at field
-      and year level.
-    \end{tablenotes}
-  \end{threeparttable}
-\end{table}
- 
-\begin{table}[H]
-  \centering
-  %\caption{Rotation Complexity Index and corn yields}
-  %\label{tab:corn_rci}
-  \begin{threeparttable}
-    \input{tables/corn_rci.tex}
-    \begin{tablenotes}
-      \small
-      \item Notes: RCI entered as a factor variable; reference category is
-      RCI = 1.41 (lowest observed value in the corn-soy subsample). Column (1)
-      includes all crop types; column (2) restricts to corn-soy fields only.
-      County and year fixed effects included.
-    \end{tablenotes}
-  \end{threeparttable}
-\end{table}
- 
-\begin{table}[H]
-  \centering
-  %\caption{Rotation Complexity Index and soybean yields}
-  %\label{tab:soy_rci}
-  \begin{threeparttable}
-    \input{tables/soy_rci.tex}
-    \begin{tablenotes}
-      \small
-      \item Notes: See Table~\ref{tab:corn_rci} notes. Dependent variable is
-      QDANN soybean yield in bushels per acre.
-    \end{tablenotes}
-  \end{threeparttable}
-\end{table}
- 
  
 \begin{table}[H]
   \centering
@@ -484,12 +604,12 @@ Crop rotation history contains actuarially significant information about both th
   %\label{tab:corn_rci_jp}
   \begin{threeparttable}
     \input{tables/corn_rci_jp.tex}
-    \begin{tablenotes}
+    \begin{minipage}{\textwidth}
       \small
-      \item Notes: Column (1) reports stage-1 mean coefficients; column (2)
+      Notes: Column (1) reports stage-1 mean coefficients; column (2)
       reports stage-2 OLS variance coefficients. Reference: RCI = 1.41.
       Corn-soy fields only. Two-way clustering at field and year level.
-    \end{tablenotes}
+    \end{minipage}
   \end{threeparttable}
 \end{table}
  
@@ -499,11 +619,10 @@ Crop rotation history contains actuarially significant information about both th
   %\label{tab:soy_rci_jp}
   \begin{threeparttable}
     \input{tables/soy_rci_jp.tex}
-    \begin{tablenotes}
+    \begin{minipage}{\textwidth}
       \small
-      \item Notes: See Table~\ref{tab:corn_rci_jp} notes. Dependent variable
-      is soybean yield.
-    \end{tablenotes}
+      Notes: See Table~\ref{tab:corn_rci_jp} notes. Dependent variable is soybean yield.
+    \end{minipage}
   \end{threeparttable}
 \end{table}
  
@@ -533,133 +652,11 @@ Crop rotation history contains actuarially significant information about both th
  
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.85\textwidth]{figures/corn_yield_map}
-  \caption{QDANN corn yields across Illinois, 2016.}
-  \label{fig:corn_yield_map}
-  \floatfoot{\footnotesize Notes: Spatial distribution of QDANN field-level corn
-  yield estimates for Illinois in 2016. Source: \citet{Ma2024}.}
-\end{figure}
- 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.85\textwidth]{figures/rci_map}
-  \caption{Rotational Complexity Index across Illinois, 2016.}
-  \label{fig:rci_map}
-  \floatfoot{\footnotesize Notes: Spatial distribution of RCI values computed from
-  six-year CDL crop histories at 30-meter resolution. Source: \citet{socolar2021};
-  CDL data from USDA-NASS.}
-\end{figure}
- 
-\begin{figure}[H]
-  \centering
   \includegraphics[width=0.85\textwidth]{figures/nccpi_corn_map}
   \caption{National Commodity Crop Productivity Index (corn) across Illinois.}
   \label{fig:nccpi_corn_map}
   \floatfoot{\footnotesize Notes: NCCPI corn values at 30-meter resolution.
   Source: gSSURGO, USDA-NRCS.}
-\end{figure}
- 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=\textwidth]{figures/score_yield}
-  \caption{Response of corn yields to rotation score values.}
-  \label{fig:score_yield}
-  \floatfoot{\footnotesize Notes: Each row corresponds to one of the 14 distinct
-  rotation score values, sorted in ascending order on the vertical axis. The
-  rotation score is computed from equation~\eqref{eq:score} using the four
-  Z-vector coefficients from Table~\ref{tab:zvector}: $\text{score}_{it} =
-  \hat{\tau}_1 \cdot \text{late\_soy}_{it} + \hat{\tau}_2 \cdot
-  \text{soy\_cons}_{it} + \hat{\tau}_3 \cdot \text{soy\_gap}_{it} +
-  \hat{\tau}_4 \cdot n\text{soy}_{it}$. Left panel: stage-1 coefficient on mean
-  corn yield (bushels per acre) from equation~\eqref{eq:stage1} with full
-  rotation sequence indicators. Right panel: stage-2 OLS coefficient on
-  conditional yield variance from equation~\eqref{eq:stage2}. Horizontal bars
-  are 95\% confidence intervals. Reference: corn monoculture (score $= 0$).
-  Two-way clustering at field and year level. Source: QDANN yield estimates,
-  \citet{Ma2024}; CDL rotation histories, USDA-NASS.}
-\end{figure}
- 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.90\textwidth]{figures/corn_rot_plot}
-  \caption{Response of corn yields to rotation sequences.}
-  \label{fig:corn_rot_plot}
-  \floatfoot{\footnotesize Notes: Point estimates and 95\% confidence intervals
-  from equation~\eqref{eq:stage1} with full controls. Reference: corn monoculture
-  (C-C-C-C-C-C). Two-way clustering at field and year level. Green: perfect
-  alternating rotation; blue: transitioning sequences; red: all others.}
-\end{figure}
- 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.90\textwidth]{figures/soy_rot_plot}
-  \caption{Response of soybean yields to rotation sequences.}
-  \label{fig:soy_rot_plot}
-  \floatfoot{\footnotesize Notes: See Figure~\ref{fig:corn_rot_plot} notes.
-  Reference: soy monoculture (S-S-S-S-S-S).}
-\end{figure}
- 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.90\textwidth]{figures/corn_var_plot}
-  \caption{Response of the standard deviation of corn yields to rotation sequences.}
-  \label{fig:corn_var_plot}
-  \floatfoot{\footnotesize Notes: Point estimates and 95\% confidence intervals
-  from stage-2 OLS variance regression. Reference: corn monoculture. Two-way
-  clustering at field and year level.}
-\end{figure}
- 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.90\textwidth]{figures/soy_var_plot}
-  \caption{Response of the standard deviation of soybean yields to rotation sequences.}
-  \label{fig:soy_var_plot}
-  \floatfoot{\footnotesize Notes: See Figure~\ref{fig:corn_var_plot} notes.
-  Reference: soy monoculture.}
-\end{figure}
- 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.85\textwidth]{figures/corn_jp_plot}
-  \caption{Just-Pope decomposition: corn rotation effects on mean and variance.}
-  \label{fig:corn_jp_plot}
-  \floatfoot{\footnotesize Notes: Each point represents one of the 31
-  non-monoculture rotation sequences. Horizontal axis: stage-1 coefficient
-  (effect on mean corn yield, bu/acre). Vertical axis: stage-2 OLS coefficient
-  (effect on yield variance). Error bars are 95\% confidence intervals.
-  Green: sequences with higher mean \textit{and} lower variance than monoculture
-  (unambiguously better). Orange: higher mean, higher variance (trade-off). Red:
-  lower mean. Grey: not significantly different from monoculture.}
-\end{figure}
- 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.85\textwidth]{figures/corn_rci_plot}
-  \caption{Changes in RCI and corn yields.}
-  \label{fig:corn_rci_plot}
-  \floatfoot{\footnotesize Notes: Factor RCI coefficients from
-  equation~\eqref{eq:stage1} with corn-soy fields only. Reference: RCI = 1.41.
-  Two-way clustering at field and year level.}
-\end{figure}
- 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=0.85\textwidth]{figures/soy_rci_plot}
-  \caption{Changes in RCI and soybean yields.}
-  \label{fig:soy_rci_plot}
-  \floatfoot{\footnotesize Notes: See Figure~\ref{fig:corn_rci_plot} notes.
-  Dependent variable is soybean yield.}
-\end{figure}
- 
-\begin{figure}[H]
-  \centering
-  \includegraphics[width=\textwidth]{figures/rci_plot}
-  \caption{Nonlinear effect of RCI on corn yield mean and variance.}
-  \label{fig:rci_plot}
-  \floatfoot{\footnotesize Notes: Factor RCI coefficients from
-  equation~\eqref{eq:stage1} (mean, left panel) and equation~\eqref{eq:stage2}
-  (variance, right panel). Shaded area is 95\% confidence interval. Reference:
-  RCI = 1.41. Corn-soy fields only; two-way clustering at field and year level.}
 \end{figure}
 	
 \end{document}
