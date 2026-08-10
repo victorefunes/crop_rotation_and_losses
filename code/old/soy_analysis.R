@@ -140,7 +140,7 @@ soy_jp_data |>
 etable(soy_rci_all, soy_rci_cs,
        tex      = TRUE,
        dict     = dict_rci,
-       headers  = c("All crops", "Corn and soybeans only"),
+       headers  = c("No controls", "Weather and soil controls"),
        keep     = "RCI",
        placement = "H",
        style.tex = style.tex("aer"),
