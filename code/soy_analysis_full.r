@@ -99,14 +99,6 @@ soy_df <- soy_df |>
   rci_correction() |>
   add_degree_days()
 
-#soy_df |>
-#  tab(rot_crop) |>
-#  data.frame() |>
-#  arrange(desc(`Freq.`)) |>
-#  select(-`Cum.`) |>
-#  mutate(cumulative = cumsum(Percent)) |>
-#  head(120)  
-
 # ── Build analysis sample ─────────────────────────────────────────────────────
 # Join rotation features, add lag dummies, recode to C/S labels,
 # filter to complete cases on all controls.
@@ -227,7 +219,7 @@ etable(soy_rot_nc, soy_rot,
        title    = "Rotation patterns and soy yields",
        label    = "tab:soy_rot",
        extralines = list("_Controls" = c("No", "Yes")),
-       file     = paste0(tab_dir, "soy_rot.tex"))   
+       file     = paste0(tab_dir, "soy_rot.tex"))
  
 # BH multiple comparisons correction
 pvals_soy <- broom::tidy(soy_rot) |>
@@ -396,7 +388,7 @@ etable(soy_rci_vpd,
        label    = "tab:soy_rci_vpd",
        file     = paste0(tab_dir, "soy_rci_vpd.tex"))     
  
-#rm(soy_rot_vpd, soy_rci_vpd); 
+rm(soy_rot_vpd, soy_rci_vpd); 
 gc()
  
 # ── 4. Just-Pope stage 1 — soy ───────────────────────────────────────────────

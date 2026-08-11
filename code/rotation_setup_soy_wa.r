@@ -143,8 +143,12 @@ to_letters <- function(x) {                 # 1->C, 5->S, 24->W
 }
 
 make_dict <- function(patterns, ref) {
-  seqs <- setdiff(patterns, ref)
-  setNames(to_letters(seqs), paste0("rot_crop", seqs))
+  seqs   <- setdiff(patterns, ref)
+  labels <- to_letters(seqs)
+  # rot_crop is factored on letter-coded levels (see to_letters() in the
+  # analysis scripts), so dict keys must be "rot_crop" + letter sequence,
+  # not the raw numeric-code pattern, or etable won't match the coefficients.
+  setNames(labels, paste0("rot_crop", labels))
 }
 
 # Soy analysis: reference = continuous soybeans. All sequences here end in soy.
