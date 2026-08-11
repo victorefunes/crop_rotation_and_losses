@@ -42,9 +42,10 @@ soy_df <- read_parquet(
   "D:/Crop data/d_igis13soy_11_30_2025.with_rci.parquet") 
 
 soy_df <- soy_df |>
-  filter(STATE_ABBR == "IL") |> 
-  mutate(tile_field_ID = paste0("T", STATE_FIPS, "_", tile, "_", field_id))  |> 
-  arrange(tile_field_ID, year) 
+  filter(STATE_ABBR == "IL") |>
+  mutate(tile_field_ID = paste0("T", STATE_FIPS, "_", tile, "_", field_id),
+         soy_yield = soy_yield / 67.25)  |>  # kg/ha -> bu/ac
+  arrange(tile_field_ID, year)
 
 cat("Soy raw rows:", nrow(soy_df), "\n")
 
@@ -345,7 +346,7 @@ soy_rci_cs |>
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey60") +
   labs(x = "Rotational Complexity Index (RCI)", y = "Coefficient Estimate",
        title   = "Changes in RCI and soy yields",
-       caption = "Soy fields. Reference: RCI = 1.41. Clustered at COUNTY_FIPS.") +
+       caption = "Soy fields. Reference: RCI = 0. Clustered at COUNTY_FIPS.") +
   theme(legend.title = element_blank(), legend.position = "bottom") ->
   soy_rci_plot
 ggsave(paste0(fig_dir, "soy_rci_plot.png"), soy_rci_plot,
@@ -803,9 +804,9 @@ ggplot(rci_plot_df, aes(x = rci, y = est, colour = moment, fill = moment)) +
   scale_fill_manual(  values = c("Mean" = "#1f77b4", "Variance" = "#d62728")) +
   scale_x_continuous(breaks = sort(unique(rci_plot_df$rci))) +
   labs(x      = "Rotational Complexity Index (RCI)",
-       y      = "Coefficient relative to RCI = 1.41",
+       y      = "Coefficient relative to RCI = 0",
        title  = "Nonlinear effect of RCI on soy yield mean and variance",
-       caption = "Soy, corn, and wheat fields. Reference: RCI = 1.41. Two-way clustering.") +
+       caption = "Soy, corn, and wheat fields. Reference: RCI = 0. Two-way clustering.") +
   theme_bw() +
   theme(legend.position = "none",
         axis.text.x = element_text(angle = 45, hjust = 1)) ->
@@ -895,8 +896,9 @@ soy_df <- read_parquet(
   "D:/Crop data/d_igis13soy_11_30_2025.with_rci.parquet") 
 
 soy_sf <- soy_df |>
-  filter(STATE_ABBR == "IL" & year == 2016) |> 
-  mutate(tile_field_ID = paste0("T", STATE_FIPS, "_", tile, "_", field_id))  |> 
+  filter(STATE_ABBR == "IL" & year == 2016) |>
+  mutate(tile_field_ID = paste0("T", STATE_FIPS, "_", tile, "_", field_id),
+         soy_yield = soy_yield / 67.25)  |>  # kg/ha -> bu/ac
   arrange(tile_field_ID, year) |>
   st_as_sf(coords = c("lon", "lat"), crs = st_crs("EPSG:4326"))
   rm(soy_df); gc()
@@ -961,6 +963,7 @@ soy_df <- read_parquet(
 soy_county <- soy_df |>
   filter(STATE_ABBR == "IL") |>
   select(COUNTY_FIPS, STATE_FIPS, year, soy_yield) |>
+  mutate(soy_yield = soy_yield / 67.25) |>  # kg/ha -> bu/ac
   group_by(COUNTY_FIPS, STATE_FIPS, year) |>
   summarise(yield = mean(soy_yield, na.rm = TRUE), .groups = "drop") |>
   rename(state = STATE_FIPS, county = COUNTY_FIPS)
