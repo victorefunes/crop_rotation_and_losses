@@ -128,6 +128,7 @@ corn_lasso <- lasso_select_sequences(
 )
 
 corn_lasso$selected_sequences
+# Selected (nonzero) sequences: 28 of 102
 
 # Overlap between the primary rlasso (plug-in penalty) selection and the
 # cv.glmnet cross-check -- how much the reported sequence set would change
