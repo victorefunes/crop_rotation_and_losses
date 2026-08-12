@@ -3,8 +3,6 @@ library(tidyverse)
 library(statar)
 library(fixest)
 library(broom)
-library(forcats)
-library(fastDummies)
 setwd("C:/Users/vf006/Box/crop_rotations_and_losses/code")
 
 source("rotation_setup_wa.R")
@@ -148,6 +146,7 @@ rename_dict <- setNames(to_letters(sub("^rot_crop", "", seq_names)), seq_names)
 etable(corn_lasso$refit_full_controls, 
        tex = TRUE, 
        dict = rename_dict,
+       label = "tab:corn_lasso",
        cluster = ~COUNTY_FIPS,
        file = paste0(tab_dir, "corn_lasso.tex"), replace = TRUE,
        title = "LASSO-selected rotation sequence effects on corn yield")

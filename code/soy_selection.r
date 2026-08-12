@@ -127,7 +127,7 @@ soy_lasso <- lasso_select_sequences(
   yvar        = "soy_yield",
   controls    = all_controls_cols,
   cluster_fml = ~COUNTY_FIPS
-)
+);gc()
 
 soy_lasso$selected_sequences
 
@@ -149,5 +149,6 @@ etable(soy_lasso$refit_full_controls,
        tex = TRUE, 
        dict = rename_dict,
        cluster = ~COUNTY_FIPS,
+       label = "tab:soy_lasso",
        file = paste0(tab_dir, "soy_lasso.tex"), replace = TRUE,
        title = "LASSO-selected rotation sequence effects on soy yield")
