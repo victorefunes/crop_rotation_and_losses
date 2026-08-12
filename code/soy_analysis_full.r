@@ -235,7 +235,7 @@ cat("Soy sequences significant at 5% (unadjusted):", sum(pvals_soy$sig_raw), "\n
 cat("Soy sequences significant at 5% FDR (BH):    ", sum(pvals_soy$sig_bh),  "\n")
  
 # Figure: soy_rot_plot — Response of soy yields to rotation sequences
-soy_rot |>
+soy_rot_nc |>
   coefplot() |>
   data.frame() |>
   filter(grepl("rot_crop", prms.estimate_names)) |>
@@ -251,11 +251,11 @@ soy_rot |>
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey60") +
   coord_flip() +
   labs(x = "Coefficient Estimate", y = "Crop sequence",
-       title   = "Response of soy yields to rotation sequences",
+       title   = "Response of soy yields to rotation sequences (no controls)",
        caption = "Reference: S-S-S-S-S-S. Clustered at COUNTY_FIPS.") +
   theme(legend.title = element_blank(), legend.position = "bottom") ->
-  soy_rot_plot
-ggsave(paste0(fig_dir, "soy_rot_plot.png"), soy_rot_plot,
+  soy_rot_plot_nc
+ggsave(paste0(fig_dir, "soy_rot_plot_nc.png"), soy_rot_plot_nc,
        width = 10, height = 7.5, dpi = 300)
 
 library(tidytext)   # for reorder_within / scale_y_reordered
@@ -286,7 +286,6 @@ soy_rot |>
   soy_rot_plot
 ggsave(paste0(fig_dir, "soy_rot_plot.png"), soy_rot_plot,
        width = 10, height = 7.5, dpi = 300)
-
  
 # ── 2. RCI models — soy ──────────────────────────────────────────────────────
 # Table: tab:soy_rci | Figure: soy_rci_plot

@@ -131,6 +131,17 @@ soy_lasso <- lasso_select_sequences(
 
 soy_lasso$selected_sequences
 
+# Overlap between the primary rlasso (plug-in penalty) selection and the
+# cv.glmnet cross-check -- how much the reported sequence set would change
+# under a CV-tuned lambda instead.
+overlap_seqs <- intersect(soy_lasso$selected_sequences, soy_lasso$cv_glmnet_selected)
+cat(sprintf(
+  "Overlap with cv.glmnet: %d of %d rlasso-selected sequences (%.1f%%) also selected by cv.glmnet.\n",
+  length(overlap_seqs), length(soy_lasso$selected_sequences),
+  100 * length(overlap_seqs) / length(soy_lasso$selected_sequences)
+))
+overlap_seqs
+
 seq_names   <- grep("^rot_crop", names(coef(soy_lasso$refit_full_controls)), value = TRUE)
 rename_dict <- setNames(to_letters(sub("^rot_crop", "", seq_names)), seq_names)
 
