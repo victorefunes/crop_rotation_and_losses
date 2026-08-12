@@ -1,0 +1,142 @@
+library(arrow)
+library(tidyverse)
+library(statar)
+library(fixest)
+library(broom)
+library(forcats)
+library(fastDummies)
+setwd("C:/Users/vf006/Box/crop_rotations_and_losses/code")
+
+source("rotation_setup_wa.R")
+
+# ── Load corn data ────────────────────────────────────────────────────────────
+# Load, correct, and add degree-day variables in one pipeline.
+# corn_df is kept as the raw data source; corn_jp_data is the analysis sample.
+
+cat("Loading corn data...\n")
+corn_df <- read_parquet(
+  "D:/Crop data/d_igis13_12_1_2025.with_rci.parquet") 
+
+corn_df <- corn_df |>
+  filter(STATE_ABBR == "IL") |> 
+  mutate(tile_field_ID = paste0("T", STATE_FIPS, "_", tile, "_", field_id),
+         corn_yield = corn_yield / 62.77)  |> 
+  arrange(tile_field_ID, year) 
+
+cat("Corn raw rows:", nrow(corn_df), "\n")
+
+## Add present year crop variable
+setDT(corn_df)  
+
+add_crop_year <- function(dt) {
+  stopifnot(is.data.table(dt))
+  
+  # Drop any stale crop_year column from a previous run, so the regex below
+  # can't accidentally re-capture it
+  if ("crop_year" %in% names(dt)) {
+    dt[, crop_year := NULL]
+  }
+  
+  # Match crop_YYYY columns only (exactly 4 digits) -- excludes crop_year,
+  # rot_seq, or anything else that happens to start with "crop_"
+  crop_cols  <- grep("^crop_[0-9]{4}$", names(dt), value = TRUE)
+  crop_years <- as.integer(sub("crop_", "", crop_cols))
+  
+  stopifnot(length(crop_cols) > 0, !anyNA(crop_years))
+  
+  m       <- as.matrix(dt[, ..crop_cols])
+  col_idx <- match(dt$year, crop_years)
+  
+  stopifnot(length(col_idx) == nrow(dt))
+  
+  dt[, crop_year := m[cbind(seq_len(.N), col_idx)]]
+  invisible(dt)
+}
+
+add_crop_year(corn_df)
+
+corn_df <- corn_df |>
+  rename(crop_0 = crop_year,
+         crop_1 = prioryr_crop,
+         crop_2 = prior2yr_crop,
+         crop_3 = prior3yr_crop,
+         crop_4 = prior4yr_crop,
+         crop_5 = prior5yr_crop,
+         crop_6 = prior6yr_crop) |>
+  filter(!(is.na(crop_5) & is.na(crop_4) & is.na(crop_3)))     
+
+source("cdl_recode.R")
+
+recode_cdl(corn_df, cols = paste0("crop_", 0:6))
+
+corn_df <- corn_df |>
+  rename(RCI = annual_RCI) |>
+  mutate(rot_crop = paste0(crop_5, "-", crop_4, "-", crop_3, "-", 
+          crop_2, "-", crop_1, "-", crop_0)) |>
+  rci_correction() |>
+  add_degree_days()
+
+# ── Rotation patterns ─────────────────────────────────────────────────────────
+
+expand.grid(crop_0 = c("1","5"),
+            crop_1 = c("1","5","24","36"),
+            crop_2 = c("1","5","24","36"),
+            crop_3 = c("1","5","24","36"),
+            crop_4 = c("1","5","24","36"),
+            crop_5 = c("1","5","24","36")) |>
+  data.frame() |>
+  mutate(pattern = paste(crop_5, crop_4, crop_3, crop_2, crop_1,
+                         crop_0, sep = "-")) ->
+  corn_soy_wheat
+
+corn_jp_data <- corn_df |>
+  filter(rot_crop %in% corn_soy_wheat$pattern) |>
+  left_join(
+    rot_features |> select(pattern, rot_index),
+    by = c("rot_crop" = "pattern")
+  ) |>
+  filter(!is.na(corn_yield)) |>
+  filter(if_all(all_of(all_controls_cols), ~ !is.na(.))) |>
+  mutate(vpd_name = case_when(
+    vpdmax_7 >= 0   & vpdmax_7 < 1.9  ~ "normal",
+    vpdmax_7 >= 1.9 & vpdmax_7 <= 2.1 ~ "somewhat dry",
+    vpdmax_7 > 2.1                     ~ "dry",
+    .default = NA_character_),
+    vpd_name = factor(vpd_name, levels = c("normal", "somewhat dry", "dry")))  
+
+cat("Corn analysis sample:", nrow(corn_jp_data), "rows\n")
+ 
+# Free raw data — no longer needed
+rm(corn_df); gc()   
+
+corn_jp_data |>
+  mutate(rot_crop = factor(rot_crop)) ->
+  corn_jp_data
+
+# Remove rotation sequences that are too rare to estimate effects reliably. The threshold is set by `min_freq`.
+min_freq <- 100
+seq_counts <- table(corn_jp_data$rot_crop)
+keep_levels <- names(seq_counts)[seq_counts >= min_freq]   # e.g. min_freq = 30
+corn_jp_data[["rot_crop"]] <- droplevels(factor(corn_jp_data[["rot_crop"]], levels = intersect(levels(corn_jp_data[["rot_crop"]]), keep_levels)))
+
+
+source("lasso_rotation_selection.R")
+
+corn_lasso <- lasso_select_sequences(
+  data        = corn_jp_data,
+  yvar        = "corn_yield",
+  controls    = all_controls_cols,
+  cluster_fml = ~COUNTY_FIPS
+)
+
+corn_lasso$selected_sequences
+
+seq_names   <- grep("^rot_crop", names(coef(corn_lasso$refit_full_controls)), value = TRUE)
+rename_dict <- setNames(sub("^rot_crop", "", seq_names), seq_names)
+
+etable(corn_lasso$refit_full_controls, 
+       tex = TRUE, 
+       dict = rename_dict,
+       cluster = ~COUNTY_FIPS,
+       file = paste0(tab_dir, "corn_lasso.tex"), replace = TRUE,
+       title = "LASSO-selected rotation sequence effects on corn yield")

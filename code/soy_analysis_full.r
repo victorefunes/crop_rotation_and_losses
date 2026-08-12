@@ -216,6 +216,8 @@ etable(soy_rot_nc, soy_rot,
        placement = "H",
        style.tex = style.tex("aer"),
        replace  = TRUE, se.below = FALSE,
+       fontsize = "scriptsize",
+       arraystretch = 0.8,
        title    = "Rotation patterns and soy yields",
        label    = "tab:soy_rot",
        extralines = list("_Controls" = c("No", "Yes")),
@@ -843,7 +845,7 @@ rm(soy_jp_s2a); gc()
  
 source("save_models_lean.R")
 boot_soy <- boot_jp_fgls(soy_jp_data, fml_mean, fml_var, fml_var_b,
-                          B = 499, seed = 42, n_workers = 4)
+                          B = 499, seed = 42, n_workers = 2)
  
 saveRDS(
   list(
@@ -869,12 +871,12 @@ saveRDS(
                                nsoy     = mean(nsoy,     na.rm = TRUE),
                                .groups  = "drop")
   ),
-  file     = "C:/Users/vf006/Documents/soy_z_models.rds",
+  file     = "D:/Crop data/soy_z_models.rds",
   compress = "bzip2"
 )
  
 cat("Soy lean models saved. File size:",
-    round(file.size("C:/Users/vf006/Documents/soy_z_models.rds") / 1e6, 1),
+    round(file.size("D:/Crop data/soy_z_models.rds") / 1e6, 1),
     "MB\n")
  
 rm(soy_jp_data, soy_jp_s1, soy_jp_s2b, boot_soy); gc()

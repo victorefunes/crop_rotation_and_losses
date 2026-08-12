@@ -43,7 +43,8 @@ corn_df <- read_parquet(
 
 corn_df <- corn_df |>
   filter(STATE_ABBR == "IL") |> 
-  mutate(tile_field_ID = paste0("T", STATE_FIPS, "_", tile, "_", field_id))  |> 
+  mutate(tile_field_ID = paste0("T", STATE_FIPS, "_", tile, "_", field_id),
+         corn_yield = corn_yield / 62.77)  |> 
   arrange(tile_field_ID, year) 
 
 cat("Corn raw rows:", nrow(corn_df), "\n")
@@ -215,6 +216,8 @@ etable(corn_rot_nc, corn_rot,
        placement = "H",
        style.tex = style.tex("aer"),
        replace  = TRUE, se.below = FALSE,
+       fontsize = "scriptsize",
+       arraystretch = 0.8,
        title    = "Rotation patterns and corn yields",
        label    = "tab:corn_rot",
        extralines = list("_Controls" = c("No", "Yes")),
@@ -823,7 +826,7 @@ rm(corn_jp_s2a); gc()
  
 source("save_models_lean.R")
 boot_corn <- boot_jp_fgls(corn_jp_data, fml_mean, fml_var, fml_var_b,
-                           B = 499, seed = 42, n_workers = 4)
+                           B = 499, seed = 42, n_workers = 2)
  
 saveRDS(
   list(
