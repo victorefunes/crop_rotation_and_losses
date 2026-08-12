@@ -235,29 +235,31 @@ cat("Corn sequences significant at 5% (unadjusted):", sum(pvals_corn$sig_raw), "
 cat("Corn sequences significant at 5% FDR (BH):    ", sum(pvals_corn$sig_bh),  "\n")
  
 # Figure: corn_rot_plot — Response of corn yields to rotation sequences
-corn_rot |>
+corn_rot_nc |>
   coefplot() |>
   data.frame() |>
   filter(grepl("rot_crop", prms.estimate_names)) |>
   separate(prms.estimate_names, into = c("temp", "term"), sep = 8) |>
   select(-temp) |>
-  mutate(group = case_when(
-    term == "S-C-S-C-S-C"                         ~ "Perfect rotation",
-    term %in% c("C-C-C-C-S-C", "C-C-S-C-S-C",
-                "S-S-S-S-S-C", "S-S-S-C-S-C")    ~ "Transitioning",
-    .default = "Other")) |>
-  ggplot(aes(x = reorder(term, -prms.y), y = prms.y)) +
+  mutate(
+    system = if_else(grepl("W", term), "Corn-soy-wheat", "Corn-soy"),
+    group  = case_when(
+      term == "S-C-S-C-S-C" ~ "Perfect rotation",
+      .default              = "Other")) |>
+  ggplot(aes(x = reorder_within(term, -prms.y, system), y = prms.y)) +
   geom_point(size = 2, aes(color = group)) +
   geom_errorbar(aes(ymin = prms.ci_low, ymax = prms.ci_high, color = group),
                 width = 0.2) +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey60") +
   coord_flip() +
+  facet_grid(system ~ ., scales = "free_y", space = "free_y") +
+  scale_x_reordered() +
   labs(x = "Coefficient Estimate", y = "Crop sequence",
-       title   = "Response of corn yields to rotation sequences",
+       title   = "Response of corn yields to rotation sequences (no controls)",
        caption = "Reference: C-C-C-C-C-C. Clustered at COUNTY_FIPS.") +
-  theme(legend.title = element_blank(), legend.position = "bottom") ->
-  corn_rot_plot
-ggsave(paste0(fig_dir, "corn_rot_plot.png"), corn_rot_plot,
+  theme(legend.title = element_blank(), legend.position = "bottom")  ->
+  corn_rot_plot_nc
+ggsave(paste0(fig_dir, "corn_rot_plot_nc.png"), corn_rot_plot_nc,
        width = 10, height = 7.5, dpi = 300)
 
 library(tidytext)   # for reorder_within / scale_y_reordered
@@ -271,10 +273,8 @@ corn_rot |>
   mutate(
     system = if_else(grepl("W", term), "Corn-soy-wheat", "Corn-soy"),
     group  = case_when(
-      term == "S-C-S-C-S-C"                       ~ "Perfect rotation",
-      term %in% c("C-C-C-C-S-C", "C-C-S-C-S-C",
-                  "S-S-S-S-S-C", "S-S-S-C-S-C")   ~ "Transitioning",
-      .default = "Other")) |>
+      term == "S-C-S-C-S-C" ~ "Perfect rotation",
+      .default              = "Other")) |>
   ggplot(aes(x = reorder_within(term, -prms.y, system), y = prms.y)) +
   geom_point(size = 2, aes(color = group)) +
   geom_errorbar(aes(ymin = prms.ci_low, ymax = prms.ci_high, color = group),
@@ -298,17 +298,23 @@ ggsave(paste0(fig_dir, "corn_rot_plot.png"), corn_rot_plot,
 corn_rci_nc <- make_jp_formula("corn_yield", "RCI", NULL)
 corn_rci_cs <- make_jp_formula("corn_yield", "RCI", all_controls)
  
+# Remove infrequent RCI levels (fewer than 100 observations)
+rci_keep <- corn_jp_data |>
+  count(RCI) |>
+  filter(n >= 100) |>
+  pull(RCI)
+
 corn_jp_data |>
-  filter(RCI != c(1.58, 4.47, 4.74)) |>
+  filter(RCI %in% rci_keep) |>
   mutate(RCI = factor(RCI)) |>
-  feols(corn_rci_nc, data = _, cluster = ~COUNTY_FIPS) -> corn_rci_all
- 
+  feols(corn_rci_nc, data = _, cluster = ~COUNTY_FIPS) -> corn_rci_nc
+
 corn_jp_data |>
-  filter(RCI != c(1.58, 4.47, 4.74)) |>
+  filter(RCI %in% rci_keep) |>
   mutate(RCI = factor(RCI)) |>
   feols(corn_rci_cs, data = _, cluster = ~COUNTY_FIPS) -> corn_rci_cs
  
-etable(corn_rci_all, corn_rci_cs,
+etable(corn_rci_nc, corn_rci_cs,
        tex      = TRUE,
        dict     = dict_rci,
        headers  = c("No controls", "Weather and soil controls"),
@@ -329,9 +335,8 @@ corn_rci_cs |>
   select(-temp) |>
   mutate(term  = as.numeric(term),
          group = case_when(
-           term == 2.24              ~ "Perfect rotation",
-           term %in% c(1.41,1.73,2) ~ "Transitioning",
-           .default = "Other")) |>
+           term == 2.24 ~ "Perfect rotation",
+           .default     = "Other")) |>
   filter(term < 5.2) |>
   ggplot(aes(x = term, y = prms.y)) +
   geom_point(size = 2, aes(color = group)) +
@@ -346,7 +351,7 @@ corn_rci_cs |>
 ggsave(paste0(fig_dir, "corn_rci_plot.png"), corn_rci_plot,
        width = 10, height = 7.5, dpi = 300)
  
-rm(corn_rci_all, corn_rci_cs); gc()
+rm(corn_rci_nc, corn_rci_cs); gc()
  
 # ── 3. VPD interaction models — corn ─────────────────────────────────────────
 # Tables: tab:corn_rot_vpd, tab:corn_rci_vpd
@@ -390,7 +395,7 @@ etable(corn_rci_vpd,
        label    = "tab:corn_rci_vpd",
        file     = paste0(tab_dir, "corn_rci_vpd.tex"))     
  
-#rm(corn_rot_vpd, corn_rci_vpd); 
+rm(corn_rot_vpd, corn_rci_vpd); 
 gc()
  
 # ── 4. Just-Pope stage 1 — corn ───────────────────────────────────────────────
@@ -631,7 +636,8 @@ corn_jp_summary <- corn_s1_coef |>
  
 cat("Corn sequences dominating monoculture:\n")
 corn_jp_summary |> filter(dominates) |>
-  select(rot_crop, mean_est, mean_se, var_est, var_se) |> print(n = Inf)
+  select(rot_crop, mean_est, mean_se, var_est, var_se) |> 
+  print(n = Inf)
  
 # Figure: corn_var_plot — Response of std dev of corn yields to rotation sequences
 corn_jp_s2 |>
@@ -643,10 +649,8 @@ corn_jp_s2 |>
   mutate(
     system = if_else(grepl("W", term), "Corn-soy-wheat", "Corn-soy"),
     group  = case_when(
-      term == "S-C-S-C-S-C"                      ~ "Perfect rotation",
-      term %in% c("C-C-C-C-S-C","C-C-S-C-S-C",
-                  "S-S-S-S-S-C","S-S-S-C-S-C")  ~ "Transitioning",
-      .default = "Other")) |>
+      term == "S-C-S-C-S-C" ~ "Perfect rotation",
+      .default              = "Other")) |>
   arrange(system, prms.y) |>
   mutate(term = factor(term, levels = unique(term))) |>
   ggplot(aes(x = term, y = prms.y)) +
@@ -725,7 +729,7 @@ rm(corn_jp_s2, corn_s1_coef, corn_s2_coef, corn_jp_summary, corn_jp_plot,
  
 corn_rci_jp_data <- corn_jp_data |>
   select(-any_of(c("resid_sq", "h_hat"))) |>
-  filter(RCI != c(1.58, 4.47, 4.74)) |>
+  filter(RCI %in% rci_keep) |>
   mutate(RCI = factor(RCI))
  
 fml_corn_rci_mean <- make_jp_formula("corn_yield", "RCI", all_controls_fgls)

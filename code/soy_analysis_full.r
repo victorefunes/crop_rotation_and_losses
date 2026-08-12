@@ -242,10 +242,8 @@ soy_rot |>
   separate(prms.estimate_names, into = c("temp", "term"), sep = 8) |>
   select(-temp) |>
   mutate(group = case_when(
-    term == "C-S-C-S-C-S"                         ~ "Perfect rotation",
-    term %in% c("S-S-S-S-C-S", "S-S-C-S-C-S",
-                "C-C-C-C-C-S", "C-C-C-S-C-S")    ~ "Transitioning",
-    .default = "Other")) |>
+    term == "C-S-C-S-C-S" ~ "Perfect rotation",
+    .default              = "Other")) |>
   ggplot(aes(x = reorder(term, -prms.y), y = prms.y)) +
   geom_point(size = 2, aes(color = group)) +
   geom_errorbar(aes(ymin = prms.ci_low, ymax = prms.ci_high, color = group),
@@ -271,10 +269,8 @@ soy_rot |>
   mutate(
     system = if_else(grepl("W", term), "Corn-soy-wheat", "Corn-soy"),
     group  = case_when(
-    term == "C-S-C-S-C-S"                         ~ "Perfect rotation",
-    term %in% c("S-S-S-S-C-S", "S-S-C-S-C-S",
-                "C-C-C-C-C-S", "C-C-C-S-C-S")    ~ "Transitioning",
-      .default = "Other")) |>
+      term == "C-S-C-S-C-S" ~ "Perfect rotation",
+      .default              = "Other")) |>
   ggplot(aes(x = reorder_within(term, -prms.y, system), y = prms.y)) +
   geom_point(size = 2, aes(color = group)) +
   geom_errorbar(aes(ymin = prms.ci_low, ymax = prms.ci_high, color = group),
@@ -298,13 +294,19 @@ ggsave(paste0(fig_dir, "soy_rot_plot.png"), soy_rot_plot,
 soy_rci_nc <- make_jp_formula("soy_yield", "RCI", NULL)
 soy_rci_cs <- make_jp_formula("soy_yield", "RCI", all_controls)
  
+# Remove infrequent RCI levels (fewer than 100 observations)
+rci_keep <- soy_jp_data |>
+  count(RCI) |>
+  filter(n >= 100) |>
+  pull(RCI)
+
 soy_jp_data |>
-  filter(RCI != c(4.47, 4.74)) |>
+  filter(RCI %in% rci_keep) |>
   mutate(RCI = factor(RCI)) |>
   feols(soy_rci_nc, data = _, cluster = ~COUNTY_FIPS) -> soy_rci_all
- 
+
 soy_jp_data |>
-  filter(RCI != c(4.47, 4.74)) |>
+  filter(RCI %in% rci_keep) |>
   mutate(RCI = factor(RCI)) |>
   feols(soy_rci_cs, data = _, cluster = ~COUNTY_FIPS) -> soy_rci_cs
  
@@ -329,9 +331,8 @@ soy_rci_cs |>
   select(-temp) |>
   mutate(term  = as.numeric(term),
          group = case_when(
-           term == 2.24              ~ "Perfect rotation",
-           term %in% c(1.41,1.73,2) ~ "Transitioning",
-           .default = "Other")) |>
+           term == 2.24 ~ "Perfect rotation",
+           .default     = "Other")) |>
   filter(term < 5.2) |>
   ggplot(aes(x = term, y = prms.y)) +
   geom_point(size = 2, aes(color = group)) +
@@ -662,10 +663,8 @@ soy_jp_s2 |>
   mutate(
     system = if_else(grepl("W", term), "Corn-soy-wheat", "Corn-soy"),
     group  = case_when(
-      term == "C-S-C-S-C-S"                      ~ "Perfect rotation",
-      term %in% c("C-C-C-C-C-S","C-C-C-S-C-S",
-                  "S-S-S-S-C-S","S-S-C-S-C-S")  ~ "Transitioning",
-      .default = "Other")) |>
+      term == "C-S-C-S-C-S" ~ "Perfect rotation",
+      .default              = "Other")) |>
   arrange(system, prms.y) |>
   mutate(term = factor(term, levels = unique(term))) |>
   ggplot(aes(x = term, y = prms.y)) +
@@ -744,7 +743,7 @@ rm(soy_jp_s2, soy_s1_coef, soy_s2_coef, soy_jp_summary, soy_jp_plot,
  
 soy_rci_jp_data <- soy_jp_data |>
   select(-any_of(c("resid_sq", "h_hat"))) |>
-  filter(RCI != c(4.47, 4.74)) |>
+  filter(RCI %in% rci_keep) |>
   mutate(RCI = factor(RCI))
  
 fml_soy_rci_mean <- make_jp_formula("soy_yield", "RCI", all_controls_fgls)
