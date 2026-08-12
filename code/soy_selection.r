@@ -145,10 +145,11 @@ overlap_seqs
 seq_names   <- grep("^rot_crop", names(coef(soy_lasso$refit_full_controls)), value = TRUE)
 rename_dict <- setNames(to_letters(sub("^rot_crop", "", seq_names)), seq_names)
 
-etable(soy_lasso$refit_full_controls, 
-       tex = TRUE, 
+etable(soy_lasso$refit_full_controls,
+       tex = TRUE,
        dict = rename_dict,
        cluster = ~COUNTY_FIPS,
+       se.below = FALSE,
        label = "tab:soy_lasso",
        file = paste0(tab_dir, "soy_lasso.tex"), replace = TRUE,
        title = "LASSO-selected rotation sequence effects on soy yield")
