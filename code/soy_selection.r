@@ -132,7 +132,7 @@ soy_lasso <- lasso_select_sequences(
 soy_lasso$selected_sequences
 
 seq_names   <- grep("^rot_crop", names(coef(soy_lasso$refit_full_controls)), value = TRUE)
-rename_dict <- setNames(sub("^rot_crop", "", seq_names), seq_names)
+rename_dict <- setNames(to_letters(sub("^rot_crop", "", seq_names)), seq_names)
 
 etable(soy_lasso$refit_full_controls, 
        tex = TRUE, 

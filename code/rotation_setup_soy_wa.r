@@ -144,8 +144,9 @@ make_jp_formula <- function(lhs, rot_var, controls,
 # readable C/S/W labels. dict_soy is generated from the sequence list so it
 # stays in sync automatically.
 
-to_letters <- function(x) {                 # 1->C, 5->S, 24->W
+to_letters <- function(x) {                 # 1->C, 5->S, 24->W, 36->A
   x <- gsub("24", "W", x, fixed = TRUE)
+  x <- gsub("36", "A", x, fixed = TRUE)
   x <- gsub("5",  "S", x, fixed = TRUE)
   x <- gsub("1",  "C", x, fixed = TRUE)
   x
