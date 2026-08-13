@@ -119,7 +119,7 @@ Crop rotations are among the most widely studied agronomic practices in temperat
  
 We study how long-term crop rotation sequences affect the mean and variance of corn yields using a large, satellite-based, field-level panel dataset for Illinois covering 2003 to 2022. Combining yield data from two independent remote-sensing sources, the Scalable Satellite-Based Crop Yield Mapper \citep[SCYM;][]{lobell2015} and the Quantile Loss Domain Adversarial Neural Networks estimator \citep[QDANN;][]{Ma2024}, with field-level crop sequence histories from the USDA Cropland Data Layer (CDL), we estimate linear fixed effects models that separately identify rotation effects on the conditional mean and conditional variance of yields, following \citet{Just1979}. County and year fixed effects absorb spatial sorting across counties and common annual shocks, so that identification comes from within-county variation in rotation sequences across fields over time.
  
-Our main findings are three. First, a handful of rotation sequences significantly outperform corn monoculture in terms of higher mean yields, but these sequences share identifiable structural features-specifically, a soybean harvest within the past one to two years, no consecutive soybean years, and a moderate number of total soybean harvests in the six-year window. Second, we construct a rotation score from these structural features that maps the observed six-year rotation sequences, drawn from corn, soybean, and winter-wheat histories, onto a scalar index. The score ranges from approximately $-144$ to $+229$ relative to corn monoculture, normalized to zero. % TODO: this range reflects the current (wheat-inclusive) score\_yield.png figure; see the detailed TODO at Section~\ref{subsec:rot_score_res} regarding the out-of-sample use of corn-soy-fitted Z-vector coefficients for wheat-containing sequences, and confirm the exact score for the perfect alternating rotation from the scoring pipeline rather than this text. Third, the Rotational Complexity Index (RCI)-the most natural scalar summary of rotation diversity-has a nonlinear and non-monotone relationship with both yield moments, which implies that linear RCI-based rating adjustments would be misspecified.
+Our main findings are three. First, a handful of rotation sequences significantly outperform corn monoculture in terms of higher mean yields, but these sequences share identifiable structural features-specifically, a soybean harvest within the past one to two years, no consecutive soybean years, and a moderate number of total soybean harvests in the six-year window. Second, we construct a rotation score from these structural features that maps the observed six-year rotation sequences, drawn from corn, soybean, and winter-wheat histories, onto a scalar index. The score ranges from approximately $-3.77$ to $+1.68$ relative to corn monoculture, normalized to zero, across 28 distinct score values (mean $-0.30$, median $0.09$). % TODO: this range comes from a direct summary of the scoring pipeline's own output (score\_plot\_df), which resolves the earlier uncertainty about the exact range and value count -- but it is on a very different scale (single digits) from the range implied by the current figures/score\_yield.png figure (which visually spans roughly $-144$ to $+229$). That gap of nearly two orders of magnitude suggests score\_yield.png was built from a different, out-of-date score construction and needs to be regenerated to match. Do not cite the -144/+229 figures anywhere else in the paper until this is resolved. The out-of-sample use of corn-soy-fitted Z-vector coefficients for wheat-containing sequences (Section~\ref{subsec:rot_score_res}) is still an open issue, and the exact score for the perfect alternating rotation specifically is still not confirmed. Third, the Rotational Complexity Index (RCI)-the most natural scalar summary of rotation diversity-has a nonlinear and non-monotone relationship with both yield moments, which implies that linear RCI-based rating adjustments would be misspecified.
 % TODO: the "2.59" figure here is the same unverified carryover flagged in detail at
 % Section~\ref{subsec:rot_score_res} -- it appears verbatim in an earlier presentation
 % that used different (larger, one sign-flipped) Z-vector coefficients, and an attempt to
@@ -660,8 +660,17 @@ For soybean yields (Table~\ref{tab:soy_rci}, Figure~\ref{fig:soy_rci_plot}), the
   USDA-NASS.}
 \end{figure}
  
-Figure~\ref{fig:score_yield} reports predicted corn yields as a function of the rotation score, now computed over the 49-sequence corn--soybean--wheat sample. Score values span a much wider range than in the corn-soy-only version, running from approximately $-144$ to $+229$, with corn monoculture normalized to zero. The score-yield relationship is positive overall but, consistent with the sequence-level and RCI results above, noisy in the middle of the distribution rather than cleanly monotone; variance effects show no clean monotone relationship with score across the distribution.
-% TODO -- IMPORTANT, flagged rather than silently corrected: the caption states the score
+Figure~\ref{fig:score_yield} reports predicted corn yields as a function of the rotation score, now computed over the 49-sequence corn--soybean--wheat sample. A direct summary of the scoring pipeline's output (\texttt{score\_plot\_df}, 28 distinct score values) shows the score running from $-3.77$ to $+1.68$ relative to corn monoculture (normalized to zero), with mean $-0.30$ and median $0.09$; the distribution is left-skewed (skewness $-0.84$), consistent with a small number of poorly-scoring sequences pulling the mean below the median. This range is narrower, not wider, than the range reported for the pre-wheat corn-soy-only version of the score, contrary to what an earlier draft of this section stated. The score-yield relationship is positive overall but, consistent with the sequence-level and RCI results above, noisy in the middle of the distribution rather than cleanly monotone; variance effects show no clean monotone relationship with score across the distribution.
+% TODO -- IMPORTANT, NEWLY IDENTIFIED: the range and distribution values above come directly
+% from score\_plot\_df, the dataframe underlying this figure, and should be treated as
+% authoritative. However, figures/score\_yield.png as currently committed visually spans
+% roughly -144 to +229 -- nearly two orders of magnitude larger than score\_plot\_df's
+% actual -3.77/+1.68 range. This means the FIGURE currently in the paper does not match the
+% TEXT above (and does not match the corrected, small-magnitude Z-vector coefficients in
+% the current Table~\ref{tab:zvector}, which are the right order of magnitude to produce a
+% score in the -3.77/+1.68 range). The figure must be regenerated from score\_plot\_df
+% before this section is finalized, or the discrepancy explained if it is not a bug.
+% TODO -- IMPORTANT, STILL OPEN: the caption states the score
 % is "Z-vector coefficients applied to sequence-level feature averages," but
 % Table~\ref{tab:zvector} (tables/zvector.tex) still reports N = 1,548,319 -- the
 % corn-soy-only estimation sample. That means the Z-vector coefficients used to build this
@@ -671,10 +680,11 @@ Figure~\ref{fig:score_yield} reports predicted corn yields as a function of the 
 % outside their estimation sample) and should be either (a) justified explicitly in the
 % text, or (b) resolved by re-estimating the Z-vector model on the full wheat-inclusive
 % sample -- e.g. by adding a wheat-count feature -- before this figure is finalized.
-% TODO: the exact number of distinct score values and the score for a specific reference
-% sequence (e.g. the old "+2.59 for the perfect alternating rotation" claim) cannot be
-% read reliably off the plot and should be pulled directly from the scoring code's output
-% table rather than estimated from the figure.
+% TODO -- PARTIALLY RESOLVED: the exact number of distinct score values (28) is now known
+% from score\_plot\_df, per above. Still open: the exact score for a specific reference
+% sequence (e.g. the old "+2.59 for the perfect alternating rotation" claim) is still not
+% confirmed and should be pulled from score\_plot\_df by sequence identity, not estimated
+% from the figure.
 
 The same scoring exercise applied to the soybean sample (Figure~\ref{fig:soy_score_yield}) shows a qualitatively similar but much smaller-scale pattern, with scores ranging from roughly $-0.46$ to $+1.29$ relative to soybean monoculture (score $=0$) and a broadly positive, though not strictly monotone, relationship with mean soybean yield.
 
@@ -703,14 +713,13 @@ Second, the mean and variance effects of these structural features do not always
  
 Third, the RCI does not move monotonically with corn yields: RCI $=1.73$ carries a large, significant \emph{negative} coefficient relative to the RCI $=1.41$ reference, RCI levels from 2.00 through 2.65 are statistically indistinguishable from the reference, and significant positive effects appear only at isolated higher levels (2.74, 4.24, and especially 4.74, the largest and most significant coefficient in the table). This non-monotonicity---and the absence of any flattening at the top of the observed range---is what a linear premium adjustment based on RCI would miss.
  
-Fourth, we develop a rotation score, constructed from the same four structural sequence features, that maps the observed six-year rotation sequences onto a compact scalar suitable as a rating input.
-% TODO: this paragraph previously claimed the score maps onto "14 distinct values" and is
-% "linearly related to yield outcomes across most of its support." The regenerated
-% score\_yield.png figure (Section~\ref{subsec:rot_score_res}) shows a wider range
-% (approximately -144 to +229) and a noisier, less clearly linear relationship than the
-% old claim -- both the exact count of distinct values and the shape claim should still be
-% re-derived from the scoring pipeline's output table rather than read off the figure, since neither is
-% guaranteed to survive a roughly 5-10x change in coefficient magnitude.
+Fourth, we develop a rotation score, constructed from the same four structural sequence features, that maps the observed six-year rotation sequences onto 28 distinct scalar values ranging from $-3.77$ to $+1.68$ relative to corn monoculture, suitable as a rating input.
+% TODO: the count (28) and range (-3.77 to +1.68) now come directly from score_plot_df
+% (Section~\ref{subsec:rot_score_res}) and supersede the earlier "14 distinct values" and
+% "-144 to +229" claims, both of which were based on either an outdated coefficient set or
+% an out-of-date score_yield.png figure. The relationship shape claim ("linearly related to
+% yield outcomes across most of its support") is still not re-confirmed against current
+% data and should not be restated until checked.
  
 \subsection{\label{subsec:implications}Implications for Crop Insurance Rating}
  
