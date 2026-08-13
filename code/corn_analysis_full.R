@@ -874,10 +874,37 @@ cat("Reloading corn data for spatial maps...\n")
 corn_df <- read_parquet(
   "D:/Crop data/d_igis13_12_1_2025.with_rci.parquet") 
 
-corn_sf <- corn_df |>
-  filter(STATE_ABBR == "IL" & year == 2016) |>
+corn_df <- corn_df |>
+  filter(STATE_ABBR == "IL" & year == 2016) |> 
   mutate(tile_field_ID = paste0("T", STATE_FIPS, "_", tile, "_", field_id),
-         corn_yield = corn_yield / 62.77)  |>  # kg/ha -> bu/ac
+         corn_yield = corn_yield / 62.77)  |> 
+  arrange(tile_field_ID, year) 
+
+## Add present year crop variable
+setDT(corn_df)  
+
+add_crop_year(corn_df)
+
+corn_df <- corn_df |>
+  rename(crop_0 = crop_year,
+         crop_1 = prioryr_crop,
+         crop_2 = prior2yr_crop,
+         crop_3 = prior3yr_crop,
+         crop_4 = prior4yr_crop,
+         crop_5 = prior5yr_crop,
+         crop_6 = prior6yr_crop) 
+
+source("cdl_recode.R")
+
+recode_cdl(corn_df, cols = paste0("crop_", 0:6))
+
+corn_df <- corn_df |>
+  rename(RCI = annual_RCI) |>
+  mutate(rot_crop = paste0(crop_5, "-", crop_4, "-", crop_3, "-", 
+          crop_2, "-", crop_1, "-", crop_0)) |>
+  rci_correction()
+
+corn_sf <- corn_df |>     
   arrange(tile_field_ID, year) |>
   st_as_sf(coords = c("lon", "lat"), crs = st_crs("EPSG:4326"))
   rm(corn_df); gc()
@@ -899,23 +926,21 @@ corn_sf |>
        caption = "Source: Ma et al. (2024)") ->
   corn_yield_map
 ggsave(paste0(fig_dir, "corn_yield_map.png"), corn_yield_map,
-       width = 10, height = 10, dpi = 300)
+       width = 10, height = 12.5, dpi = 600)
  
 # Figure: rci_map — RCI values across Illinois (2016)
 corn_sf |>
-  rename(RCI = annual_RCI) |>
   filter(!is.na(RCI)) |>
-  mutate(RCI = factor(RCI)) |>
   ggplot() +
   geom_sf(data = il_map) +
-  geom_sf(aes(color = RCI), size = 0.2) +
-  guides(colour = guide_legend(override.aes = list(size = 2))) +
+  geom_sf(aes(color = RCI), size = 0.2, alpha = 0.3) +
+  scale_color_viridis_c() +
   theme(legend.position = "bottom") +
   labs(title   = "Rotational Complexity Index (2016)",
        caption = "Source: CDL / Socolar et al. (2021)") ->
   rci_map
 ggsave(paste0(fig_dir, "rci_map.png"), rci_map,
-       width = 10, height = 10, dpi = 300)
+       width = 10, height = 12.5, dpi = 600)
  
 # Figure: nccpi_corn_map — NCCPI corn productivity index (2016)
 corn_sf |>
@@ -929,7 +954,7 @@ corn_sf |>
        caption = "Source: gSSURGO") ->
   nccpi_corn_map
 ggsave(paste0(fig_dir, "nccpi_corn_map.png"), nccpi_corn_map,
-       width = 10, height = 10, dpi = 300)
+       width = 10, height = 12.5, dpi = 600)
  
 rm(corn_sf, il_map, corn_yield_map, rci_map, nccpi_corn_map); gc()
  

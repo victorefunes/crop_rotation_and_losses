@@ -887,10 +887,37 @@ cat("Reloading soy data for spatial maps...\n")
 soy_df <- read_parquet(
   "D:/Crop data/d_igis13soy_11_30_2025.with_rci.parquet") 
 
-soy_sf <- soy_df |>
-  filter(STATE_ABBR == "IL" & year == 2016) |>
+soy_df <- soy_df |>
+  filter(STATE_ABBR == "IL" & year == 2016) |> 
   mutate(tile_field_ID = paste0("T", STATE_FIPS, "_", tile, "_", field_id),
-         soy_yield = soy_yield / 67.25)  |>  # kg/ha -> bu/ac
+         soy_yield = soy_yield / 67.25)  |> 
+  arrange(tile_field_ID, year) 
+
+## Add present year crop variable
+setDT(soy_df)  
+
+add_crop_year(soy_df)
+
+soy_df <- soy_df |>
+  rename(crop_0 = crop_year,
+         crop_1 = prioryr_crop,
+         crop_2 = prior2yr_crop,
+         crop_3 = prior3yr_crop,
+         crop_4 = prior4yr_crop,
+         crop_5 = prior5yr_crop,
+         crop_6 = prior6yr_crop) 
+
+source("cdl_recode.R")
+
+recode_cdl(soy_df, cols = paste0("crop_", 0:6))
+
+soy_df <- soy_df |>
+  rename(RCI = annual_RCI) |>
+  mutate(rot_crop = paste0(crop_5, "-", crop_4, "-", crop_3, "-", 
+          crop_2, "-", crop_1, "-", crop_0)) |>
+  rci_correction()  
+
+soy_sf <- soy_df |>
   arrange(tile_field_ID, year) |>
   st_as_sf(coords = c("lon", "lat"), crs = st_crs("EPSG:4326"))
   rm(soy_df); gc()
@@ -912,23 +939,21 @@ soy_sf |>
        caption = "Source: Ma et al. (2024)") ->
   soy_yield_map
 ggsave(paste0(fig_dir, "soy_yield_map.png"), soy_yield_map,
-       width = 10, height = 10, dpi = 300)
+       width = 10, height = 12.5, dpi = 600)
  
 # Figure: rci_map — RCI values across Illinois (2016)
 soy_sf |>
-  rename(RCI = annual_RCI) |>
   filter(!is.na(RCI)) |>
-  mutate(RCI = factor(RCI)) |>
   ggplot() +
   geom_sf(data = il_map) +
-  geom_sf(aes(color = RCI), size = 0.2) +
-  guides(colour = guide_legend(override.aes = list(size = 2))) +
+  geom_sf(aes(color = RCI), size = 0.2, alpha = 0.3) +
+  scale_color_viridis_c() +
   theme(legend.position = "bottom") +
   labs(title   = "Rotational Complexity Index (2016)",
        caption = "Source: CDL / Socolar et al. (2021)") ->
   rci_map
 ggsave(paste0(fig_dir, "rci_map.png"), rci_map,
-       width = 10, height = 10, dpi = 300)
+       width = 10, height = 12.5, dpi = 600)
  
 # Figure: nccpi_soy_map — NCCPI soy productivity index (2016)
 soy_sf |>
@@ -942,7 +967,7 @@ soy_sf |>
        caption = "Source: gSSURGO") ->
   nccpi_soy_map
 ggsave(paste0(fig_dir, "nccpi_soy_map.png"), nccpi_soy_map,
-       width = 10, height = 10, dpi = 300)
+       width = 10, height = 12.5, dpi = 600)
  
 rm(soy_sf, il_map, soy_yield_map, rci_map, nccpi_soy_map); gc()
  
