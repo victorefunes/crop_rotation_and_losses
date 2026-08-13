@@ -179,7 +179,7 @@ corn_jp_data |>
   kable(format  = "latex",
         booktabs = TRUE,
         caption = "Summary statistics by rotation type",
-        label   = "summary",
+        label   = "corn_summary",
         align   = c("l","r","r","r","r","r","r","r","r")) |>
   kable_styling(latex_options = c("hold_position", "scale_down")) |>
   #footnote(general = paste0(

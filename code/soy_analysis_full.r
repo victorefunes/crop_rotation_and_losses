@@ -179,12 +179,12 @@ soy_jp_data |>
   kable(format  = "latex",
         booktabs = TRUE,
         caption = "Summary statistics by rotation type",
-        label   = "summary",
+        label   = "soy_summary",
         align   = c("l","r","r","r","r","r","r","r","r")) |>
   kable_styling(latex_options = c("hold_position", "scale_down")) |>
   #footnote(general = paste0(
   #  "Means with standard deviations in parentheses. ",
-  #  "Corn yield in bushels per acre (QDANN). ",
+  #  "Soy yield in bushels per acre (QDANN). ",
   #  "Precipitation in mm; GDD and EDD in degree-days; ",
   #  "VPD in kPa; AWC in mm. ",
   #  "Perfect rotation = alternating C-S sequence (S-C-S-C-S-C or C-S-C-S-C-S). ",
