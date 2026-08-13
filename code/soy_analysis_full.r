@@ -192,7 +192,7 @@ soy_jp_data |>
   #  "Sample: Illinois field-year observations, 2009--2022."
   #),
   #general_title = "Notes:") |>
-  save_kable(file = paste0(tab_dir, "summary_stats.tex"))
+  save_kable(file = paste0(tab_dir, "soy_summary_stats.tex"))
  
 cat("Summary statistics table saved.\n")
  

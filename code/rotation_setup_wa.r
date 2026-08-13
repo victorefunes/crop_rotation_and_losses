@@ -72,6 +72,7 @@ corn_soy_patterns <- tibble(pattern = c(
 rci_correction <- function(df) {
   df |>
     mutate(data_rm = case_when(
+      rot_crop == "1-1-1-1-1-1" & RCI != 0 ~ 1,
       rot_crop == "5-1-5-1-5-1" & RCI == 3.24 ~ 1,
       rot_crop == "5-1-5-1-5-1" & RCI == 3    ~ 1,
       rot_crop == "5-1-5-1-1-1" & RCI == 2.24 ~ 1,
