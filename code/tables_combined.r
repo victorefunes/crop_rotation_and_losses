@@ -61,7 +61,11 @@ dict_z <- c(
   "late_soy" = "Latest soy rotation",
   "soy_gap"  = "Soy gap",
   "soy_cons" = "Number of consecutive soy years",
-  "nsoy"     = "Number of soy harvests"
+  "nsoy"     = "Number of soy harvests",
+  "late_corn" = "Latest corn rotation",
+  "corn_gap"  = "Corn gap",
+  "corn_cons" = "Number of consecutive corn years",
+  "ncorn"     = "Number of corn harvests"
 )
 
 # ── Table: tab:zvector ────────────────────────────────────────────────────────
@@ -78,7 +82,8 @@ etable(corn_z_s1, corn_z_s2, soy_z_s1, soy_z_s2,
        dict      = dict_z,
        headers   = c("Corn mean", "Corn variance",
                      "Soy mean",  "Soy variance"),
-       keep_raw      = c("late_soy", "soy_gap", "soy_cons", "nsoy"),
+       keep_raw      = c("late_soy", "soy_gap", "soy_cons", "nsoy",
+                          "late_corn", "corn_gap", "corn_cons", "ncorn"),
        se.below  = FALSE,
        style.tex = style.tex("aer"),
        replace   = TRUE,

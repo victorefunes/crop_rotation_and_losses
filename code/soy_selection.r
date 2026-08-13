@@ -148,6 +148,7 @@ rename_dict <- setNames(to_letters(sub("^rot_crop", "", seq_names)), seq_names)
 
 etable(soy_lasso$refit_full_controls,
        tex = TRUE,
+       keep = "^rot_crop",
        dict = rename_dict,
        cluster = ~COUNTY_FIPS,
        se.below = FALSE,
