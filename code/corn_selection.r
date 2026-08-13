@@ -154,6 +154,7 @@ make_dict_from_model <- function(model, prefix = "rot_crop") {
 etable(corn_lasso$refit_full_controls, tex = TRUE, cluster = ~COUNTY_FIPS,
        dict = make_dict_from_model(corn_lasso$refit_full_controls),
        keep_raw = "^rot_crop",
+       se.below = FALSE,
        file = paste0(tab_dir, "corn_lasso.tex"), replace = TRUE,
        title = "LASSO-selected rotation sequence effects on corn yield",
        label = "tab:corn_lasso")
