@@ -144,8 +144,16 @@ overlap_seqs
 seq_names   <- grep("^rot_crop", names(coef(corn_lasso$refit_full_controls)), value = TRUE)
 rename_dict <- setNames(to_letters(sub("^rot_crop", "", seq_names)), seq_names)
 
+make_dict_from_model <- function(model, prefix = "rot_crop") {
+  coefs <- names(coef(model))
+  seqs  <- grep(paste0("^", prefix), coefs, value = TRUE)
+  raw   <- sub(paste0("^", prefix), "", seqs)
+  setNames(to_letters(raw), seqs)
+}
+
 etable(corn_lasso$refit_full_controls, tex = TRUE, cluster = ~COUNTY_FIPS,
-       dict = dict_corn, keep = "^rot_crop",
+       dict = make_dict_from_model(corn_lasso$refit_full_controls),
+       keep_raw = "^rot_crop",
        file = paste0(tab_dir, "corn_lasso.tex"), replace = TRUE,
        title = "LASSO-selected rotation sequence effects on corn yield",
        label = "tab:corn_lasso")
