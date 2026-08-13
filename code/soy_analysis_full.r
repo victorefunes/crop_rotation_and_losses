@@ -390,7 +390,7 @@ etable(soy_rci_vpd,
        label    = "tab:soy_rci_vpd",
        file     = paste0(tab_dir, "soy_rci_vpd.tex"))     
  
-rm(soy_rot_vpd, soy_rci_vpd); 
+#rm(soy_rot_vpd, soy_rci_vpd); 
 gc()
  
 # ── 4. Just-Pope stage 1 — soy ───────────────────────────────────────────────
@@ -494,14 +494,14 @@ feols(fml_z_soy_var, data = soy_jp_data,
       cluster = ~tile_field_ID + year) -> soy_z_s2
  
 # ── Save Z-vector models for tables_combined.R ────────────────────────────────
-#saveRDS(
-#  list(z_s1        = soy_z_s1,
-#       z_s2        = soy_z_s2,
-#       rot_vpd_nc  = soy_rot_vpd_nc,
-#       rot_vpd     = soy_rot_vpd),
-#  file     = "D:/Crop data/soy_z_models.rds",
-#  compress = "bzip2"
-#)  
+saveRDS(
+  list(z_s1        = soy_z_s1,
+       z_s2        = soy_z_s2,
+       rot_vpd_nc  = soy_rot_vpd_nc,
+       rot_vpd     = soy_rot_vpd),
+  file     = "D:/Crop data/soy_z_models.rds",
+  compress = TRUE   # gzip -- the real fix for the original slowness was bzip2, not object size
+)
  
 # ── 5. Just-Pope stage 2 — soy ───────────────────────────────────────────────
 # Table: tab:soy_jp_var | Figures: soy_var_plot, soy_coeff_plot, soy_jp_plot
@@ -544,7 +544,6 @@ get_z_coef <- function(name) {
   if (name %in% names(z_coefs)) return(unname(z_coefs[name]))
   warning("Z-vector term '", name, "' was dropped from soy_z_s1 ",
           "(collinear with the others) -- treating its score contribution as 0.")
-  0
 }
 
 score_df <- soy_jp_data |>
@@ -918,6 +917,7 @@ soy_df <- soy_df |>
   rci_correction()  
 
 soy_sf <- soy_df |>
+  filter(rot_crop %in% soy_patterns$pattern) |>
   arrange(tile_field_ID, year) |>
   st_as_sf(coords = c("lon", "lat"), crs = st_crs("EPSG:4326"))
   rm(soy_df); gc()

@@ -18,7 +18,7 @@ lean_feols <- function(fit) {
     r2       = r2(fit, type = "r2"),
     wr2      = r2(fit, type = "wr2"),
     fml      = formula(fit),
-    fixef_vars = fixef_vars(fit),
+    fixef_vars = fit$fixef_vars,
     call     = fit$call
   )
 }

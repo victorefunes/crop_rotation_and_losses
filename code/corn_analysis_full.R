@@ -395,7 +395,7 @@ etable(corn_rci_vpd,
        label    = "tab:corn_rci_vpd",
        file     = paste0(tab_dir, "corn_rci_vpd.tex"))     
  
-rm(corn_rot_vpd, corn_rci_vpd); 
+#rm(corn_rot_vpd, corn_rci_vpd); 
 gc()
  
 # ── 4. Just-Pope stage 1 — corn ───────────────────────────────────────────────
@@ -494,14 +494,14 @@ feols(fml_z_corn_var, data = corn_jp_data,
       cluster = ~tile_field_ID + year) -> corn_z_s2
  
 # ── Save Z-vector models for tables_combined.R ────────────────────────────────
-#saveRDS(
-#  list(z_s1        = corn_z_s1,
-#       z_s2        = corn_z_s2,
-#       rot_vpd_nc  = corn_rot_vpd_nc,
-#       rot_vpd     = corn_rot_vpd),
-#  file     = "D:/Crop data/corn_z_models.rds",
-#  compress = "bzip2"
-#)  
+saveRDS(
+  list(z_s1        = corn_z_s1,
+       z_s2        = corn_z_s2,
+       rot_vpd_nc  = corn_rot_vpd_nc,
+       rot_vpd     = corn_rot_vpd),
+  file     = "D:/Crop data/corn_z_models.rds",
+  compress = TRUE   # gzip -- the real fix for the original slowness was bzip2, not object size
+)
  
 # ── 5. Just-Pope stage 2 — corn ───────────────────────────────────────────────
 # Table: tab:corn_jp_var | Figures: corn_var_plot, corn_coeff_plot, corn_jp_plot
@@ -905,6 +905,7 @@ corn_df <- corn_df |>
   rci_correction()
 
 corn_sf <- corn_df |>     
+  filter(rot_crop %in% corn_soy_patterns$pattern) |>
   arrange(tile_field_ID, year) |>
   st_as_sf(coords = c("lon", "lat"), crs = st_crs("EPSG:4326"))
   rm(corn_df); gc()
@@ -941,7 +942,7 @@ corn_sf |>
   rci_map
 ggsave(paste0(fig_dir, "rci_map.png"), rci_map,
        width = 10, height = 12.5, dpi = 600)
- 
+
 # Figure: nccpi_corn_map — NCCPI corn productivity index (2016)
 corn_sf |>
   filter(!is.na(nccpi3corn_mean)) |>

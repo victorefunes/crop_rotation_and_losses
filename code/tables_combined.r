@@ -16,7 +16,7 @@ source("rotation_setup.R")
 
 # ── Check prerequisites before loading ───────────────────────────────────────
 
-rds_dir <- "C:/Users/vf006/Documents/"
+rds_dir <- "D:/Crop data/"
 
 corn_rds <- paste0(rds_dir, "corn_z_models.rds")
 soy_rds  <- paste0(rds_dir, "soy_z_models.rds")
@@ -71,6 +71,7 @@ dict_z <- c(
 # corn_z_s2 = QDANN variance equation
 # soy_z_s1  = SCYM mean equation  (rename headers accordingly if needed)
 # soy_z_s2  = SCYM variance equation
+tab_dir <- "C:/Users/vf006/Box/crop_rotations_and_losses/tables/"
 
 etable(corn_z_s1, corn_z_s2, soy_z_s1, soy_z_s2,
        tex       = TRUE,

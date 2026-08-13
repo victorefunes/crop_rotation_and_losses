@@ -1,28 +1,28 @@
 
-\begin{table}[H]
+\begin{table}[htbp]
    \caption{\label{tab:zvector} Effect of rotation patterns on yields}
    \bigskip
    \centering
    \begin{tabular}{lcccc}
       \toprule
-                                      & corn\_yield             & resid\_sq\_z            & soy\_yield               & resid\_sq\_z\\    
-                                      & Corn mean               & Corn variance           & Soy mean                 & Soy variance \\   
-                                      & (1)                     & (2)                     & (3)                      & (4)\\  
+                                      & corn\_yield             & resid\_sq\_z           & soy\_yield    & resid\_sq\_z\\    
+                                      & Corn mean               & Corn variance          & Soy mean      & Soy variance \\   
+                                      & (1)                     & (2)                    & (3)           & (4)\\  
       \midrule 
-      Latest soy rotation             & 0.4092$^{***}$ (0.0557) & -0.1334 (1.024)         &                          &   \\   
-      Soy gap                         & 0.1594$^{*}$ (0.0840)   & -2.139$^{***}$ (0.6738) & -0.0009 (0.0136)         & 0.1578$^{**}$ (0.0516)\\   
-      Number of consecutive soy years & -0.2992 (0.4533)        & 9.050$^{*}$ (4.229)     & -0.1417 (0.0791)         & 0.8617$^{***}$ (0.2375)\\   
-      Number of soy harvests          & 0.7247$^{***}$ (0.2123) & 1.358 (3.712)           & -0.2972$^{***}$ (0.0563) & -0.1172 (0.1657)\\   
+      Latest soy rotation             & 0.7348$^{***}$ (0.1479) & -0.9992 (1.716)        &               &   \\   
+      Soy gap                         & 0.2572$^{**}$ (0.1124)  & -2.124$^{**}$ (0.9333) &               &   \\   
+      Number of consecutive soy years & -0.3127 (0.5852)        & 8.282 (5.686)          &               &   \\   
+      Number of soy harvests          & 0.6406$^{**}$ (0.2437)  & -1.919 (3.054)         &               &   \\   
        \\
-      Observations                    & 1,548,319               & 1,548,319               & 1,335,786                & 1,335,786\\  
-      R$^2$                           & 0.86114                 & 0.31709                 & 0.80890                  & 0.33776\\  
-      Within R$^2$                    & 0.16966                 & 0.00866                 & 0.08743                  & 0.00504\\  
-      Controls                        & Yes                     & Yes                     & Yes                      & Yes\\  
-      Year FE                         & \checkmark              & \checkmark              & \checkmark               & \checkmark\\   
-      FIPS FE                         & \checkmark              & \checkmark              & \checkmark               & \checkmark\\   
+      Observations                    & 1,507,098               & 1,507,098              & 1,238,730     & 1,238,730\\  
+      R$^2$                           & 0.83921                 & 0.31885                & 0.80491       & 0.34878\\  
+      Within R$^2$                    & 0.14568                 & 0.01283                & 0.08399       & 0.00423\\  
+      Controls                        & Yes                     & Yes                    & Yes           & Yes\\  
+      Year FE                         & \checkmark              & \checkmark             & \checkmark    & \checkmark\\   
+      FIPS FE                         & \checkmark              & \checkmark             & \checkmark    & \checkmark\\   
        \\
-      tile\_field\_ID fixed effects   & $\checkmark$            & $\checkmark$            & $\checkmark$             & $\checkmark$\\   
-      year fixed effects              & $\checkmark$            & $\checkmark$            & $\checkmark$             & $\checkmark$\\   
+      tile\_field\_ID fixed effects   & $\checkmark$            & $\checkmark$           & $\checkmark$  & $\checkmark$\\   
+      year fixed effects              & $\checkmark$            & $\checkmark$           & $\checkmark$  & $\checkmark$\\   
       \bottomrule
    \end{tabular}
 \end{table}
