@@ -162,7 +162,7 @@ SCYM \citep{lobell2015} uses a large ensemble of crop-simulation runs to train a
 \subsection{\label{subsec:rci}Rotational Complexity Index (RCI)}	
 We measure rotation diversity using the Rotational Complexity Index (RCI) developed by \cite{socolar2021}. The RCI was designed to capture both the richness and the turnover of crop sequences at the field level - two properties that prior diversity measures based on crop frequency or short observation windows failed to represent simultaneously. \cite{socolar2021} applied the index to 1.5 million fields across eight US Midwest states using six-year CDL sequences, establishing it as the standard field-scale measure of rotational complexity in the Corn Belt literature.
 
-The RCI adapts the rotational diversity index of \cite{Tiemann2016}, which quantifies rotation diversity as a function of rotation length $l$ and number of crops $n$, $d = \sqrt{nl}$, to accommodate large-scale remotely sensed data where true rotation length is unobserved. Rather than trying to identify rotations of a known length, \cite{socolar2021} observe a fixed six-year sequence of crops in each field and replace rotation length with two species turnover terms. The resulting index is:
+The RCI adapts the rotational diversity index of \cite{Tiemann2016}), which quantifies rotation diversity as a function of rotation length $l$ and number of crops $n$ $d = \sqrt{nl}$, to accommodate large-scale remotely sensed data where true rotation length is unobserved. Rather than trying to identify rotations of a known length, \cite{socolar2021} observe a fixed six-year sequence of crops in each field and replace rotation length with two species turnover terms. The resulting index is:
 
 \begin{equation}
     RCI = \sqrt{n\times \dfrac{T_{1}+T_{2}+T_{p}}{2}}\label{eq:rci}
@@ -189,6 +189,8 @@ The second estimator is QDANN (Quantile Loss Domain Adversarial Neural Networks)
 
 We treat QDANN as the preferred specification given its higher reported accuracy, its ability to characterize the full conditional yield distribution rather than just the conditional mean, and its explicit design for field-level inference. SCYM results are reported alongside throughout as a robustness check. The consistency of rotation effect estimates across the two estimators - which use entirely different modeling approaches, training objectives, and domain adaptation strategies - serves as an informal validation of both yield datasets and the econometric design; here we additionally validate those yield moments against the independent SCYM series.
 
+Figure~\ref{fig:corn_yield_map} shows the spatial distribution of QDANN corn yields across Illinois in 2016, Figure~\ref{fig:soy_yield_map} shows the corresponding soybean yield distribution, and Figure~\ref{fig:rci_map} shows the distribution of RCI values. The maps reveal the expected geographic concentration of high-productivity, high-rotation-complexity fields in the central Illinois Corn Belt.
+
 \begin{figure}[H]
   \centering
   \begin{minipage}[t]{0.49\textwidth}
@@ -212,8 +214,6 @@ We treat QDANN as the preferred specification given its higher reported accuracy
   Illinois in 2016, same source.}
 \end{figure}
 
-Figure~\ref{fig:corn_yield_map} shows the spatial distribution of QDANN corn yields across Illinois in 2016, Figure~\ref{fig:soy_yield_map} shows the corresponding soybean yield distribution, and Figure~\ref{fig:rci_map} shows the distribution of RCI values. The maps reveal the expected geographic concentration of high-productivity, high-rotation-complexity fields in the central Illinois Corn Belt.
-
 \begin{figure}[H]
   \centering
   \includegraphics[width=0.85\textwidth]{figures/rci_map}
@@ -232,7 +232,7 @@ For each field-pixel and outcome year $t$, we construct a six-year rolling rotat
 
 We characterize rotation histories in two complementary ways. The first is the full sequence of crop codes over the six-year window. All retained sequences end in corn by the outcome restriction and enter the corn yield regressions as indicators relative to corn monoculture (coded $C-C-C-C-C-C$), giving 48 non-monoculture sequence effects; of these, 31 are pure corn--soybean sequences and 17 contain at least one winter-wheat year. We refer to the latter as the corn--soybean--wheat system and separate the two systems in the sequence-effect figures. The second characterization uses the RCI of \citet{socolar2021}, described in Section~\ref{subsec:rci}.
 
-Two coding choices deserve note. First, winter wheat enters as a rotation-history covariate rather than as a modeled outcome: corn and soybean remain the outcome crops, and wheat appears only in the six-year predecessor window. Second, we initially considered extending the rotation set to alfalfa and to the winter-wheat/soybean double crop, both of which are agronomically distinct (alfalfa is a perennial nitrogen-fixing forage). In the Illinois sample, each accounts for well under 1\% of field-years and does not appear in any of the 49 sequences that clear the 99\% support threshold used for the main sequence-dummy, RCI, and Z-vector tables, so we restrict those analyses to corn, soybean, and winter wheat. The LASSO analysis in Section~\ref{subsec:lasso_results}, which considers a substantially larger unrestricted candidate set, does recover one alfalfa-containing sequence for soybean with a large and precisely estimated coefficient, indicating alfalfa is not entirely unidentifiable in this sample, only too rare to survive a frequency-based restriction. We discuss this further in Section~\ref{subsec:limitations}.
+Two coding choices deserve note. First, winter wheat enters as a rotation-history covariate rather than as a modeled outcome: corn and soybean remain the outcome crops, and wheat appears only in the six-year predecessor window. Second, we initially considered extending the rotation set to alfalfa and to the winter-wheat/soybean double crop, both of which are agronomically distinct (alfalfa is a perennial nitrogen-fixing forage). In the Illinois sample, each accounts for well under one percent of field-years and does not appear in any of the 49 sequences clearing the 99\% support threshold used for the main sequence-dummy, RCI, and Z-vector tables, so we restrict those analyses to corn, soybean, and winter wheat. The LASSO analysis in Section~\ref{subsec:lasso_results}, which considers a substantially larger unrestricted candidate set, does recover one alfalfa-containing sequence for soybean with a large and precisely estimated coefficient, indicating alfalfa is not entirely unidentifiable in this sample, only too rare to survive a frequency-based restriction. We discuss this further in Section~\ref{subsec:limitations}.
 
 \subsection{\label{subsec:w_controls}Weather Controls}
 Monthly precipitation totals, vapor pressure deficit (VPD), and a soil moisture index are derived from GRIDMET \citep{Abatzoglou2013}, which is available at a spatial resolution of approximately 4 kilometers. We aggregate each variable to monthly totals or means for June, July, and August. Following \citet{SchlenkerRoberts2009}, we replace monthly mean temperature with growing degree days (GDD) accumulated between 8\textdegree C and 29\textdegree C, and extreme degree days (EDD) accumulated above 29\textdegree C. Climate water deficit data come from TerraClimate \citep{Abatzoglou2018}.
@@ -243,19 +243,21 @@ Soil characteristics come from gSSURGO, produced by the USDA Natural Resources C
 \subsection{\label{subsec:smaple_const}Sample Construction and Summary Statistics}
 The estimation sample is constructed by merging the QDANN and SCYM yield rasters with CDL rotation sequences, GRIDMET and TerraClimate weather covariates, and gSSURGO soil variables at the 30-meter pixel level. Final sample sizes are 1,548,319 field-year observations (QDANN) and 1,411,846 (SCYM).
 
-%\begin{table}[H]
-  %\centering
-  %\caption{Summary statistics by rotation type}
-  %\label{tab:summary}
-  %\begin{threeparttable}
-    \input{tables/summary_stats.tex}
-    \begin{minipage}{\textwidth}
-      \footnotesize
-      Notes: Means and standard deviations (in parentheses) for QDANN corn yields and key covariates, by rotation type.      
-      Corn monoculture = C-C-C-C-C-C; Perfect rotation = alternating C-S sequence; Transitioning = sequences with RCI between 1.41 and 2.00.
-    \end{minipage}
-  %\end{threeparttable}
-%\end{table}
+\input{tables/corn_summary_stats.tex}
+\begin{minipage}{\textwidth}
+  \footnotesize
+  Notes: Means and standard deviations (in parentheses) for QDANN corn yields and key covariates, by rotation type. Corn monoculture = C-C-C-C-C-C; Perfect rotation = alternating C-S sequence; Transitioning = sequences with RCI between 1.41 and 2.00.
+\end{minipage}
+
+\input{tables/soy_summary_stats.tex}
+\begin{minipage}{\textwidth}
+  \footnotesize
+  Notes: Means and standard deviations (in parentheses) for QDANN soybean yields and key covariates, by rotation type. Soy monoculture = S-S-S-S-S-S; Perfect rotation = alternating C-S sequence; Transitioning = sequences with RCI between 1.41 and 2.00.
+\end{minipage}
+
+Tables~\ref{tab:corn_summary} and \ref{tab:soy_summary} report summary statistics for three illustrative rotation-type buckets within each crop's sample---monoculture, the perfect alternating rotation, and transitioning sequences (RCI between 1.41 and 2.00)---rather than the full sequence-dummy sample, so the reported $N$s sum to fewer observations than the full estimation sample. The pattern is consistent with the sequence-level results below: for corn, the perfect rotation bucket has both the highest mean yield (198.0 bu/acre) and the lowest yield standard deviation (28.0) of the three groups, while continuous corn has the lowest mean yield (187.2) and the highest variability (33.2). The same ordering holds for soybean, though the gap in $N$ across buckets is more extreme: continuous soybean is rare (26,462 field-years) relative to the perfect-rotation bucket (986,141), consistent with corn-soybean rotation being the dominant practice in the sample and continuous soybean monoculture being agronomically unusual in Illinois. % TODO: the "Corn monoculture" bucket in Table~\ref{tab:corn_summary} reports a non-zero mean RCI (0.61, SD 0.80), where continuous corn should have RCI exactly 0 by construction (Section~\ref{subsec:rci}: $n=1$, $T_1=T_2=T_p=0$). Confirm whether this bucket is defined more broadly than the literal C-C-C-C-C-C sequence (e.g. near-monoculture fields), or whether this reflects a computation issue in the RCI values feeding this table specifically.
+
+Weather and soil covariates are broadly similar across rotation types within each crop, with the largest differences in June precipitation and growing degree days, consistent with rotation choice being only weakly correlated with the weather and soil controls once the sample is restricted to a single crop and county set; this supports the identification strategy in Section~\ref{subsec:stage_1}, which relies on within-county, across-field variation in rotation conditional on these same controls.
 	
 \section{Econometric Framework\label{sec:econ_framework}}
 \subsection{\label{subsec:just_pope}The Just-Pope Framework and Its Variants}
@@ -409,8 +411,9 @@ Notes: Dependent variable is QDANN corn yield in bushels per acre. Reference cat
 % it in another table/threeparttable environment nests a float inside a float (and
 % threeparttable inside internal vertical mode), which will not compile. This same fix is
 % applied to every other \input{tables/*.tex} call in the Results and Appendix below. See
-% the already-correct pattern for tables/summary_stats.tex earlier in the file, which
-% avoids this by commenting out its outer wrapper.
+% the already-correct pattern for tables/corn_summary_stats.tex and
+% tables/soy_summary_stats.tex earlier in the file, which avoid this by using their own
+% \begin{table}...\end{table} wrapper directly rather than commenting one out.
 % TODO: verify against this table -- the current column-2 ("With controls") values are
 % S-S-C-S-S-C = 4.799 and S-C-S-C-S-C = 2.896, not 4.61 and 4.12 as stated in the prose
 % below. Note S-C-S-C-S-C at 2.896 is still significant at the 1% level, so it may not
