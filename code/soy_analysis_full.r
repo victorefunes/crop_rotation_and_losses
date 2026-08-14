@@ -233,6 +233,51 @@ pvals_soy <- broom::tidy(soy_rot) |>
  
 cat("Soy sequences significant at 5% (unadjusted):", sum(pvals_soy$sig_raw), "\n")
 cat("Soy sequences significant at 5% FDR (BH):    ", sum(pvals_soy$sig_bh),  "\n")
+
+# Splice p-values into soy_rot.tex, next to each coefficient's SE
+get_rot_pvals <- function(mod) {
+  broom::tidy(mod) |>
+    filter(grepl("^rot_crop", term)) |>
+    transmute(term = gsub("^rot_crop", "", term), p.value)
+}
+
+pvals_nc   <- get_rot_pvals(soy_rot_nc)
+pvals_full <- get_rot_pvals(soy_rot)
+
+fmt_p <- function(p) {
+  if (length(p) == 0 || is.na(p)) return(character(0))
+  if (p < 0.001) return("[p<0.001]")
+  sprintf("[p=%.3f]", p)
+}
+
+insert_pval <- function(cell, p) {
+  p_str <- fmt_p(p)
+  if (length(p_str) == 0) return(cell)
+  sub("(\\([0-9.]+\\))", paste0("\\1 ", p_str), cell)
+}
+
+soy_rot_tex_path <- paste0(tab_dir, "soy_rot.tex")
+tex_lines <- readLines(soy_rot_tex_path)
+
+tex_lines <- vapply(tex_lines, function(line) {
+  label_match <- regmatches(line, regexpr("^\\s*[A-Za-z0-9\\-]+(?=\\s{2,})", line, perl = TRUE))
+  if (length(label_match) == 0) return(line)
+  term_label <- trimws(label_match)
+
+  p_nc   <- pvals_nc$p.value[pvals_nc$term     == term_label]
+  p_full <- pvals_full$p.value[pvals_full$term == term_label]
+  if (length(p_nc) == 0 && length(p_full) == 0) return(line)
+
+  parts <- strsplit(line, "&", fixed = TRUE)[[1]]
+  if (length(parts) < 3) return(line)
+
+  parts[2] <- insert_pval(parts[2], p_nc)
+  parts[3] <- insert_pval(parts[3], p_full)
+
+  paste(parts, collapse = "&")
+}, character(1), USE.NAMES = FALSE)
+
+writeLines(tex_lines, soy_rot_tex_path)
  
 # Figure: soy_rot_plot — Response of soy yields to rotation sequences
 soy_rot_nc |>
@@ -433,6 +478,33 @@ etable(soy_jp_s1, soy_jp_s1_lag1, soy_jp_s1_lag2, soy_jp_s1_idx,
        title    = "Stage 1 — Soy yield: full sequences vs lag summary variables",
        label    = "tab:soy_jp_mean",
        file     = paste0(tab_dir, "soy_jp_mean.tex"))
+
+# Splice BH-adjusted p-values into soy_jp_mean.tex, next to each rot_crop coefficient's SE
+pvals_jp_mean <- broom::tidy(soy_jp_s1) |>
+  filter(term %in% names(rot_dict)) |>
+  transmute(term_label = rot_dict[term],
+            p.value = p.adjust(p.value, method = "BH"))
+
+soy_jp_mean_tex_path <- paste0(tab_dir, "soy_jp_mean.tex")
+tex_lines <- readLines(soy_jp_mean_tex_path)
+
+tex_lines <- vapply(tex_lines, function(line) {
+  label_match <- regmatches(line, regexpr("^\\s*[A-Za-z0-9\\-]+(?=\\s{2,})", line, perl = TRUE))
+  if (length(label_match) == 0) return(line)
+  term_label <- trimws(label_match)
+
+  p <- pvals_jp_mean$p.value[pvals_jp_mean$term_label == term_label]
+  if (length(p) == 0) return(line)
+
+  parts <- strsplit(line, "&", fixed = TRUE)[[1]]
+  if (length(parts) < 2) return(line)
+
+  parts[2] <- insert_pval(parts[2], p)
+
+  paste(parts, collapse = "&")
+}, character(1), USE.NAMES = FALSE)
+
+writeLines(tex_lines, soy_jp_mean_tex_path)
  
 rm(soy_jp_s1_lag1, soy_jp_s1_lag2, soy_jp_s1_idx, soy_rot_nc, soy_rot)
 gc()

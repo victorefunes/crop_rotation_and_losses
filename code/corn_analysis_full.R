@@ -233,6 +233,51 @@ pvals_corn <- broom::tidy(corn_rot) |>
  
 cat("Corn sequences significant at 5% (unadjusted):", sum(pvals_corn$sig_raw), "\n")
 cat("Corn sequences significant at 5% FDR (BH):    ", sum(pvals_corn$sig_bh),  "\n")
+
+# Splice p-values into corn_rot.tex, next to each coefficient's SE
+get_rot_pvals <- function(mod) {
+  broom::tidy(mod) |>
+    filter(grepl("^rot_crop", term)) |>
+    transmute(term = gsub("^rot_crop", "", term), p.value)
+}
+
+pvals_nc   <- get_rot_pvals(corn_rot_nc)
+pvals_full <- get_rot_pvals(corn_rot)
+
+fmt_p <- function(p) {
+  if (length(p) == 0 || is.na(p)) return(character(0))
+  if (p < 0.001) return("[p<0.001]")
+  sprintf("[p=%.3f]", p)
+}
+
+insert_pval <- function(cell, p) {
+  p_str <- fmt_p(p)
+  if (length(p_str) == 0) return(cell)
+  sub("(\\([0-9.]+\\))", paste0("\\1 ", p_str), cell)
+}
+
+corn_rot_tex_path <- paste0(tab_dir, "corn_rot.tex")
+tex_lines <- readLines(corn_rot_tex_path)
+
+tex_lines <- vapply(tex_lines, function(line) {
+  label_match <- regmatches(line, regexpr("^\\s*[A-Za-z0-9\\-]+(?=\\s{2,})", line, perl = TRUE))
+  if (length(label_match) == 0) return(line)
+  term_label <- trimws(label_match)
+
+  p_nc   <- pvals_nc$p.value[pvals_nc$term     == term_label]
+  p_full <- pvals_full$p.value[pvals_full$term == term_label]
+  if (length(p_nc) == 0 && length(p_full) == 0) return(line)
+
+  parts <- strsplit(line, "&", fixed = TRUE)[[1]]
+  if (length(parts) < 3) return(line)
+
+  parts[2] <- insert_pval(parts[2], p_nc)
+  parts[3] <- insert_pval(parts[3], p_full)
+
+  paste(parts, collapse = "&")
+}, character(1), USE.NAMES = FALSE)
+
+writeLines(tex_lines, corn_rot_tex_path)
  
 # Figure: corn_rot_plot — Response of corn yields to rotation sequences
 corn_rot_nc |>
@@ -438,7 +483,34 @@ etable(corn_jp_s1, corn_jp_s1_lag1, corn_jp_s1_lag2, corn_jp_s1_idx,
        title    = "Stage 1 — Corn yield: full sequences vs lag summary variables",
        label    = "tab:corn_jp_mean",
        file     = paste0(tab_dir, "corn_jp_mean.tex"))
- 
+
+# Splice BH-adjusted p-values into corn_jp_mean.tex, next to each rot_crop coefficient's SE
+pvals_jp_mean <- broom::tidy(corn_jp_s1) |>
+  filter(term %in% names(rot_dict)) |>
+  transmute(term_label = rot_dict[term],
+            p.value = p.adjust(p.value, method = "BH"))
+
+corn_jp_mean_tex_path <- paste0(tab_dir, "corn_jp_mean.tex")
+tex_lines <- readLines(corn_jp_mean_tex_path)
+
+tex_lines <- vapply(tex_lines, function(line) {
+  label_match <- regmatches(line, regexpr("^\\s*[A-Za-z0-9\\-]+(?=\\s{2,})", line, perl = TRUE))
+  if (length(label_match) == 0) return(line)
+  term_label <- trimws(label_match)
+
+  p <- pvals_jp_mean$p.value[pvals_jp_mean$term_label == term_label]
+  if (length(p) == 0) return(line)
+
+  parts <- strsplit(line, "&", fixed = TRUE)[[1]]
+  if (length(parts) < 2) return(line)
+
+  parts[2] <- insert_pval(parts[2], p)
+
+  paste(parts, collapse = "&")
+}, character(1), USE.NAMES = FALSE)
+
+writeLines(tex_lines, corn_jp_mean_tex_path)
+
 rm(corn_jp_s1_lag1, corn_jp_s1_lag2, corn_jp_s1_idx, corn_rot_nc, corn_rot)
 gc()
  
@@ -500,7 +572,8 @@ saveRDS(
        rot_vpd_nc  = corn_rot_vpd_nc,
        rot_vpd     = corn_rot_vpd),
   file     = "D:/Crop data/corn_z_models.rds",
-  compress = TRUE   # gzip -- the real fix for the original slowness was bzip2, not object size
+  compress = TRUE   
+  # gzip -- the real fix for the original slowness was bzip2, not object size
 )
  
 # ── 5. Just-Pope stage 2 — corn ───────────────────────────────────────────────
