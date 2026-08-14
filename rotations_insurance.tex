@@ -10,7 +10,7 @@
 %\newtheorem{theorem}{Proposition}
 \theoremstyle{remark}
 %\newtheorem*{remark}{Remark}
-\usepackage{graphicx}
+\usepackage[T1]{fontenc}
 \usepackage{setspace}
 \usepackage{pdflscape}
 \usepackage{booktabs, threeparttable, tabularx, makecell, siunitx}
@@ -227,8 +227,20 @@ Figure~\ref{fig:corn_yield_map} shows the spatial distribution of QDANN corn yie
 \subsection{\label{subsec:rot_seq}Crop History and Rotation Sequences}
 Field-level crop histories come from the USDA Cropland Data Layer (CDL), an annual raster product produced by NASS that classifies each 30-meter pixel into a crop or land-cover category using satellite imagery and agricultural survey reference data. CDL has been available annually since 2008 for the full contiguous United States and since 2003 for Illinois. We use annual CDL data from 2003 to 2022 for Illinois, providing up to 20 years of rotation history for each field.
 
-For each field-pixel and outcome year $t$, we construct a six-year rolling rotation sequence by recording the CDL-classified crop in each of years $t-1$ through $t-6$. Using the CDL numeric codes, we reclassify each year into one of three rotation crops---corn (code 1), soybean (code 5), and winter wheat (code 24)---and treat all remaining categories as ``other.'' We restrict the analysis to field-year observations satisfying three conditions: corn is the outcome crop in year $t$; the six-year history contains only corn, soybean, or winter wheat, with no years classified as other crops, fallow, or non-agricultural land cover; and the field appears in at least two consecutive years in the panel after singleton removal. To keep the sequence space tractable and well-supported, we further retain only the 49 distinct six-year sequences that together account for approximately 99\% of qualifying field-years, dropping rarer sequences each observed in a negligible share of fields. After these restrictions, the corn sequence-effect sample contains 1,751,995 field-year observations for QDANN.
-% TODO: confirm the SCYM N on the wheat-inclusive sample (the prior corn-soy-only figures were 1,548,319 QDANN / 1,411,846 SCYM). The pipeline currently reports inconsistent N across tables -- corn\_rot = 1,751,995, corn\_rci = 1,751,962, but zvector still = 1,548,319 (corn-soy only) -- which should be reconciled to a single sample definition before these tables are cited together.
+For each field-pixel and outcome year $t$, we construct a six-year rolling rotation sequence by recording the CDL-classified crop in each of years $t-1$ through $t-6$. Using the CDL numeric codes, we reclassify each year into one of three rotation crops---corn (code 1), soybean (code 5), and winter wheat (code 24)---and treat all remaining categories as ``other.'' We restrict the analysis to field-year observations satisfying three conditions: corn is the outcome crop in year $t$; the six-year history contains only corn, soybean, or winter wheat, with no years classified as other crops, fallow, or non-agricultural land cover; and the field appears in at least two consecutive years in the panel after singleton removal. To keep the sequence space tractable and well-supported, we further retain only the 49 distinct six-year sequences that together account for approximately 99\% of qualifying field-years, dropping rarer sequences each observed in a negligible share of fields. After these restrictions, the corn sequence-effect sample contains 1,507,098 field-year observations for QDANN.
+% TODO -- UPDATED, PARTIALLY RESOLVED: sample sizes are now reconciled across most tables --
+% corn\_rot, zvector (corn columns), and corn\_jp\_var all agree exactly at N = 1,507,098;
+% soy\_rot, zvector (soy columns), and soy\_jp\_var agree exactly at N = 1,238,730.
+% corn\_rci (1,506,993) and soy\_rci (1,238,698) are very close to these (off by 105 and 32
+% rows respectively) and likely reflect only RCI-specific missingness, not a real
+% inconsistency. Still confirm the SCYM N on this sample if SCYM is reported anywhere
+% (prior corn-soy-only figures were 1,548,319 QDANN / 1,411,846 SCYM, now superseded).
+% NEW ISSUE: tables/soy\_lasso.tex reports N = 419,886 against a full soy sample of
+% 1,238,730 (34\% retention after restricting to the 24 LASSO-selected sequences), while
+% the analogous corn\_lasso.tex retains 1,501,632 of 1,507,098 (99.6\%). This asymmetry is
+% large and unexplained -- check whether the soy LASSO selection genuinely excludes some
+% very common sequences, or whether the post-selection sample filter has a bug (e.g.
+% reference-level handling) before citing soy\_lasso results as representative.
 
 We characterize rotation histories in two complementary ways. The first is the full sequence of crop codes over the six-year window. All retained sequences end in corn by the outcome restriction and enter the corn yield regressions as indicators relative to corn monoculture (coded $C-C-C-C-C-C$), giving 48 non-monoculture sequence effects; of these, 31 are pure corn--soybean sequences and 17 contain at least one winter-wheat year. We refer to the latter as the corn--soybean--wheat system and separate the two systems in the sequence-effect figures. The second characterization uses the RCI of \citet{socolar2021}, described in Section~\ref{subsec:rci}.
 
@@ -664,7 +676,7 @@ For soybean yields (Table~\ref{tab:soy_rci}, Figure~\ref{fig:soy_rci_plot}), the
   USDA-NASS.}
 \end{figure}
  
-Figure~\ref{fig:score_yield} reports predicted corn yields as a function of the rotation score, now computed over the 49-sequence corn--soybean--wheat sample. A direct summary of the scoring pipeline's output (\texttt{score\_plot\_df}, 28 distinct score values) shows the score running from $-3.77$ to $+1.68$ relative to corn monoculture (normalized to zero), with mean $-0.30$ and median $0.09$; the distribution is left-skewed (skewness $-0.84$), consistent with a small number of poorly-scoring sequences pulling the mean below the median. This range is narrower, not wider, than the range reported for the pre-wheat corn-soy-only version of the score, contrary to what an earlier draft of this section stated. The score-yield relationship is positive overall but, consistent with the sequence-level and RCI results above, noisy in the middle of the distribution rather than cleanly monotone; variance effects show no clean monotone relationship with score across the distribution.
+Figure~\ref{fig:score_yield} reports predicted corn yields as a function of the rotation score, now computed over the 49-sequence corn--soybean--wheat sample. A direct summary of the scoring pipeline's output (\texttt{score\_plot\_df}, 28 sequences) shows the score running from $-3.77$ to $+1.68$ relative to corn monoculture (normalized to zero), with mean $-0.30$ and median $0.09$; the distribution is left-skewed (skewness $-0.84$), consistent with a small number of poorly-scoring sequences pulling the mean below the median. This range is narrower, not wider, than the range reported for the pre-wheat corn-soy-only version of the score, contrary to what an earlier draft of this section stated. The 28 sequences map onto 18 distinct score values (Figure~\ref{fig:score_yield}), several sequences sharing an identical score. The score-yield relationship is positive overall but, consistent with the sequence-level and RCI results above, noisy in the middle of the distribution rather than cleanly monotone; variance effects show no clean monotone relationship with score across the distribution.
 % TODO -- IMPORTANT, NEWLY IDENTIFIED: the range and distribution values above come directly
 % from score\_plot\_df, the dataframe underlying this figure, and should be treated as
 % authoritative. However, figures/score\_yield.png as currently committed visually spans
@@ -690,7 +702,7 @@ Figure~\ref{fig:score_yield} reports predicted corn yields as a function of the 
 % confirmed and should be pulled from score\_plot\_df by sequence identity, not estimated
 % from the figure.
 
-The same scoring exercise applied to the soybean sample (Figure~\ref{fig:soy_score_yield}) shows a qualitatively similar but much smaller-scale pattern, with scores ranging from roughly $-0.46$ to $+1.29$ relative to soybean monoculture (score $=0$) and a broadly positive, though not strictly monotone, relationship with mean soybean yield.
+The same scoring exercise applied to the soybean sample (Figure~\ref{fig:soy_score_yield}) shows a qualitatively similar but much smaller-scale pattern, with scores ranging from roughly $-0.26$ to $+1.42$ relative to soybean monoculture (score $=0$) and a broadly positive, though not strictly monotone, relationship with mean soybean yield.
 
 \begin{figure}[H]
   \centering
