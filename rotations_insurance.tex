@@ -20,7 +20,6 @@
 \usepackage{threeparttable}
 \usepackage{caption}
 \usepackage{subcaption}
-\usepackage{subfig}
 \usepackage[colorlinks=true,linkcolor=black,urlcolor=blue,citecolor=black]{hyperref}
 \usepackage{float}
 % floatrow was previously loaded here for its \floatfoot command (used 14 times in this
@@ -49,7 +48,6 @@
 \usepackage{listings}
 \usepackage{lscape}
 \usepackage[left=2cm,right=2cm,top=1.5cm,bottom=1.5cm]{geometry}
-%\usepackage[margin=0.5in]{geometry}
 \usepackage{enumitem}
 \BeforeBeginEnvironment{tabular}{\footnotesize}% Adjust tabular font size to \small
 \usepackage{authblk}
@@ -73,21 +71,21 @@
 \newtheorem{example}[theorem]{Example}
 \newtheorem{problem}[theorem]{Problem}
 \newtheorem{principle}[theorem]{Principle}
-
+ 
 \usepackage{graphicx, color}
 \usepackage{booktabs}
 \graphicspath{{fig/}}
-
+ 
 \usepackage[square,sort,comma,numbers]{natbib}
 \bibliographystyle{apalike}
 \bibpunct{(}{)}{,}{a}{,}{,}
-
-
+ 
+ 
 %\usepackage[linesnumbered,ruled,vlined,commentsnumbered]{algorithm2e} % use algorithm2e for typesetting algorithms
 \usepackage{algorithm, algpseudocode} % use algorithm and algorithmicx for typesetting algorithms
 \usepackage{mathrsfs} % for \mathscr command
-
-
+ 
+ 
 \title{Challenges of Incorporating Rotation Information into Crop Insurance Rates}
  
 \author[1]{Victor Funes-Leal}
@@ -95,7 +93,7 @@
 \author[3]{Eunchun Park}
 \affil[1,2,3]{Department of Agricultural Economics and Agribusiness, University of Arkansas}
 \date{}
-
+ 
 \begin{document}
 
 \maketitle
@@ -120,11 +118,7 @@ Crop rotations are among the most widely studied agronomic practices in temperat
 We study how long-term crop rotation sequences affect the mean and variance of corn yields using a large, satellite-based, field-level panel dataset for Illinois covering 2003 to 2022. Combining yield data from two independent remote-sensing sources, the Scalable Satellite-Based Crop Yield Mapper \citep[SCYM;][]{lobell2015} and the Quantile Loss Domain Adversarial Neural Networks estimator \citep[QDANN;][]{Ma2024}, with field-level crop sequence histories from the USDA Cropland Data Layer (CDL), we estimate linear fixed effects models that separately identify rotation effects on the conditional mean and conditional variance of yields, following \citet{Just1979}. County and year fixed effects absorb spatial sorting across counties and common annual shocks, so that identification comes from within-county variation in rotation sequences across fields over time.
  
 Our main findings are three. First, a handful of rotation sequences significantly outperform corn monoculture in terms of higher mean yields, but these sequences share identifiable structural features-specifically, a soybean harvest within the past one to two years, no consecutive soybean years, and a moderate number of total soybean harvests in the six-year window. Second, we construct a rotation score from these structural features that maps the observed six-year rotation sequences, drawn from corn, soybean, and winter-wheat histories, onto a scalar index. The score ranges from approximately $-3.77$ to $+1.68$ relative to corn monoculture, normalized to zero, across 28 distinct score values (mean $-0.30$, median $0.09$). % TODO: this range comes from a direct summary of the scoring pipeline's own output (score\_plot\_df), which resolves the earlier uncertainty about the exact range and value count -- but it is on a very different scale (single digits) from the range implied by the current figures/score\_yield.png figure (which visually spans roughly $-144$ to $+229$). That gap of nearly two orders of magnitude suggests score\_yield.png was built from a different, out-of-date score construction and needs to be regenerated to match. Do not cite the -144/+229 figures anywhere else in the paper until this is resolved. The out-of-sample use of corn-soy-fitted Z-vector coefficients for wheat-containing sequences (Section~\ref{subsec:rot_score_res}) is still an open issue, and the exact score for the perfect alternating rotation specifically is still not confirmed. Third, the Rotational Complexity Index (RCI)-the most natural scalar summary of rotation diversity-has a nonlinear and non-monotone relationship with both yield moments, which implies that linear RCI-based rating adjustments would be misspecified.
-% TODO: the "2.59" figure here is the same unverified carryover flagged in detail at
-% Section~\ref{subsec:rot_score_res} -- it appears verbatim in an earlier presentation
-% that used different (larger, one sign-flipped) Z-vector coefficients, and an attempt to
-% independently reproduce it by hand failed. Update this sentence once the score has been
-% regenerated from the current Table~\ref{tab:zvector} coefficients.
+
  
 These findings speak directly to two active policy debates. First, USDA's Risk Management Agency (RMA) has signaled interest in incorporating conservation practice information into crop insurance rating as part of broader efforts to align the FCIP with climate and conservation goals. Our results suggest that rotation history is an actuarially meaningful predictor of yield risk, but that its incorporation requires sequence-level or structural-feature-based characterization rather than a simple index. Second, the literature on conservation practice adoption has noted that the APH mechanism may inadvertently discourage rotations and cover cropping by recording short-run yield dips during practice transitions \citep{Connor2022}. Our estimated transition effects provide direct evidence on the magnitude and persistence of this penalty for corn-soybean rotation sequences in Illinois, and our rotation score provides a tractable rating instrument that could condition premiums on rotation history.
  
@@ -183,13 +177,13 @@ Here we describe the panel construction in full, as it forms the empirical found
 \subsection{\label{subsec:yield}Yield Data}
 We use two independent satellite-based yield estimators as outcome measures, both derived from Landsat satellite imagery processed at 30-meter spatial resolution.
 
-The first is SCYM (Scalable Satellite-Based Crop Yield Mapper), developed by \cite{lobell2015}. SCYM uses a large ensemble of crop simulation runs spanning a range of soil, climate, and management conditions to train a pixel-level statistical model that predicts field-level biomass from Landsat reflectance, which is then converted to grain yield using harvest index assumptions. The model does not require ground-based yield measurements for calibration, making it applicable across the full spatial extent of the CDL raster. 
+The first is SCYM (Scalable Satellite-Based Crop Yield Mapper), developed by \cite{lobell2015}. SCYM uses a large ensemble of crop simulation runs spanning a range of soil, climate, and management conditions to train a pixel-level statistical model that predicts field-level biomass from Landsat reflectance, then converts it to grain yield using harvest index assumptions. The model does not require ground-based yield measurements for calibration, making it applicable across the full spatial extent of the CDL raster. 
 
 The second estimator is QDANN (Quantile Loss Domain Adversarial Neural Networks), developed by \cite{Ma2024}. QDANN combines three methodological elements: a domain-adversarial neural network architecture that learns features invariant to the shift between training and target domains; quantile regression via pinball loss that targets the full conditional distribution rather than just the conditional mean; and unsupervised domain adaptation that transfers a model trained on labeled county-level NASS yield data to unlabeled field-level predictions without requiring field-level ground truth. The domain adaptation step is particularly important for our application, as it explicitly accounts for distributional differences between the county-level training domain and the 30-meter field-level prediction domain. 
 
-We treat QDANN as the preferred specification given its higher reported accuracy, its ability to characterize the full conditional yield distribution rather than just the conditional mean, and its explicit design for field-level inference. SCYM results are reported alongside throughout as a robustness check. The consistency of rotation effect estimates across the two estimators - which use entirely different modeling approaches, training objectives, and domain adaptation strategies - serves as an informal validation of both yield datasets and the econometric design; here we additionally validate those yield moments against the independent SCYM series.
+We treat QDANN as the preferred specification given its higher reported accuracy, its ability to characterize the full conditional yield distribution rather than just the conditional mean, and its explicit design for field-level inference. We report SCYM results alongside throughout as a robustness check. The consistency of rotation effect estimates across the two estimators - which use entirely different modeling approaches, training objectives, and domain adaptation strategies - serves as an informal validation of both yield datasets and the econometric design; here we additionally validate those yield moments against the independent SCYM series.
 
-Figure~\ref{fig:corn_yield_map} shows the spatial distribution of QDANN corn yields across Illinois in 2016, Figure~\ref{fig:soy_yield_map} shows the corresponding soybean yield distribution, and Figure~\ref{fig:rci_map} shows the distribution of RCI values. The maps reveal the expected geographic concentration of high-productivity, high-rotation-complexity fields in the central Illinois Corn Belt.
+Figure~\ref{fig:yield_maps_combined} shows the spatial distribution of QDANN corn and soybean yields across Illinois in 2016 (panels a and b, respectively), and Figure~\ref{fig:rci_map} shows the distribution of RCI values. The maps reveal the expected geographic concentration of high-productivity, high-rotation-complexity fields in the central Illinois Corn Belt.
 
 \begin{figure}[H]
   \centering
@@ -197,14 +191,12 @@ Figure~\ref{fig:corn_yield_map} shows the spatial distribution of QDANN corn yie
     \centering
     \includegraphics[width=\textwidth]{figures/corn_yield_map}\\
     \textbf{\footnotesize (a) Corn yield}
-    \label{fig:corn_yield_map}
   \end{minipage}
   \hfill
   \begin{minipage}[t]{0.49\textwidth}
     \centering
     \includegraphics[width=\textwidth]{figures/soy_yield_map}\\
     \textbf{\footnotesize (b) Soybean yield}
-    \label{fig:soy_yield_map}
   \end{minipage}
   \caption{Spatial distribution of corn and soybean yields across Illinois, 2016.}
   \label{fig:yield_maps_combined}
@@ -250,10 +242,10 @@ Two coding choices deserve note. First, winter wheat enters as a rotation-histor
 Monthly precipitation totals, vapor pressure deficit (VPD), and a soil moisture index are derived from GRIDMET \citep{Abatzoglou2013}, which is available at a spatial resolution of approximately 4 kilometers. We aggregate each variable to monthly totals or means for June, July, and August. Following \citet{SchlenkerRoberts2009}, we replace monthly mean temperature with growing degree days (GDD) accumulated between 8\textdegree C and 29\textdegree C, and extreme degree days (EDD) accumulated above 29\textdegree C. Climate water deficit data come from TerraClimate \citep{Abatzoglou2018}.
 
 \subsection{\label{subsec:soil_controls}Soil Controls}
-Soil characteristics come from gSSURGO, produced by the USDA Natural Resources Conservation Service at 30-meter resolution. We extract three field-level measures: the National Commodity Crop Productivity Index (NCCPI), root zone available water storage (AWC), and soil organic carbon stock (SOC) in the 0-100-centimeter depth zone. NCCPI and SOC are collinear with county fixed effects and are dropped from the preferred specification; AWC is retained. Figure~\ref{fig:nccpi_corn_map} shows the spatial distribution of NCCPI across Illinois.
+Soil characteristics come from gSSURGO, produced by the USDA Natural Resources Conservation Service at 30-meter resolution. We extract three field-level measures: the National Commodity Crop Productivity Index (NCCPI), root-zone available water storage (AWC), and soil organic carbon stock (SOC) in the 0-100-centimeter depth zone. NCCPI and SOC are collinear with county fixed effects and are dropped from the preferred specification; we retain AWC. Figure~\ref{fig:nccpi_corn_map} shows the spatial distribution of NCCPI across Illinois.
 
 \subsection{\label{subsec:smaple_const}Sample Construction and Summary Statistics}
-The estimation sample is constructed by merging the QDANN and SCYM yield rasters with CDL rotation sequences, GRIDMET and TerraClimate weather covariates, and gSSURGO soil variables at the 30-meter pixel level. Final sample sizes are 1,548,319 field-year observations (QDANN) and 1,411,846 (SCYM).
+We construct the estimation sample by merging the QDANN and SCYM yield rasters with CDL rotation sequences, GRIDMET and TerraClimate weather covariates, and gSSURGO soil variables at the 30-meter pixel level. Final sample sizes are 1,548,319 field-year observations (QDANN) and 1,411,846 (SCYM).
 
 \input{tables/corn_summary_stats.tex}
 \begin{minipage}{\textwidth}
@@ -304,7 +296,7 @@ address the truncation problem by flooring negative fitted values at a small pos
 
 The most flexible variant in the recent literature is the nonparametric production risk estimator of \cite{li2021}, in which both the mean function $f(\cdot)$ and the variance function $h(\cdot)$ are estimated using local polynomial regression rather than parametric functional forms. This allows the risk effect of any variable to vary continuously with a conditioning covariate - for example, the variance effect of a recent soybean placement varying smoothly with soil productivity. The LRZ estimator nests the parametric Just-Pope model as a special case in which the local polynomial slopes are constant. We implement the parametric Just-Pope estimator as our main specification and the LRZ nonparametric extension as a robustness check, allowing rotation effects to vary with NCCPI soil productivity, following the approach described in Section 4 of \cite{li2021}.
 
-Our main estimator follows the three-stage FGLS approach of \cite{Harvey1976} and \cite{Saha1997}, embedded in a panel fixed effects framework with two-way clustering for inference. The specific implementation is described in Sections 4.2 through 4.4 below.
+Our main estimator follows the three-stage FGLS approach of \cite{Harvey1976} and \cite{Saha1997}, embedded in a panel fixed effects framework with two-way clustering for inference. We describe the specific implementation in Sections 4.2 through 4.4 below.
 
 \subsection{\label{subsec:stage_1}Conditional Mean: Stage 1}
 We model the conditional mean of corn yields as a two-way fixed effects regression following the linear panel framework:
@@ -314,7 +306,7 @@ We model the conditional mean of corn yields as a two-way fixed effects regressi
 \end{equation}
 
 where $y_{it}$ is the yield of field $i$ year $t$ measured in bushels per acre; $\text{seq}_{it}$ is either a vector of rotation sequence indicators (with corn monoculture as the reference category) or a vector of factor RCI indicators (with the lowest observed RCI as the reference); $W_{it}$ is a vector of weather and soil controls described in Section 3.3; $\lambda_{k}$ is a county (FIPS) fixed effect; and $\gamma_{t}$ is a year fixed effect. The error term $\varepsilon_{it}$ is assumed to
-have mean zero conditional on the regressors.
+have a conditional mean of zero given the regressors.
 
 County fixed effects absorb all time-invariant differences across counties in average yield levels - including persistent soil quality gradients, drainage infrastructure, and local agronomic practices. Year fixed effects absorb common shocks to all fields in a given year, including statewide weather events and aggregate commodity price signals that affect input use uniformly. Identification of the rotation effect $\hat{\tau}$ therefore comes from within-county, across-field variation in rotation sequences over time, conditional on the weather and soil controls. Standard errors are  clustered two-way at the field $\text{tile\_field\_ID}$) and year levels, following \cite{Cameron2015}, to account for both within-field serial correlation in the panel and cross-sectional dependence across fields in the same growing season driven by common weather shocks.
 
@@ -333,11 +325,7 @@ where $\lambda$ is the plug-in penalty level and $\psi_k$ are data-dependent pen
 
 Third, because the $\ell_1$ penalty in equation~\eqref{eq:lasso} biases the surviving coefficients toward zero and does not admit standard errors in the usual sense, we treat the LASSO step as a variable-selection device only. We refit an unpenalized fixed-effects regression, in the form of equation~\eqref{eq:stage1}, restricted to the sequences with nonzero $\hat{\tau}^{\text{LASSO}}_k$, with the same two-way clustered standard errors used throughout the paper. This two-stage procedure, using LASSO for selection and ordinary least squares for estimation and inference on the selected model, follows \citet{Belloni2014} and ensures that the coefficients and significance levels we report are not mechanically shrunk or affected by the selection step itself.
 
-Of the 102 candidate corn sequences considered (the unrestricted sample, prior to any 99\%-frequency cut), 28 have nonzero post-selection coefficients; for soybean, 24 sequences are selected. Full post-selection refit coefficients are reported in Table~\ref{tab:corn_lasso} and Table~\ref{tab:soy_lasso}, discussed in Section~\ref{subsec:lasso_results}.
-% TODO: the soybean candidate-pool size (analogous to corn's 102) was not in the console
-% output shared and should be added here once available. The cv.glmnet cross-check
-% (selected-sequence overlap with the rlasso plug-in penalty) was also not reported and
-% should be added as a robustness footnote once run.
+Of the 102 candidate corn sequences considered (the unrestricted sample, prior to any 99\%-frequency cut), 29 have nonzero post-selection coefficients (28.4\%); for soybean, 25 of 94 candidate sequences are selected (26.6\%), a similar selection rate to corn. Full post-selection refit coefficients are reported in Table~\ref{tab:corn_lasso} and Table~\ref{tab:soy_lasso}, discussed in Section~\ref{subsec:lasso_results}.
 % TODO: tables/corn\_lasso.tex and tables/soy\_lasso.tex report sequences as raw numeric
 % CDL-code strings (e.g. "5-1-5-1-5-1"), not the letter-coded format (e.g. "S-C-S-C-S-C")
 % used in every other table in this paper (corn\_rot, soy\_rot, zvector, the RCI tables).
@@ -533,7 +521,9 @@ Table~\ref{tab:soy_rot} and Figure~\ref{fig:soy_rot_plot} report sequence-level 
  
 \subsection{\label{subsec:lasso_results}LASSO-Selected Rotation Sequences}
 
-Of the 102 candidate corn sequences in the unrestricted sample, 28 survive LASSO selection with a nonzero post-selection coefficient (Table~\ref{tab:corn_lasso}); for soybean, 24 sequences are selected (Table~\ref{tab:soy_lasso}). % TODO: state the soybean candidate-pool size once available, and the resulting selection rate, alongside corn's 28/102 (~27\%).
+Of the 102 candidate corn sequences in the unrestricted sample, 29 survive LASSO selection with a nonzero post-selection coefficient (28.4\%; Table~\ref{tab:corn_lasso}); for soybean, 25 of 94 candidate sequences are selected (26.6\%; Table~\ref{tab:soy_lasso}), a similar selection rate to corn.
+
+As a robustness check on each selection, we compare the sequences selected by the plug-in-penalty \texttt{rlasso} against a \texttt{cv.glmnet} fit with the same demeaned outcome and design matrix, for both crops. For corn, \texttt{cv.glmnet} selects 28 sequences at the 1-SE lambda against \texttt{rlasso}'s 29, and the two procedures agree on 26 sequences (89.7\% of \texttt{rlasso}'s selections). Unlike the soybean cross-check, agreement is not one-directional: three sequences are selected by \texttt{rlasso} only and two by \texttt{cv.glmnet} only, so each procedure picks up a small number of sequences the other misses rather than one nesting inside the other. None of the five disputed corn sequences is individually discussed elsewhere in this paper. For soybean, we compare the 25 sequences selected by \texttt{rlasso} against \texttt{cv.glmnet}. \texttt{cv.glmnet} selects 18 sequences at the 1-SE lambda, and every one of these 18 is also selected by \texttt{rlasso} -- \texttt{cv.glmnet}'s selection is a strict subset of \texttt{rlasso}'s here, so the two procedures agree on 18 of the 25 sequences \texttt{rlasso} selects (72\%), a lower and more one-sided agreement rate than for corn. The seven sequences selected by \texttt{rlasso} but not \texttt{cv.glmnet} include the alfalfa-containing sequence discussed below, which is therefore not robust to this alternative penalty choice. % TODO: the pattern of disagreement differs by crop -- corn shows small, two-directional disagreement (each method picks up a few sequences the other misses), while soybean shows cv.glmnet strictly nested inside rlasso. Neither pattern matches a simple "cv.glmnet always selects more" prior; report both patterns as-is rather than trying to reconcile them into one general statement.
 
 \input{tables/corn_lasso.tex}
 \begin{quote}
@@ -549,7 +539,7 @@ Notes: See Table~\ref{tab:corn_lasso} notes. Dependent variable is QDANN soybean
 
 Two patterns stand out. First, among the corn-selected sequences, coefficients are consistently large and positive when the most recent rotation year (six years back through the current year) includes a soybean planting close to the current year, and consistently small, negative, or insignificant when the only soybean year in the window is five years distant and the intervening years are continuous corn---for example, a single distant soybean year followed by four years of continuous corn (numeric codes 5-1-1-1-1-1 and 1-5-1-1-1-1) carries significant \emph{negative} coefficients, while sequences with soybean in the year immediately preceding the current corn crop are uniformly positive and significant. This is the same recency pattern documented by the Z-vector's $\text{late\_soy}$ coefficient below, recovered here by a purely data-driven selection procedure rather than assumed functional form, which is a useful cross-validation of that result. Of the 28 selected corn sequences, three (numeric codes 5-1-5-1-1-1, 5-1-5-5-1-1, and 5-5-1-5-1-1) are not statistically significant in the post-selection refit, indicating LASSO selection and conventional significance are not the same criterion; a sequence can survive the penalty and still fail to clear significance once shrinkage is removed.
 
-Second, the soybean selection recovers a sequence containing alfalfa (numeric code 36-36-36-5-1-5, i.e. three years of alfalfa followed by soybean, corn, and soybean in the current year, or A-A-A-S-C-S in the paper's letter convention), with the largest coefficient in the soybean table (2.736, $p<0.01$) and a standard error small enough to indicate the sequence is not a near-singleton artifact of the kind flagged elsewhere in this paper (compare the RCI $=1.58$ level discussed in Section~\ref{subsec:rci_effects}). This is the only alfalfa-containing sequence identified anywhere in the paper; it does not appear in the 49-sequence restricted sample used for the main corn and soybean sequence-dummy tables, the RCI tables, or the Z-vector model, precisely because it falls below the 99\% frequency threshold used to construct that restricted sample. We read this as suggestive evidence that a longer alfalfa stand transitioning into row crops carries a substantial yield benefit for the following soybean crop, consistent with alfalfa's role as a strong nitrogen-fixing perennial, but caution that the result rests on a single selected sequence and should not be over-interpreted as a general perennial-rotation effect; see Section~\ref{subsec:limitations}. Six of the 24 selected soybean sequences are not statistically significant in the post-selection refit.
+Second, the soybean selection recovers a sequence containing alfalfa (numeric code 36-36-36-5-1-5, i.e. three years of alfalfa followed by soybean, corn, and soybean in the current year, or A-A-A-S-C-S in the paper's letter convention), with the largest coefficient in the soybean table (2.736, $p<0.01$) and a standard error small enough to indicate the sequence is not a near-singleton artifact of the kind flagged elsewhere in this paper (compare the RCI $=1.58$ level discussed in Section~\ref{subsec:rci_effects}). This is the only alfalfa-containing sequence identified anywhere in the paper; it does not appear in the 49-sequence restricted sample used for the main corn and soybean sequence-dummy tables, the RCI tables, or the Z-vector model, precisely because it falls below the 99\% frequency threshold used to construct that restricted sample. We read this as suggestive evidence that a longer alfalfa stand transitioning into row crops carries a substantial yield benefit for the following soybean crop, consistent with alfalfa's role as a strong nitrogen-fixing perennial, but caution that the result rests on a single selected sequence and should not be over-interpreted as a general perennial-rotation effect; see Section~\ref{subsec:limitations}. This caution is reinforced by the robustness check above: the alfalfa-containing sequence is selected by \texttt{rlasso} but not by \texttt{cv.glmnet}, so it is not robust to the choice of LASSO penalty and should be read as suggestive rather than a stable, cross-validated finding. Six of the 25 selected soybean sequences are not statistically significant in the post-selection refit.
 
 \subsection{Parsimonious Z-Vector Model}
 
