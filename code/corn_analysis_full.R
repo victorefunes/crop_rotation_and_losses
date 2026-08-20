@@ -441,12 +441,13 @@ rot_vpd_order_regex <- paste0("^", rot_vpd_order, "$")
 etable(corn_rot_vpd,
        tex      = TRUE,
        dict     = c(dict_corn, dict_vpd),
-       drop     = c("pr_", "cGDD_", "EDD_", "soil_", "vpd_",
+       drop     = c("pr_", "cGDD_", "EDD_", "soil_",
                     "rootznaws", "Constant"),
        order    = rot_vpd_order_regex,
        placement = "H",
        style.tex = style.tex("aer"),
-       replace  = TRUE,
+       replace  = TRUE, se.below = FALSE,
+       fontsize = "scriptsize",
        title    = "Effect of weather and rotation sequences on corn yields",
        label    = "tab:corn_rot_vpd",
        file     = paste0(tab_dir, "corn_rot_vpd.tex"))
@@ -458,7 +459,8 @@ etable(corn_rci_vpd,
                     "rootznaws", "Constant"),
        placement = "H",
        style.tex = style.tex("aer"),
-       replace  = TRUE,
+       replace  = TRUE, se.below = FALSE,
+       fontsize = "scriptsize",
        title    = "RCI x drought interaction effects on corn yields",
        label    = "tab:corn_rci_vpd",
        file     = paste0(tab_dir, "corn_rci_vpd.tex"))     
@@ -589,27 +591,28 @@ feols(fml_z_corn_var, data = corn_jp_data,
       cluster = ~tile_field_ID + year) -> corn_z_s2
  
 # ── Save Z-vector models for tables_combined.R ────────────────────────────────
-saveRDS(
-  list(z_s1        = corn_z_s1,
-       z_s2        = corn_z_s2,
-       rot_vpd_nc  = corn_rot_vpd_nc,
-       rot_vpd     = corn_rot_vpd),
-  file     = "D:/Crop data/corn_z_models.rds",
-  compress = TRUE   
-  # gzip -- the real fix for the original slowness was bzip2, not object size
-)
+#saveRDS(
+#  list(z_s1        = corn_z_s1,
+#       z_s2        = corn_z_s2,
+#       rot_vpd_nc  = corn_rot_vpd_nc,
+#       rot_vpd     = corn_rot_vpd),
+#  file     = "D:/Crop data/corn_z_models.rds",
+#  compress = TRUE   
+#  # gzip -- the real fix for the original slowness was bzip2, not object size
+#)
  
 # ── 5. Just-Pope stage 2 — corn ───────────────────────────────────────────────
 # Table: tab:corn_jp_var | Figures: corn_var_plot, corn_coeff_plot, corn_jp_plot
  
 corn_jp_s1 |>
   augment(newdata = corn_jp_data) |>
-  mutate(resid_sq = (corn_yield - .fitted)^2) |>
+  mutate(resid = corn_yield - .fitted, 
+         resid_sq = (corn_yield - .fitted)^2) |>
   select(-starts_with(".")) ->
   corn_jp_data
  
 fml_corn_var <- make_jp_formula("resid_sq", "rot_crop", all_controls_fgls)
-feols(fml_corn_var, data = corn_jp_data, cluster = ~tile_field_ID+year) -> corn_jp_s2
+feols(fml_corn_var, data = corn_jp_data) -> corn_jp_s2
  
 # Table: tab:corn_jp_var
 etable(corn_jp_s2,
@@ -817,8 +820,49 @@ corn_jp_summary |>
 ggsave(paste0(fig_dir, "corn_jp_plot.png"), corn_jp_plot,
        width = 9, height = 7, dpi = 300)
  
+# Capture stage-2 variance estimate before corn_jp_s2 is removed; used to
+# standardize stage-3 skewness coefficients below.
+corn_stage2_var <- mean(fitted(corn_jp_s2))
+
 rm(corn_jp_s2, corn_s1_coef, corn_s2_coef, corn_jp_summary, corn_jp_plot,
    corn_coeff_plot, corn_var_plot); gc()
+
+
+# ── Stage 3: conditional skewness / downside risk (corn) ──────────────────────
+# Antle (1983) moment-based extension. resid is already on corn_jp_data from the
+# stage-2 join; the third central moment is the natural downside-risk statistic:
+#   E[(y - mu)^3 | X].  Coefficient > 0  => sequence shifts mass toward the RIGHT
+#   tail relative to monoculture (LESS downside risk, insurer-favorable);
+#   Coefficient < 0  => heavier LEFT tail (MORE downside risk, loss-cost relevant).
+corn_jp_data <- corn_jp_data |>
+  mutate(resid_cube = resid^3)
+
+# Standardize by stage-2 variance^{3/2} so coefficients/SEs are on a
+# standardized-skewness scale: rescaling the LHS by a constant scales OLS
+# coefficients and SEs by that same constant.
+skew_scale <- corn_stage2_var^1.5
+
+corn_jp_data <- corn_jp_data |>
+  mutate(resid_cube_std = resid_cube / skew_scale)
+
+fml_corn_skew <- make_jp_formula("resid_cube_std", "rot_crop", all_controls)
+
+corn_jp_s3 <- feols(
+  fml_corn_skew,
+  data    = corn_jp_data
+)
+
+etable(corn_jp_s3,
+       tex      = TRUE,
+       keep     = "^[CSW]-",
+       dict     = rot_dict,
+       se.below = FALSE,
+       placement = "H",
+       style.tex = style.tex("aer"),
+       replace  = TRUE,
+       title    = "Stage 3 — Corn yield conditional skewness (standardized third moment)",
+       label    = "tab:corn_jp_skew",
+       file     = paste0(tab_dir, "corn_jp_skew.tex"))
  
 # ── 6. Just-Pope factor RCI — corn ───────────────────────────────────────────
 # Table: tab:corn_rci_jp | Figure: rci_plot
