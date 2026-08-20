@@ -181,9 +181,12 @@ lasso_select_sequences <- function(data, yvar, seqvar = "rot_crop",
     n_candidate         = ncol(X_seq),
     n_selected          = length(selected_sequences),
     cv_glmnet_selected  = cv_selected,   # cross-check; compare length/overlap
+    cv_glmnet_fit       = cv_fit,        # full path; plot(cv_glmnet_fit) for lambda vs CV error / nvars
     refit_no_controls   = refit_nc,
     refit_full_controls = refit_full,
-    reference_level     = ref_level
+    reference_level     = ref_level,
+    X_dm                = X_dm,          # demeaned (and control-partialled) sequence dummies fed to LASSO
+    y_dm                = y_dm           # demeaned (and control-partialled) outcome fed to LASSO
   )
 }
  

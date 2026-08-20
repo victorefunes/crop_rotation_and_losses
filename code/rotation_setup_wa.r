@@ -69,25 +69,25 @@ corn_soy_patterns <- tibble(pattern = c(
 # the original corn-soy entries; if a wheat sequence shows an analogous RCI
 # mismatch, add it here the same way.
 
-rci_correction <- function(df) {
-  df |>
-    mutate(data_rm = case_when(
-      rot_crop == "1-1-1-1-1-1" & RCI != 0 ~ 1,
-      rot_crop == "5-1-5-1-5-1" & RCI != 2.24 ~ 1,
-      rot_crop == "5-1-5-1-1-1" & RCI == 2.24 ~ 1,
-      rot_crop == "5-1-1-5-1-5" & RCI == 2.24 ~ 1,
-      rot_crop == "1-5-5-1-5-1" & RCI == 2.24 ~ 1,
-      rot_crop == "1-5-1-5-5-1" & RCI == 2.24 ~ 1,
-      rot_crop == "1-5-1-1-1-5" & RCI == 1.73 ~ 1,
-      rot_crop == "1-1-1-5-1-5" & RCI == 0    ~ 1,
-      rot_crop == "1-1-1-1-1-5" & RCI == 0    ~ 1,
-      rot_crop == "1-5-1-1-5-1" & RCI == 2.24 ~ 1,
-      rot_crop == "1-5-1-5-1-5" & RCI == 0    ~ 1,
-      rot_crop == "1-5-1-5-1-5" & RCI == 2.45 ~ 1,
-      .default = 0)) |>
-    filter(data_rm == 0) |>
-    select(-data_rm)
-}
+#rci_correction <- function(df) {
+#  df |>
+#    mutate(data_rm = case_when(
+#      rot_crop == "1-1-1-1-1-1" & RCI != 0 ~ 1,
+#      rot_crop == "5-1-5-1-5-1" & RCI != 2.24 ~ 1,
+#      rot_crop == "5-1-5-1-1-1" & RCI == 2.24 ~ 1,
+#      rot_crop == "5-1-1-5-1-5" & RCI == 2.24 ~ 1,
+#      rot_crop == "1-5-5-1-5-1" & RCI == 2.24 ~ 1,
+#      rot_crop == "1-5-1-5-5-1" & RCI == 2.24 ~ 1,
+#      rot_crop == "1-5-1-1-1-5" & RCI == 1.73 ~ 1,
+#      rot_crop == "1-1-1-5-1-5" & RCI == 0    ~ 1,
+#      rot_crop == "1-1-1-1-1-5" & RCI == 0    ~ 1,
+#      rot_crop == "1-5-1-1-5-1" & RCI == 2.24 ~ 1,
+#      rot_crop == "1-5-1-5-1-5" & RCI == 0    ~ 1,
+#      rot_crop == "1-5-1-5-1-5" & RCI == 2.45 ~ 1,
+#      .default = 0)) |>
+#    filter(data_rm == 0) |>
+#    select(-data_rm)
+#}
 
 # ── Degree-day functions (Schlenker-Roberts 2009) ─────────────────────────────
 

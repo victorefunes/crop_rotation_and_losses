@@ -160,3 +160,20 @@ etable(soy_lasso$refit_full_controls, tex = TRUE, cluster = ~COUNTY_FIPS,
        file = paste0(tab_dir, "soy_lasso.tex"), replace = TRUE,
        title = "LASSO-selected rotation sequence effects on soybean yield",
        label = "tab:soy_lasso")
+
+
+## Cross-checks
+rlasso_sel <- soy_lasso$selected_sequences
+cv_sel     <- soy_lasso$cv_glmnet_selected
+
+length(rlasso_sel); length(cv_sel)
+intersect(rlasso_sel, cv_sel)          # selected by both
+setdiff(cv_sel, rlasso_sel)            # cv.glmnet-only (expected: more, since 1se tends to select more)
+setdiff(rlasso_sel, cv_sel)            # rlasso-only (would be surprising -- worth a look if non-empty)
+length(intersect(rlasso_sel, cv_sel)) / length(rlasso_sel)   # fraction of rlasso's picks confirmed by cv.glmnet
+
+
+glmnet_fit <- soy_lasso$cv_glmnet_fit$glmnet.fit
+plot(glmnet_fit, xvar = "lambda", label = TRUE)
+abline(v = log(soy_lasso$cv_glmnet_fit$lambda.1se), lty = 2)
+abline(v = log(soy_lasso$cv_glmnet_fit$lambda.min), lty = 3)

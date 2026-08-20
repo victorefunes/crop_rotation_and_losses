@@ -12,7 +12,8 @@
 ##   tab:zvector   — Effect of rotation patterns on yields (main result, Table 1)
 ## ============================================================================
 setwd("C:/Users/vf006/Box/crop_rotations_and_losses/code")
-source("rotation_setup.R")
+source("rotation_setup_wa.R")
+source("rotation_setup_soy_wa.R")
 
 # ── Check prerequisites before loading ───────────────────────────────────────
 

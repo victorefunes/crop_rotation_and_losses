@@ -3,6 +3,7 @@ library(tidyverse)
 library(statar)
 library(fixest)
 library(broom)
+library(marginaleffects)
 setwd("C:/Users/vf006/Box/crop_rotations_and_losses/code")
 
 source("rotation_setup_wa.R")
@@ -61,19 +62,58 @@ corn_df <- corn_df |>
          crop_4 = prior4yr_crop,
          crop_5 = prior5yr_crop,
          crop_6 = prior6yr_crop) |>
-  filter(!(is.na(crop_5) & is.na(crop_4) & is.na(crop_3)))     
+  filter(!(is.na(crop_5) & is.na(crop_4) & is.na(crop_3)))   
+
+source("rci_vectorized.R")
+
+corn_df <- corn_df |>
+    mutate(RCI = rci(crop_0, crop_1, crop_2, crop_3, crop_4, crop_5))      
 
 source("cdl_recode.R")
 
 recode_cdl(corn_df, cols = paste0("crop_", 0:6))
 
 corn_df <- corn_df |>
-  rename(RCI = annual_RCI) |>
+  #rename(RCI = annual_RCI) |>
   mutate(rot_crop = paste0(crop_5, "-", crop_4, "-", crop_3, "-", 
           crop_2, "-", crop_1, "-", crop_0)) |>
-  rci_correction() |>
+  #rci_correction() |>
   add_degree_days()
 
+#crop_cols <- paste0("crop_", 1:6)
+
+# Count corn-outcome field-years whose 6-year window contains alfalfa (code 36),
+# using the SAME year-t-is-corn restriction as the rest of the paper, but WITHOUT
+# the corn/soy/wheat-only filter that currently excludes alfalfa by construction.
+#alfalfa_check <- corn_df[
+#  crop_0 == "1",
+#  .(has_alfalfa = any(.SD == 36)),
+#  .SDcols = crop_cols,
+#  by = .(tile_field_ID, year)
+#]
+#alfalfa_check[, .N, by = has_alfalfa]  
+
+#regime_check <- corn_df[
+#  crop_0 == "1",
+#  .(has_wheat   = any(.SD == 24),
+#    has_alfalfa = any(.SD == 36)),
+#  .SDcols = crop_cols,
+#  by = .(tile_field_ID, year)
+#]
+
+#regime_check[, regime := fcase(
+#  !has_wheat & !has_alfalfa, "corn_soy",
+#   has_wheat & !has_alfalfa, "corn_soy_wheat",
+#  !has_wheat &  has_alfalfa, "corn_soy_alfalfa",
+#   has_wheat &  has_alfalfa, "corn_soy_wheat_alfalfa"
+#)]
+
+#regime_check[, .N, by = regime][order(-N)]
+
+#regime_check[regime == "corn_soy_wheat_alfalfa",
+#           .(n_fields = uniqueN(tile_field_ID), n_years = uniqueN(year))]
+
+#regime_check[, .(n_fields = uniqueN(tile_field_ID), n_years = uniqueN(year)), by = regime]
 # ── Rotation patterns ─────────────────────────────────────────────────────────
 
 expand.grid(crop_0 = c("1","5"),
@@ -103,7 +143,24 @@ corn_jp_data <- corn_df |>
     vpd_name = factor(vpd_name, levels = c("normal", "somewhat dry", "dry")))  
 
 cat("Corn analysis sample:", nrow(corn_jp_data), "rows\n")
- 
+
+#crop_cols <- paste0("crop_", 1:6)
+
+#corn_jp_data[, `:=`(
+#  has_wheat   = apply(.SD, 1, function(x) any(x == 24)),
+#  has_alfalfa = apply(.SD, 1, function(x) any(x == 36))
+#), .SDcols = crop_cols]
+
+#corn_jp_data[, regime := fcase(
+#  !has_wheat & !has_alfalfa, "corn_soy",
+#   has_wheat & !has_alfalfa, "corn_soy_wheat",
+#  !has_wheat &  has_alfalfa, "corn_soy_alfalfa",
+#   has_wheat &  has_alfalfa, "corn_soy_wheat_alfalfa"
+#)]
+
+#cat("Switching-regression regime counts:\n")
+#print(corn_jp_data[, .N, by = regime][order(-N)])
+
 # Free raw data — no longer needed
 rm(corn_df); gc()   
 
@@ -116,7 +173,6 @@ min_freq <- 100
 seq_counts <- table(corn_jp_data$rot_crop)
 keep_levels <- names(seq_counts)[seq_counts >= min_freq]   # e.g. min_freq = 30
 corn_jp_data[["rot_crop"]] <- droplevels(factor(corn_jp_data[["rot_crop"]], levels = intersect(levels(corn_jp_data[["rot_crop"]]), keep_levels)))
-
 
 source("lasso_rotation_selection.R")
 
@@ -158,3 +214,19 @@ etable(corn_lasso$refit_full_controls, tex = TRUE, cluster = ~COUNTY_FIPS,
        file = paste0(tab_dir, "corn_lasso.tex"), replace = TRUE,
        title = "LASSO-selected rotation sequence effects on corn yield",
        label = "tab:corn_lasso")
+
+## Cross-checks
+rlasso_sel <- corn_lasso$selected_sequences
+cv_sel     <- corn_lasso$cv_glmnet_selected
+
+length(rlasso_sel); length(cv_sel)
+intersect(rlasso_sel, cv_sel)          # selected by both
+setdiff(cv_sel, rlasso_sel)            # cv.glmnet-only (expected: more, since 1se tends to select more)
+setdiff(rlasso_sel, cv_sel)            # rlasso-only (would be surprising -- worth a look if non-empty)
+length(intersect(rlasso_sel, cv_sel)) / length(rlasso_sel)   # fraction of rlasso's picks confirmed by cv.glmnet
+
+
+glmnet_fit <- corn_lasso$cv_glmnet_fit$glmnet.fit
+plot(glmnet_fit, xvar = "lambda", label = TRUE)
+abline(v = log(corn_lasso$cv_glmnet_fit$lambda.1se), lty = 2)
+abline(v = log(corn_lasso$cv_glmnet_fit$lambda.min), lty = 3)

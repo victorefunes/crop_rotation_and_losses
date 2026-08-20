@@ -88,15 +88,20 @@ corn_df <- corn_df |>
          crop_5 = prior5yr_crop,
          crop_6 = prior6yr_crop) 
 
+source("rci_vectorized.R")
+
+corn_df <- corn_df |>
+    mutate(RCI = rci(crop_0, crop_1, crop_2, crop_3, crop_4, crop_5))     
+
 source("cdl_recode.R")
 
 recode_cdl(corn_df, cols = paste0("crop_", 0:6))
 
 corn_df <- corn_df |>
-  rename(RCI = annual_RCI) |>
+  #rename(RCI = annual_RCI) |>
   mutate(rot_crop = paste0(crop_5, "-", crop_4, "-", crop_3, "-", 
           crop_2, "-", crop_1, "-", crop_0)) |>
-  rci_correction() |>
+  #rci_correction() |>
   add_degree_days()
 
 # ── Build analysis sample ─────────────────────────────────────────────────────
@@ -134,9 +139,10 @@ corn_jp_data <- corn_df |>
     vpd_name = factor(vpd_name, levels = c("normal", "somewhat dry", "dry")))
  
 cat("Corn analysis sample:", nrow(corn_jp_data), "rows\n")
- 
+
 # Free raw data — no longer needed
-rm(corn_df); gc()
+rm(corn_df); 
+gc() 
  
 # ── Summary statistics table ──────────────────────────────────────────────────
 # Table: tab:summary — means and SDs by rotation type
@@ -206,13 +212,22 @@ feols(corn_yield ~ rot_crop | tile_field_ID + year,
  
 feols(corn_yield_formula,
       data = corn_jp_data, cluster = ~COUNTY_FIPS) -> corn_rot
- 
+
+# Order rot_crop coefficient rows by estimate (with-controls model), decreasing
+rot_order <- broom::tidy(corn_rot) |>
+  filter(grepl("^rot_crop", term)) |>
+  arrange(desc(estimate)) |>
+  pull(term) |>
+  gsub("^rot_crop", "", x = _)
+rot_order_regex <- paste0("^", rot_order, "$")
+
 etable(corn_rot_nc, corn_rot,
        tex      = TRUE,
        dict     = dict_corn,
        headers  = c("No controls", "With controls"),
        drop     = c("pr_", "cGDD_", "EDD_", "soil_", "vpd_",
                     "rootznaws", "Constant"),
+       order    = rot_order_regex,
        placement = "H",
        style.tex = style.tex("aer"),
        replace  = TRUE, se.below = FALSE,
@@ -280,6 +295,8 @@ tex_lines <- vapply(tex_lines, function(line) {
 writeLines(tex_lines, corn_rot_tex_path)
  
 # Figure: corn_rot_plot — Response of corn yields to rotation sequences
+library(tidytext)   # for reorder_within / scale_x_reordered
+
 corn_rot_nc |>
   coefplot() |>
   data.frame() |>
@@ -307,8 +324,6 @@ corn_rot_nc |>
 ggsave(paste0(fig_dir, "corn_rot_plot_nc.png"), corn_rot_plot_nc,
        width = 10, height = 7.5, dpi = 300)
 
-library(tidytext)   # for reorder_within / scale_y_reordered
-
 corn_rot |>
   coefplot() |>
   data.frame() |>
@@ -335,7 +350,6 @@ corn_rot |>
   corn_rot_plot
 ggsave(paste0(fig_dir, "corn_rot_plot.png"), corn_rot_plot,
        width = 10, height = 7.5, dpi = 300)
-
  
 # ── 2. RCI models — corn ──────────────────────────────────────────────────────
 # Table: tab:corn_rci | Figure: corn_rci_plot
@@ -411,16 +425,25 @@ feols(corn_yield ~ rot_crop + vpd_name | tile_field_ID + year,
  
 corn_jp_data |>
   feols(corn_vpd_formula, data = _, cluster = ~COUNTY_FIPS) -> corn_rot_vpd
- 
+
 corn_jp_data |>
   mutate(RCI = factor(RCI)) |>
   feols(corn_rci_vpd_formula, data = _, cluster = ~COUNTY_FIPS) -> corn_rci_vpd
- 
+
+# Order rot_crop coefficient rows by estimate, decreasing
+rot_vpd_order <- broom::tidy(corn_rot_vpd) |>
+  filter(grepl("^rot_crop", term)) |>
+  arrange(desc(estimate)) |>
+  pull(term) |>
+  gsub("^rot_crop", "", x = _)
+rot_vpd_order_regex <- paste0("^", rot_vpd_order, "$")
+
 etable(corn_rot_vpd,
        tex      = TRUE,
        dict     = c(dict_corn, dict_vpd),
        drop     = c("pr_", "cGDD_", "EDD_", "soil_", "vpd_",
                     "rootznaws", "Constant"),
+       order    = rot_vpd_order_regex,
        placement = "H",
        style.tex = style.tex("aer"),
        replace  = TRUE,
