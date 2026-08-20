@@ -265,7 +265,7 @@ required inputs to be either uniformly risk-increasing or risk-neutral - and all
 \medskip\noindent\textbf{Antle's flexible moment-based extension - \cite{antle1983, Antle2010}}. 
 
 \cite{antle1983} extended the Just-Pope framework to estimate higher moments of the output distribution beyond the mean and variance, showing that the first three moments of milk yield are statistically significant functions of inputs. This matters for
-insurance applications because indemnities are driven by left-tail probabilities, and mean-variance summaries may miss important skewness effects. \cite{Antle2010} later proposed partial-moment functions as a flexible way to characterize asymmetric input effects on output distributions. We do not implement the Antle extension here, but note that estimating skewness effects of rotation sequences on corn yields is a natural extension of our analysis.
+insurance applications because indemnities are driven by left-tail probabilities, and mean-variance summaries may miss important skewness effects. \cite{Antle2010} later proposed partial-moment functions as a flexible way to characterize asymmetric input effects on output distributions. We implement the third-moment case of this extension for corn: alongside the stage-1 mean and stage-2 variance equations, we estimate a third-stage moment regression of the cubed first-stage residual on the same rotation-sequence and control variables, recovering the effect of each sequence on the conditional skewness of corn yields (Table~\ref{tab:corn_jp_skew}). Because indemnities are triggered by low-yield realizations, this third moment is the distributional margin most directly relevant to insurance pricing. \citet{difalco2009} apply this moment-based approach to crop diversity in Ethiopian agriculture, finding that greater diversity reduces both production variance and exposure to downside risk, the closest applied precedent for the rotation-and-skewness question we take up here.
 
 \medskip\noindent\textbf{Maximum likelihood and log-linear variance - \cite{Harvey1976, Saha1997}}. 
 
@@ -444,8 +444,17 @@ Figure~\ref{fig:corn_jp_plot} summarizes the joint mean-variance results in a si
 \end{figure}
 
 Figure~\ref{fig:corn_jp_plot} summarizes the joint mean-variance results in a single scatter plot.
-% NOTE: this section previously had two near-identical paragraphs describing the same
-% mean-variance dominance finding, one before and one after this figure block. The
+
+Table~\ref{tab:corn_jp_skew} extends the mean-variance results to the third moment, reporting the effect of each rotation sequence on the conditional skewness of corn yields, estimated as a third-stage regression of the cubed first-stage residual on the same specification (following \citet{antle1983}). The sign convention is the reverse of the variance stage: a \emph{positive} skewness coefficient indicates that a sequence shifts probability mass toward the right tail relative to corn monoculture, thinning the left tail and \emph{reducing} downside risk, whereas a negative coefficient signals heavier left-tail exposure. This is the margin that maps most directly onto insurance loss cost, since indemnities are paid on low-yield realizations rather than on variance per se; a sequence can lower variance while leaving---or worsening---the probability of a bad harvest. Read alongside the mean and variance columns, the skewness estimates identify which sequences are unambiguously preferred to monoculture in the sense of \citet{difalco2009}: higher expected yield, lower variance, and no increase in downside risk.
+% TODO: fill in the empirical specifics from tables/corn_jp_skew.tex once available in this
+% working copy -- (i) which rotation sequences carry statistically significant positive
+% (downside-risk-reducing) vs negative skewness coefficients, and (ii) whether the sequences
+% flagged as mean-increasing / variance-reducing also clear the skewness screen. Confirm the
+% table \label is tab:corn_jp_skew (assumed here from the corn_jp_mean / corn_jp_var naming
+% convention). Inference on the cubed-residual coefficients should come from the three-stage
+% bootstrap (Section~\ref{subsec:bootstrap}), not the analytic clustered SEs, since the
+% stage-3 regressor is a generated variable built from stage-1 fitted values.
+% NOTE: a near-duplicate mean-variance dominance paragraph that previously sat after this
 % duplicate has been removed; the surviving version (above the figure earlier in this
 % subsection) covers the same content.
 
@@ -779,7 +788,7 @@ Two qualifications bound how far these findings can be pushed toward an actual r
 \input{tables/corn_jp_var.tex}
 \begin{quote}
 \small
-Notes: Dependent variable is squared first-stage residual from the corn yield mean regression. OLS estimates of stage-2 variance equation~\eqref{eq:stage2}, by rotation sequence. Reference: corn monoculture. County and year fixed effects included. Two-way clustering at field and year level. Reported here rather than in the main text because the conditional-variance estimators are secondary to the mean results in this setting; see Section~\ref{subsec:var_effects}.
+Notes: Dependent variable is the squared first-stage residual from the corn yield mean regression. OLS estimates of stage-2 variance equation~\eqref{eq:stage2}, by rotation sequence. Reference: corn monoculture. County and year fixed effects included. Two-way clustering at field and year level. Reported here rather than in the main text because the conditional-variance estimators are secondary to the mean results in this setting; see Section~\ref{subsec:var_effects}.
 \end{quote}
 
 \input{tables/corn_rci_jp.tex}
@@ -791,7 +800,7 @@ Notes: Column (1) reports stage-1 mean coefficients; column (2) reports stage-2 
 % an estimated coefficient, which is inconsistent with it being the omitted reference
 % level. Confirm which RCI value is actually omitted.
  
- 
+\input{tables/corn_jp_skew.tex} 
  
 \clearpage
 \section*{Figures}
