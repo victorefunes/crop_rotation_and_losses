@@ -156,9 +156,9 @@ SCYM \citep{lobell2015} uses a large ensemble of crop-simulation runs to train a
 Because both SCYM and QDANN are modeled quantities derived from a specific sensor, retrieval algorithm, and training procedure rather than direct field measurements, they are properly understood as gridded outcome data subject to the measurement-error concerns increasingly documented for earth observation (EO) products used in applied econometric research \citep{Benami2026}. \citet{Benami2026} distinguish classical measurement error, which attenuates estimated effects toward zero, from non-classical measurement error, which is systematic and can be correlated with the true outcome or with covariates of interest and so can bias estimates in an unpredictable direction; they document, for example, that estimated rainfall coefficients can change sign entirely depending on which gridded precipitation product is used. We are not aware of a comparable cross-product comparison for field-level satellite-derived corn and soybean yields specifically, and we return to the implications of this measurement-error framework for our own estimates in Section~\ref{subsec:limitations}.
     
 \subsection{\label{subsec:rci}Rotational Complexity Index (RCI)}	
-We measure rotation diversity using the Rotational Complexity Index (RCI) developed by \cite{socolar2021}. The RCI was designed to capture both the richness and the turnover of crop sequences at the field level - two properties that prior diversity measures based on crop frequency or short observation windows failed to represent simultaneously. \cite{socolar2021} applied the index to 1.5 million fields across eight US Midwest states using six-year CDL sequences, establishing it as the standard field-scale measure of rotational complexity in the Corn Belt literature.
+We measure rotation diversity using the Rotational Complexity Index (RCI) developed by \citet{socolar2021}. The RCI was designed to capture both the richness and the turnover of crop sequences at the field level - two properties that prior diversity measures based on crop frequency or short observation windows failed to represent simultaneously. \citet{socolar2021} applied the index to 1.5 million fields across eight US Midwest states using six-year CDL sequences, establishing it as the standard field-scale measure of rotational complexity in the Corn Belt literature. Interest in a scalar summary of rotational diversity is motivated by long-term experimental evidence that diversification affects both yield levels and yield stability: \citet{bowles2020}, synthesizing multi-decade rotation trials across a continental precipitation gradient, find that more diverse maize rotations raise yields across all growing conditions and reduce yield losses under adverse conditions such as drought - precisely the mean and downside-risk margins that a rotation-conditioned insurance rate would seek to price.
 
-The RCI adapts the rotational diversity index of \cite{Tiemann2016}), which quantifies rotation diversity as a function of rotation length $l$ and number of crops $n$ $d = \sqrt{nl}$, to accommodate large-scale remotely sensed data where true rotation length is unobserved. Rather than trying to identify rotations of a known length, \cite{socolar2021} observe a fixed six-year sequence of crops in each field and replace rotation length with two species turnover terms. The resulting index is:
+The RCI adapts the rotational diversity index of \citet{Tiemann2016}, which quantifies rotation diversity as a function of rotation length $l$ and number of crops $n$ $d = \sqrt{nl}$, to accommodate large-scale remotely sensed data where true rotation length is unobserved. Rather than trying to identify rotations of a known length, \citet{socolar2021} observe a fixed six-year sequence of crops in each field and replace rotation length with two species turnover terms. The resulting index is:
 
 \begin{equation}
     RCI = \sqrt{n\times \dfrac{T_{1}+T_{2}+T_{p}}{2}}\label{eq:rci}
@@ -166,9 +166,9 @@ The RCI adapts the rotational diversity index of \cite{Tiemann2016}), which quan
 
 Where $T_{1}$ is the one-year turnover, equal to the number of years in which the crop differs from the prior year; $T_{2}$ is the two-year turnover, equal to the number of years in which the crop differs from the crop grown two years prior; and $T_{p}$ is a pseudo-turnover term equal to the number of times a perennial crop (such as alfalfa or pasture) appears in two consecutive years. The $T_{p}$ term ensures that consecutive perennial plantings are not penalized for low turnover, reflecting the agronomic understanding that perennials provide soil health benefits even when repeated. 
 
-The index has several properties relevant to our application. First, corn monoculture - a field planted in corn every year of the six-year window - receives $n=1, T_{1}=T_{2}=T_{p}=0$, and therefore $\text{RCI} = 0$. Second, across the US Midwest study area \cite{socolar2021} document 19 unique RCI values ranging from monoculture ($RCI = 0$) to maximum diversity ($RCI = 5.2$), with a notable mass at $RCI = 2.24$, the value corresponding to a perfect alternating corn-soybean rotation (CSCSCS). In our Illinois sample, most sequences are corn--soybean, but a subset now includes winter wheat as a third crop; these three-crop sequences attain crop richness $n = 3$ and therefore reach higher RCI values than pure corn--soybean sequences can. Perennial turnover ($T_{p} > 0$) remains unattainable in the 49-sequence sample used for the RCI and sequence-dummy tables, since that restricted sample contains no perennial crop such as alfalfa or pasture (Section~\ref{subsec:lasso_results} discusses an alfalfa-containing sequence recovered once this restriction is relaxed). % TODO: state the exact observed RCI range on the 49-sequence wheat-inclusive sample (the prior corn-soy-only range was 1.41 to 4.74); recompute from the current sample's RCI values.
+The index has several properties relevant to our application. First, corn monoculture - a field planted in corn every year of the six-year window - receives $n=1, T_{1}=T_{2}=T_{p}=0$, and therefore $\text{RCI} = 0$. Second, across the US Midwest study area \citet{socolar2021} document 19 unique RCI values ranging from monoculture ($RCI = 0$) to maximum diversity ($RCI = 5.2$), with a notable mass at $RCI = 2.24$, the value corresponding to a perfect alternating corn-soybean rotation (CSCSCS). In our Illinois sample, most sequences are corn--soybean, but a subset now includes winter wheat as a third crop; these three-crop sequences attain crop richness $n = 3$ and therefore reach higher RCI values than pure corn--soybean sequences can. Perennial turnover ($T_{p} > 0$) remains unattainable in the 49-sequence sample used for the RCI and sequence-dummy tables, since that restricted sample contains no perennial crop such as alfalfa or pasture (Section~\ref{subsec:lasso_results} discusses an alfalfa-containing sequence recovered once this restriction is relaxed). % TODO: state the exact observed RCI range on the 49-sequence wheat-inclusive sample (the prior corn-soy-only range was 1.41 to 4.74); recompute from the current sample's RCI values.
 
-Third, and most important for our application, the RCI is not monotonically related to yield outcomes, as we show in Section~\ref{sec:results}, posing a direct challenge to linear RCI-based insurance rating. Because the index takes the square root of the product of crop richness and turnover, two sequences with the same RCI value can have very different agronomic properties - for example, a sequence with two crops and high turnover may score identically to one with three crops and lower turnover, yet have substantially different effects on nitrogen availability and pest pressure. A field transitioning from monoculture to a corn-soybean rotation may pass through intermediate RCI values that reflect agronomically suboptimal sequences, such as consecutive soybean years that accumulate soybean cyst nematode pressure. \cite{burchfield2024} find that rotational complexity as measured by the RCI is currently insufficient to observe yield gains in major crops at the county scale, a result consistent with the nonlinearity we document at the field level: a higher RCI does not uniformly predict higher yields, because the index aggregates sequence properties with heterogeneous and sometimes opposing effects on corn yields.
+Third, and most important for our application, the RCI is not monotonically related to yield outcomes, as we show in Section~\ref{sec:results}, posing a direct challenge to linear RCI-based insurance rating. Because the index takes the square root of the product of crop richness and turnover, two sequences with the same RCI value can have very different agronomic properties - for example, a sequence with two crops and high turnover may score identically to one with three crops and lower turnover, yet have substantially different effects on nitrogen availability and pest pressure. A field transitioning from monoculture to a corn-soybean rotation may pass through intermediate RCI values that reflect agronomically suboptimal sequences, such as consecutive soybean years that accumulate soybean cyst nematode pressure. \citet{burchfield2024} find that rotational complexity as measured by the RCI is currently insufficient to observe yield gains in major crops at the county scale, a result consistent with the nonlinearity we document at the field level: a higher RCI does not uniformly predict higher yields, because the index aggregates sequence properties with heterogeneous and sometimes opposing effects on corn yields.
 
 This nonlinearity presents a direct challenge for insurance rating. A linear premium adjustment based on the continuous RCI would systematically misprice fields in intermediate rotation patterns - overcharging fields with high RCI values that feature agronomically suboptimal sequencing, and undercharging fields with moderate RCI values that nonetheless achieve strong yield outcomes through well-timed soybean placement. Our use of factor RCI - treating each of the 18 distinct observed values as a separate indicator rather than imposing a linear functional form - is motivated by this concern. 
 
@@ -611,7 +611,98 @@ Figure~\ref{fig:score_yield} reports predicted corn yields as a function of the 
 % confirmed and should be pulled from score\_plot\_df by sequence identity, not estimated
 % from the figure.
 
-\section{\label{sec:conclusions}Discussion and Conclusions} 
+\subsection{\label{subsec:vpd_effects}Weather Effects: Vapor Pressure Deficit and Drought}
+
+\input{tables/corn_rot_vpd.tex}
+\begin{quote}
+\small
+Notes: Dependent variable is QDANN corn yield in bushels per acre. Rotation
+sequences enter as indicators relative to corn monoculture (C-C-C-C-C-C).
+\emph{Somewhat dry season} and \emph{Dry season} are July vapor pressure deficit
+(VPD) bins, defined as 1.9--2.1 kPa and $>$2.1 kPa respectively, with normal
+($<$1.9 kPa) as the omitted reference; \texttt{vpd\_6}, \texttt{vpd\_7}, and
+\texttt{vpd\_8} are continuous monthly VPD for June, July, and August. Field
+(\texttt{tile\_field\_ID}) and year fixed effects included. Standard errors in
+parentheses. $^{***}p<0.01$, $^{**}p<0.05$, $^{*}p<0.10$.
+\end{quote}
+% TODO: confirm the units and scale of the continuous VPD coefficients. vpd_6 = 54.91,
+% vpd_7 = -18.91, vpd_8 = 11.68 are large relative to a corn yield expressed in bushels
+% per acre; if VPD is in kPa these are bu/acre per kPa and the magnitudes should be sanity-
+% checked against the observed within-field VPD range before any per-kPa marginal effect is
+% quoted in the text.
+% TODO: the model contains BOTH continuous July VPD (vpd_7) and the July-VPD dry-season bins
+% (Somewhat dry / Dry). Confirm this is intended and not a double-counting of the same July
+% signal -- if the bins are meant to capture nonlinearity, consider dropping the continuous
+% vpd_7 term, or state explicitly that vpd_7 holds the within-bin linear slope.
+% TODO: this specification uses field (tile_field_ID) fixed effects, whereas the main mean
+% model in eq:stage1 uses county (FIPS) fixed effects. Note the difference explicitly, or
+% re-estimate under a common FE structure so the sequence coefficients are comparable across
+% tables.
+
+Table~\ref{tab:corn_rot_vpd} augments the sequence-mean specification with
+explicit growing-season weather terms, allowing rotation and drought effects to
+be read from a single model. Two patterns stand out. First, the drought bins are
+negative and increase in magnitude with severity: a somewhat dry July lowers corn
+yield by 1.29 bushels per acre and a dry July by 1.88 bushels per acre, both
+relative to a normal July and both statistically significant. Second, the
+month-specific VPD terms are not uniformly signed---July VPD carries a negative
+coefficient while June and August VPD enter positively. This sign pattern is
+consistent with the agronomy of corn: July spans the silking and pollination
+window, when high atmospheric moisture demand is most damaging, whereas moderate
+VPD earlier and later in the season need not depress yields.
+
+The rotation-sequence coefficients retain the ordering documented in
+Section~\ref{subsec:seq_effects}: sequences combining a recent soybean harvest
+with winter wheat (for example W-C-C-S-W-C and C-S-C-W-S-C) sit at the top of the
+table, while continuous-corn-adjacent sequences (C-S-C-C-C-C, S-C-C-C-C-C,
+S-S-C-C-C-C) carry negative and significant coefficients. That this ordering
+survives the inclusion of explicit weather controls indicates the rotation
+effects are not merely proxying for cross-field differences in drought exposure.
+For insurance rating, the joint result is that drought risk and rotation history
+enter corn yields through distinct channels: a rotation-conditioned rate would
+need to price the sequence effect on top of, rather than as a substitute for, the
+weather-driven component of yield risk.
+
+\subsection{\label{subsec:rci_vpd_effects}Rotational Complexity and Drought: Interaction Effects}
+
+\input{tables/corn_rci_vpd.tex}
+\begin{quote}
+\small
+Notes: Dependent variable is QDANN corn yield in bushels per acre. RCI enters as
+a factor variable interacted with July VPD dry-season bins (\emph{Somewhat dry},
+1.9--2.1 kPa; \emph{Dry}, $>$2.1 kPa; normal $<$1.9 kPa omitted). Main effects
+and interaction terms shown. Field (\texttt{tile\_field\_ID}) and year fixed
+effects included. Standard errors in parentheses. $^{***}p<0.01$,
+$^{**}p<0.05$, $^{*}p<0.10$.
+\end{quote}
+% TODO: confirm the omitted RCI reference level. RCI1.41 appears here with its own
+% coefficient (-0.7067), so the reference is some other level (RCI = 0 / monoculture?).
+% State the omitted category explicitly, and reconcile with tables/corn_rci.tex, which uses
+% RCI = 1.41 as its stated reference.
+% TODO: the RCI x Dry-season interactions are non-monotone and individually noisy (e.g.
+% RCI3 x Dry = +5.36 but RCI3.24 x Dry = -5.32, both significant). Before drawing a
+% buffering conclusion at extreme drought, consider a joint test (or a linear-in-RCI
+% interaction) rather than reading individual factor-level interaction coefficients.
+
+Table~\ref{tab:corn_rci_vpd} interacts factor RCI with the July drought bins to
+ask whether more complex rotations buffer corn yields against dry conditions---the
+field-level analogue of the resilience mechanism documented experimentally by
+\citet{bowles2020}. The evidence is mixed and, as elsewhere in this paper,
+non-monotone in RCI. Under \emph{somewhat dry} conditions the interaction terms
+are predominantly positive, and significantly so at several RCI levels (for
+example RCI = 2.00, 2.24, and 2.45), indicating that moderate rotational
+complexity partially offsets the roughly 2.7 bushel-per-acre penalty of a
+somewhat dry July. Under \emph{dry} conditions, however, the interactions change
+sign repeatedly across adjacent RCI levels and are individually imprecise, so the
+table does not support a clean claim that higher RCI buffers corn against severe
+drought. This pattern reinforces the paper's central message: RCI is too coarse
+and too non-monotone a summary of rotation structure to carry a stable
+interaction with weather risk, which is precisely the property that would be
+required for a linear RCI-based adjustment to crop insurance rates to be
+correctly specified.
+
+\section{\label{sec:conclusions}Discussion and Conclusions}
+
 \subsection{\label{susec:summary}Summary of Findings}
  
 This paper uses a large satellite-based field-level panel for Illinois from 2003 to 2022 to estimate how six-year crop rotation sequences affect both the mean and variance of corn yields. Our main findings are four.
@@ -700,25 +791,6 @@ Notes: Column (1) reports stage-1 mean coefficients; column (2) reports stage-2 
 % an estimated coefficient, which is inconsistent with it being the omitted reference
 % level. Confirm which RCI value is actually omitted.
  
-%\begin{table}[H]
-%  \centering
-  %\caption{Effect of weather (VPD) and rotation sequences on corn yields}
-  %\label{tab:rot_vpd}
-%  \begin{threeparttable}
-%  \scriptsize
-%    \input{tables/rot_vpd.tex}
-%    \begin{tablenotes}
-%      \small
-%      \item Notes: Dependent variables are QDANN corn yield (columns 1-2) and
-%      QDANN soybean yield (columns 3-4) in bushels per acre. VPD bins defined
-%      as: normal ($<$1.9 kPa), somewhat dry (1.9-2.1 kPa), dry ($>$2.1 kPa),
-%      measured in July. Reference: normal VPD, corn monoculture (columns 1-2)
-%      or soy monoculture (columns 3–4). Standard errors in parentheses, two-way
-%      clustered at field and year level.
-%      $^{***}p<0.01$, $^{**}p<0.05$, $^{*}p<0.10$.
-%    \end{tablenotes}
-%  \end{threeparttable}
-%\end{table}
  
  
 \clearpage
