@@ -204,6 +204,9 @@ cat("Summary statistics table saved.\n")
  
 # ── 1. OLS mean model ─────────────────────────────────────────────────────────
 # Table: tab:corn_rot | Figure: corn_rot_plot
+
+corn_jp_data <- corn_jp_data |>
+  filter(!is.na(vpd_name))
  
 corn_yield_formula <- make_jp_formula("corn_yield", "rot_crop", all_controls)
  
