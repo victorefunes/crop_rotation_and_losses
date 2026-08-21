@@ -208,7 +208,7 @@ boot_jp_moments <- function(dt, fml_mean, fml_var, fml_skew,
 # ── Run ─────────────────────────────────────────────────────────────────────
 gc()
 boot_moments <- boot_jp_moments(corn_jp_data, fml_mean, fml_var, fml_skew,
-                                B = 499, seed = 42)
+                                B = 999, seed = 42)
 
 saveRDS(boot_moments,
         "D:/Crop data/boot_moments.rds", compress = TRUE)

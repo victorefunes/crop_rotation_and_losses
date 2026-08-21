@@ -499,12 +499,6 @@ One pattern stands out. First, among the corn-selected sequences, coefficients a
 \small
 Notes: Columns (1)-(2) report corn yield mean and variance effects, discussed below. Columns (1) and (2) are stage-1 and stage-2 (OLS on squared residuals) coefficients, respectively. Controls include monthly precipitation (quadratic), GDD, EDD, VPD, soil moisture, and AWC for June--August. County and year fixed effects included. Standard errors two-way clustered at field and year level. $^{***}p<0.01$, $^{**}p<0.05$, $^{*}p<0.10$.
 \end{quote}
-% TODO -- IMPORTANT: this paper is now corn-only, but tables/zvector.tex as generated still
-% contains soybean columns (3)-(4). The notes above and the discussion below now describe
-% columns (1)-(2) only; columns (3)-(4) should be dropped by regenerating this table with
-% only the corn Z-vector model, rather than leaving unused soybean columns in a corn-only
-% paper's main results table.
-
 Table~\ref{tab:zvector} reports the parsimonious parameterization of rotation effects in terms of four structural features of soybean placement within the six-year corn rotation window: recency, spacing, consecutiveness, and count.
 
 For corn yields, the most recent soybean placement variable ($\text{late\_soy}$) carries a positive and significant mean effect of 0.7348 ($p<0.01$), and the soy gap variable carries a smaller positive effect of 0.2572, significant at the 5 percent level. The number of soybean harvests variable carries a positive and significant effect of 0.6406 ($p<0.05$): controlling for recency and spacing, more soybean years in the window raise corn yields. The consecutive soybean years dummy carries a negative but statistically insignificant mean effect ($-0.3127$).

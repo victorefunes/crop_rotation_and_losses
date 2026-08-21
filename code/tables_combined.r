@@ -1,37 +1,28 @@
 ## ============================================================================
 ## tables_combined.R
-## Produces tables that require results from both corn_analysis.R and
-## soy_analysis.R. Run this after both analysis scripts have completed
-## and saved their model objects to disk.
+## Produces tables that require results from corn_analysis.R.
+## Run this after corn_analysis.R has completed and saved its model
+## objects to disk.
 ##
 ## Prerequisites:
 ##   corn_z_models.rds  — from corn_analysis.R
-##   soy_z_models.rds   — from soy_analysis.R
 ##
 ## Tables produced:
 ##   tab:zvector   — Effect of rotation patterns on yields (main result, Table 1)
 ## ============================================================================
 setwd("C:/Users/vf006/Box/crop_rotations_and_losses/code")
 source("rotation_setup_wa.R")
-source("rotation_setup_soy_wa.R")
 
 # ── Check prerequisites before loading ───────────────────────────────────────
 
 rds_dir <- "D:/Crop data/"
 
 corn_rds <- paste0(rds_dir, "corn_z_models.rds")
-soy_rds  <- paste0(rds_dir, "soy_z_models.rds")
 
-missing <- c(
-  if (!file.exists(corn_rds)) corn_rds,
-  if (!file.exists(soy_rds))  soy_rds
-)
-
-if (length(missing) > 0) {
+if (!file.exists(corn_rds)) {
   stop(
-    "Missing RDS file(s). Run the following scripts first:\n",
-    if (!file.exists(corn_rds)) "  -> corn_analysis.R  (saves corn_z_models.rds)\n",
-    if (!file.exists(soy_rds))  "  -> soy_analysis.R   (saves soy_z_models.rds)\n",
+    "Missing RDS file. Run the following script first:\n",
+    "  -> corn_analysis.R  (saves corn_z_models.rds)\n",
     call. = FALSE
   )
 }
@@ -39,22 +30,12 @@ if (length(missing) > 0) {
 # ── Load saved model objects ──────────────────────────────────────────────────
 
 corn_z <- readRDS(corn_rds)
-soy_z  <- readRDS(soy_rds)
 
 corn_z_s1       <- corn_z$z_s1
 corn_z_s2       <- corn_z$z_s2
-corn_rot_vpd_nc <- corn_z$rot_vpd_nc
-corn_rot_vpd    <- corn_z$rot_vpd
-
-soy_z_s1        <- soy_z$z_s1
-soy_z_s2        <- soy_z$z_s2
-soy_rot_vpd_nc  <- soy_z$rot_vpd_nc
-soy_rot_vpd     <- soy_z$rot_vpd
 
 cat("Corn Z-vector stage 1 obs:", nobs(corn_z_s1), "\n")
 cat("Corn Z-vector stage 2 obs:", nobs(corn_z_s2), "\n")
-cat("Soy  Z-vector stage 1 obs:", nobs(soy_z_s1),  "\n")
-cat("Soy  Z-vector stage 2 obs:", nobs(soy_z_s2),  "\n")
 
 # ── Coefficient label dictionary ──────────────────────────────────────────────
 
@@ -62,74 +43,34 @@ dict_z <- c(
   "late_soy" = "Latest soy rotation",
   "soy_gap"  = "Soy gap",
   "soy_cons" = "Number of consecutive soy years",
-  "nsoy"     = "Number of soy harvests",
-  "late_corn" = "Latest corn rotation",
-  "corn_gap"  = "Corn gap",
-  "corn_cons" = "Number of consecutive corn years",
-  "ncorn"     = "Number of corn harvests"
+  "nsoy"     = "Number of soy harvests"
 )
 
 # ── Table: tab:zvector ────────────────────────────────────────────────────────
 # Replicates Table 1 from the draft PDF.
-# Columns: QDANN mean, QDANN variance, SCYM mean, SCYM variance
+# Columns: QDANN mean, QDANN variance
 # corn_z_s1 = QDANN mean equation
 # corn_z_s2 = QDANN variance equation
-# soy_z_s1  = SCYM mean equation  (rename headers accordingly if needed)
-# soy_z_s2  = SCYM variance equation
 tab_dir <- "C:/Users/vf006/Box/crop_rotations_and_losses/tables/"
 
-etable(corn_z_s1, corn_z_s2, soy_z_s1, soy_z_s2,
+etable(corn_z_s1, corn_z_s2,
        tex       = TRUE,
        dict      = dict_z,
-       headers   = c("Corn mean", "Corn variance",
-                     "Soy mean",  "Soy variance"),
-       keep_raw      = c("late_soy", "soy_gap", "soy_cons", "nsoy",
-                          "late_corn", "corn_gap", "corn_cons", "ncorn"),
+       headers   = c("Corn mean", "Corn variance"),
+       keep_raw  = c("late_soy", "soy_gap", "soy_cons", "nsoy"),
        se.below  = FALSE,
        style.tex = style.tex("aer"),
        replace   = TRUE,
        title     = "Effect of rotation patterns on yields",
        label     = "tab:zvector",
        extralines = list(
-         "_Controls" = c("Yes", "Yes", "Yes", "Yes"),
-         "_Year FE"  = c("\\checkmark", "\\checkmark",
-                         "\\checkmark", "\\checkmark"),
-         "_FIPS FE"  = c("\\checkmark", "\\checkmark",
-                         "\\checkmark", "\\checkmark")
+         "_Controls" = c("Yes", "Yes"),
+         "_Year FE"  = c("\\checkmark", "\\checkmark"),
+         "_FIPS FE"  = c("\\checkmark", "\\checkmark")
        ),
        file = paste0(tab_dir, "zvector.tex"))
 
 cat("Z-vector table saved to:", paste0(tab_dir, "zvector.tex"), "\n")
-
-
-# ── Table: tab:rot_vpd — Rotation x VPD, corn and soy combined ───────────────
-# Four columns: corn (no controls), corn (with controls),
-#               soy  (no controls), soy  (with controls)
-# Standard errors reported below each coefficient (se.below = TRUE)
-
-etable(
-  corn_rot_vpd_nc, corn_rot_vpd,   # corn: no controls, with controls
-  soy_rot_vpd_nc,  soy_rot_vpd,    # soy:  no controls, with controls
-  tex       = TRUE,
-  dict      = c(dict_corn, dict_soy, dict_vpd),
-  headers   = list(
-    "Corn yields" = 2,              # span first two columns
-    "Soy yields"  = 2               # span last two columns
-  ),
-  keep_raw  = c(names(dict_corn), names(dict_soy),
-                "vpd_namesomewhat dry", "vpd_namedry"),
-  drop      = c("pr_", "cGDD_", "EDD_", "soil_", "vpd_6", "vpd_7", "vpd_8",
-                "rootznaws", "Constant"),
-  se.below  = TRUE,                 # SEs on separate row below coefficient
-  style.tex = style.tex("aer"),
-  replace   = TRUE,
-  title     = "Effect of weather and rotation sequences on corn and soybean yields",
-  label     = "tab:rot_vpd",
-  extralines = list(
-    "_Controls" = c("No", "Yes", "No", "Yes")
-  ),
-  file = paste0(tab_dir, "rot_vpd.tex")
-)
 
 # ── Sanity check: compare to draft PDF Table 1 ────────────────────────────────
 # Expected values from draft (QDANN mean column):
