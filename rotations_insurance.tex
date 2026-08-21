@@ -430,7 +430,7 @@ Sequences ending in two or more consecutive corn years generally show negative o
  
 \subsection{\label{subsec:var_effects}Sequence-Level Effects on Corn Yield Variance}
  
-Figure~\ref{fig:corn_var_plot} and the full stage-2 variance results (Table~\ref{tab:corn_jp_var}, Appendix) show the corresponding effects on the conditional variance of corn yields; because the conditional-variance estimators are secondary to the mean results in this setting, the sequence-by-sequence coefficient table is reported in the Appendix rather than the main text. As with the mean effects, Figure~\ref{fig:corn_var_plot} separates the corn--soybean and corn--soybean--wheat sequences into panels, and the wheat panel's variance coefficients carry very wide confidence intervals on thin support. Sequences that raise mean yields also tend to reduce yield variance, implying joint mean-variance dominance over monoculture. Sequences with a very recent soybean placement (year $t-1$) tend to show negative variance coefficients; $C-C-C-C-S-C$, for example, carries a statistically significant variance reduction (Table~\ref{tab:corn_jp_var}, Appendix). % TODO: the "11.3 units at the 5 percent level" figure previously stated here does not match the current tables/corn\_jp\_var.tex value for C-C-C-C-S-C (-44,885.8**), which is on the same untransformed scale as the other stage-2 tables; confirm and restate the correct magnitude and units once the scale is resolved.
+Figure~\ref{fig:corn_var_plot} and the full stage-2 variance results (Table~\ref{tab:corn_jp_moments}, Appendix) show the corresponding effects on the conditional variance of corn yields; because the conditional-variance estimators are secondary to the mean results in this setting, the sequence-by-sequence coefficient table is reported in the Appendix rather than the main text. As with the mean effects, Figure~\ref{fig:corn_var_plot} separates the corn--soybean and corn--soybean--wheat sequences into panels, and the wheat panel's variance coefficients carry very wide confidence intervals on thin support. Sequences that raise mean yields also tend to reduce yield variance, implying joint mean-variance dominance over monoculture. Sequences with a very recent soybean placement (year $t-1$) tend to show negative variance coefficients; $C-C-C-C-S-C$, for example, carries a statistically significant variance reduction (Table~\ref{tab:corn_jp_moments}, Appendix). % TODO: the "11.3 units at the 5 percent level" figure previously stated here does not match the current tables/corn\_jp\_var.tex value for C-C-C-C-S-C (-44,885.8**), which is on the same untransformed scale as the other stage-2 tables; confirm and restate the correct magnitude and units once the scale is resolved.
 Figure~\ref{fig:corn_jp_plot} summarizes the joint mean-variance results in a single scatter plot.
 
 \begin{figure}[H]
@@ -776,7 +776,7 @@ Two qualifications bound how far these findings can be pushed toward an actual r
 
 \section*{Tables}
 
-\input{tables/corn_jp_var.tex}
+\input{tables/corn_jp_moments.tex}
 \begin{quote}
 \small
 Notes: Dependent variable is squared first-stage residual from the corn yield mean regression. OLS estimates of stage-2 variance equation~\eqref{eq:stage2}, by rotation sequence. Reference: corn monoculture. County and year fixed effects included. Two-way clustering at field and year level. Reported here rather than in the main text because the conditional-variance estimators are secondary to the mean results in this setting; see Section~\ref{subsec:var_effects}.

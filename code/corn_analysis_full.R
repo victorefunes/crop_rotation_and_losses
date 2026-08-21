@@ -10,7 +10,7 @@
 ##   tab:corn_rot_vpd   — Rotation x VPD interaction, corn
 ##   tab:corn_rci_vpd   — RCI x VPD interaction, corn
 ##   tab:corn_jp_mean   — Just-Pope stage 1: corn yield mean
-##   tab:corn_jp_var    — Just-Pope stage 2: corn yield variance (OLS)
+##   tab:corn_jp_moments — Just-Pope stage 2/3: corn yield variance (OLS) and standardized skewness
 ##   tab:corn_rci_jp    — Just-Pope factor RCI: corn yield moments
 ##
 ## Figures produced:
@@ -602,7 +602,7 @@ feols(fml_z_corn_var, data = corn_jp_data,
 #)
  
 # ── 5. Just-Pope stage 2 — corn ───────────────────────────────────────────────
-# Table: tab:corn_jp_var | Figures: corn_var_plot, corn_coeff_plot, corn_jp_plot
+# Table: tab:corn_jp_moments | Figures: corn_var_plot, corn_coeff_plot, corn_jp_plot
  
 corn_jp_s1 |>
   augment(newdata = corn_jp_data) |>
@@ -613,20 +613,10 @@ corn_jp_s1 |>
  
 fml_corn_var <- make_jp_formula("resid_sq", "rot_crop", all_controls_fgls)
 feols(fml_corn_var, data = corn_jp_data) -> corn_jp_s2
- 
-# Table: tab:corn_jp_var
-etable(corn_jp_s2,
-       tex      = TRUE,
-       keep     = "^[CSW]-",
-       dict     = rot_dict,
-       se.below = FALSE,
-       placement = "H",
-       style.tex = style.tex("aer"),
-       replace  = TRUE,
-       title    = "Stage 2 — Corn yield conditional variance (OLS)",
-       label    = "tab:corn_jp_var",
-       file     = paste0(tab_dir, "corn_jp_var.tex"))
- 
+
+# Table tab:corn_jp_moments is produced jointly with stage-3 skewness below
+# (combined into a single table) — see the "Stage 3" section.
+
 # ── Figure: score_yield — Response of yields to rotation score values ─────────
 # corn_jp_s1 / corn_jp_s2 contain the sequence-level coefficients.
 # corn_z_s1 supplies the Z-vector coefficients used to compute the score.
@@ -820,11 +810,12 @@ corn_jp_summary |>
 ggsave(paste0(fig_dir, "corn_jp_plot.png"), corn_jp_plot,
        width = 9, height = 7, dpi = 300)
  
-# Capture stage-2 variance estimate before corn_jp_s2 is removed; used to
-# standardize stage-3 skewness coefficients below.
+# corn_jp_s2 is kept alive (not rm()'d here) — its variance estimate is used
+# to standardize stage-3 skewness below, and both models are reported jointly
+# in a single table (tab:corn_jp_moments).
 corn_stage2_var <- mean(fitted(corn_jp_s2))
 
-rm(corn_jp_s2, corn_s1_coef, corn_s2_coef, corn_jp_summary, corn_jp_plot,
+rm(corn_s1_coef, corn_s2_coef, corn_jp_summary, corn_jp_plot,
    corn_coeff_plot, corn_var_plot); gc()
 
 
@@ -852,18 +843,23 @@ corn_jp_s3 <- feols(
   data    = corn_jp_data
 )
 
-etable(corn_jp_s3,
+# Table: tab:corn_jp_moments — stage-2 variance and stage-3 (standardized) skewness,
+# reported jointly as a single table.
+etable(corn_jp_s2, corn_jp_s3,
        tex      = TRUE,
        keep     = "^[CSW]-",
        dict     = rot_dict,
+       headers  = c("Variance", "Skewness (standardized)"),
        se.below = FALSE,
        placement = "H",
        style.tex = style.tex("aer"),
        replace  = TRUE,
-       title    = "Stage 3 — Corn yield conditional skewness (standardized third moment)",
-       label    = "tab:corn_jp_skew",
-       file     = paste0(tab_dir, "corn_jp_skew.tex"))
- 
+       title    = "Stage 2/3 — Corn yield conditional variance and skewness",
+       label    = "tab:corn_jp_moments",
+       file     = paste0(tab_dir, "corn_jp_moments.tex"))
+
+rm(corn_jp_s2, corn_jp_s3); gc()
+
 # ── 6. Just-Pope factor RCI — corn ───────────────────────────────────────────
 # Table: tab:corn_rci_jp | Figure: rci_plot
  
@@ -937,74 +933,7 @@ rm(corn_rci_jp_data, corn_rci_jp_s1, corn_rci_jp_s2, rci_plot_df, rci_plot); gc(
  
 # ── 7. FGLS + bootstrap — corn ────────────────────────────────────────────────
  
-fml_mean  <- make_jp_formula("corn_yield", "rot_crop", all_controls_fgls)
-fml_var   <- make_jp_formula("resid_sq",   "rot_crop", all_controls_fgls)
-fml_var_b <- make_jp_formula("resid_sq_b", "rot_crop", all_controls_fgls)
- 
-# Stage 2a to get h_hat for FGLS weights
-corn_jp_s1 |>
-  augment(newdata = corn_jp_data) |>
-  mutate(resid_sq = (corn_yield - .fitted)^2) |>
-  select(-starts_with(".")) ->
-  corn_jp_data
- 
-feols(fml_var, data = corn_jp_data, cluster = ~tile_field_ID+year) -> corn_jp_s2a
- 
-corn_jp_s2a |>
-  augment(newdata = corn_jp_data) |>
-  mutate(h_hat = pmax(.fitted, 1e-6)) |>
-  select(-starts_with(".")) ->
-  corn_jp_data
- 
-cat("Obs hitting h_hat floor:", sum(corn_jp_data$h_hat == 1e-6), "\n")
- 
-feols(fml_var, data = corn_jp_data,
-      weights = ~I(1/h_hat),
-      cluster = ~tile_field_ID+year) -> corn_jp_s2b
- 
-etable(corn_jp_s1, corn_jp_s2a, corn_jp_s2b,
-       keep  = "rot_crop",
-       title = "Just-Pope FGLS: corn rotation effects on mean and variance")
- 
-rm(corn_jp_s2a); gc()
- 
-source("save_models_lean.R")
-boot_corn <- boot_jp_fgls(corn_jp_data, fml_mean, fml_var, fml_var_b,
-                           B = 499, seed = 42, n_workers = 2)
- 
-saveRDS(
-  list(
-    # Z-vector models — lean extracts only
-    z_s1         = lean_feols(corn_z_s1),
-    z_s2         = lean_feols(corn_z_s2),
-    # Full sequence models needed for score_yield figure
-    jp_s1        = lean_feols(corn_jp_s1),
-    jp_s2        = lean_feols(corn_jp_s2),
-    # VPD models
-    rot_vpd_nc   = lean_feols(corn_rot_vpd_nc),
-    rot_vpd      = lean_feols(corn_rot_vpd),
-    # Bootstrap — lean strips embedded data from feols objects inside
-    boot         = lean_boot(boot_corn),
-    # Score construction inputs — just the coefficient vector
-    z_coefs      = coef(corn_z_s1),
-    # Score data frame — sequence-level feature averages (small)
-    score_df     = corn_jp_data |>
-                     group_by(rot_crop) |>
-                     summarise(late_soy = mean(late_soy, na.rm = TRUE),
-                               soy_gap  = mean(soy_gap,  na.rm = TRUE),
-                               soy_cons = mean(soy_cons, na.rm = TRUE),
-                               nsoy     = mean(nsoy,     na.rm = TRUE),
-                               .groups  = "drop")
-  ),
-  file     = "C:/Users/vf006/Documents/corn_z_models.rds",
-  compress = "bzip2"
-)
- 
-cat("Corn lean models saved. File size:",
-    round(file.size("C:/Users/vf006/Documents/corn_z_models.rds") / 1e6, 1),
-    "MB\n")
- 
-rm(corn_jp_data, corn_jp_s1, corn_jp_s2b, boot_corn); gc()
+source("just_pope_bootstrap_moments.R")
  
 # ── 8. Spatial maps — corn ────────────────────────────────────────────────────
 # Figures: corn_yield_map, rci_map, nccpi_corn_map
