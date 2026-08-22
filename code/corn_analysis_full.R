@@ -497,12 +497,29 @@ rot_dict <- setNames(
   chartr("15", "CS", sub("^rot_crop", "", grep("^rot_crop", names(coef(corn_jp_s1)), value=TRUE))),
   grep("^rot_crop", names(coef(corn_jp_s1)), value=TRUE)
 )
- 
+
+# Bootstrap vcov matrices, from jp_boot_vcov.R -> tables/*.txt (as tab_dir).
+# write.table() writes coefficient names verbatim, but a double-wrapped
+# "I(I(pr_6^2))" was saved instead of "I(pr_6^2)" -- fix that on load so the
+# names line up exactly with the fitted models' coefficient names, which
+# etable() requires for a vcov matrix to be accepted.
+read_vcov_txt <- function(path) {
+  m <- as.matrix(read.table(path, header = TRUE, row.names = 1,
+                             check.names = FALSE))
+  fix_names <- function(nm) gsub("^I\\(I\\((.*)\\)\\)$", "I(\\1)", nm)
+  colnames(m) <- fix_names(colnames(m))
+  rownames(m) <- fix_names(rownames(m))
+  m
+}
+
+jp_vcov_mean <- read_vcov_txt(paste0(tab_dir, "jp_vcov_mean.txt"))
+
 # Table: tab:corn_jp_mean
 etable(corn_jp_s1, corn_jp_s1_lag1, corn_jp_s1_lag2, corn_jp_s1_idx,
        tex      = TRUE,
        keep     = c("^[CSW]-", "soy_lag", "rot_index"),
        dict     = rot_dict,
+       vcov     = list(jp_vcov_mean, NULL, NULL, NULL),
        notes    = bh_note_corn,
        se.below = FALSE,
        placement = "H",
@@ -615,7 +632,23 @@ corn_jp_s1 |>
   corn_jp_data
  
 fml_corn_var <- make_jp_formula("resid_sq", "rot_crop", all_controls_fgls)
-feols(fml_corn_var, data = corn_jp_data) -> corn_jp_s2
+
+# Stage 2a: OLS variance regression, used only to build the FGLS weights (h_hat)
+feols(fml_corn_var, data = corn_jp_data) -> corn_jp_s2a
+
+corn_jp_s2a |>
+  augment(newdata = corn_jp_data) |>
+  mutate(h_hat = pmax(.fitted, 1e-6)) |>
+  select(-starts_with(".")) ->
+  corn_jp_data
+
+# Stage 2b: FGLS variance regression, weighted by 1/h_hat -- matches the
+# estimator whose bootstrap vcov (jp_vcov_var, computed the same way in
+# just_pope_bootstrap_moments.R) is attached below, so the SEs in
+# tab:corn_jp_moments correspond to the same estimator as the point estimates.
+feols(fml_corn_var, data = corn_jp_data, weights = ~I(1/h_hat)) -> corn_jp_s2
+
+rm(corn_jp_s2a); gc()
 
 # Table tab:corn_jp_moments is produced jointly with stage-3 skewness below
 # (combined into a single table) — see the "Stage 3" section.
@@ -846,18 +879,28 @@ corn_jp_s3 <- feols(
   data    = corn_jp_data
 )
 
+# jp_vcov_var.txt was bootstrapped off the FGLS (1/h_hat weighted) variance
+# stage in just_pope_bootstrap_moments.R; corn_jp_s2 above is now fit the same
+# way, so its point estimates and this vcov correspond to the same estimator.
+# jp_vcov_skew.txt is on the RAW resid_cube scale; corn_jp_s3 regresses the
+# standardized resid_cube_std = resid_cube / skew_scale, so Var(std coef) =
+# Var(raw coef) / skew_scale^2 -- rescaled below before use.
+jp_vcov_var  <- read_vcov_txt(paste0(tab_dir, "jp_vcov_var.txt"))
+jp_vcov_skew <- read_vcov_txt(paste0(tab_dir, "jp_vcov_skew.txt")) / skew_scale^2
+
 # Table: tab:corn_jp_moments — stage-2 variance and stage-3 (standardized) skewness,
 # reported jointly as a single table.
 etable(corn_jp_s2, corn_jp_s3,
        tex      = TRUE,
        keep     = "^[CSW]-",
        dict     = rot_dict,
+       vcov     = list(jp_vcov_var, jp_vcov_skew),
        headers  = c("Variance", "Skewness (standardized)"),
        se.below = FALSE,
        placement = "H",
        style.tex = style.tex("aer"),
        replace  = TRUE,
-       title    = "Stage 2/3 — Corn yield conditional variance and skewness",
+       title    = "Stage 2/3 — Corn yield conditional variance (FGLS) and skewness",
        label    = "tab:corn_jp_moments",
        file     = paste0(tab_dir, "corn_jp_moments.tex"))
 
