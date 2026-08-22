@@ -113,10 +113,14 @@ format_jp_moment_tex <- function(coef, se, pval, n_obs, r2, wr2,
   invisible(path)
 }
 
+# Absolute output directory -- avoids the "../tables/" vs "tables/" mismatch
+# that breaks these functions depending on the caller's working directory.
+jp_tab_dir <- "C:/Users/vf006/Box/crop_rotations_and_losses/tables/"
+
 # ── Variance stage -> tables/corn_jp_var.tex (FGLS point est. + bootstrap SE) ──
 write_jp_var_tex <- function(boot_obj,
                              fit  = boot_obj$fit_var,
-                             path = "tables/corn_jp_var.tex",
+                             path = paste0(jp_tab_dir, "corn_jp_var.tex"),
                              caption = paste("Stage 2 --- Corn yield conditional",
                                              "variance (FGLS, bootstrap SE)"),
                              dep_label = "resid\\_sq",
@@ -127,7 +131,7 @@ write_jp_var_tex <- function(boot_obj,
 # ── Skewness stage -> tables/corn_jp_skew.tex ─────────────────────────────────
 write_jp_skew_tex <- function(boot_obj,
                               fit  = boot_obj$fit_skew,
-                              path = "tables/corn_jp_skew.tex",
+                              path = paste0(jp_tab_dir, "corn_jp_skew.tex"),
                               caption = paste("Stage 3 --- Corn yield conditional",
                                               "skewness (standardized third moment,",
                                               "bootstrap SE)"),
@@ -136,10 +140,37 @@ write_jp_skew_tex <- function(boot_obj,
   .emit_jp_tex(boot_obj$skewness, fit, path, dep_label, caption, label, ...)
 }
 
+# ── First-stage (mean) bootstrap vcov -> tables/corn_jp_mean_vcov.rds ─────────
+# The mean-stage LaTeX table (tab:corn_jp_mean) is built elsewhere from the
+# analytic clustered SEs (those are already valid -- see the note at the top of
+# just_pope_bootstrap_moments.R -- the mean is estimated on observed yield, not
+# a generated regressor). What the analytic output does NOT give is the
+# covariance BETWEEN rotation-sequence coefficients, which is needed for the
+# SE of any linear combination of them (e.g. the rotation "score" in
+# corn_analysis_full.R). boot_obj$boot_mean holds the B replicate draws, so
+# their sample covariance is the bootstrap estimate of that full vcov.
+write_jp_mean_vcov <- function(boot_obj,
+                               draws = boot_obj$boot_mean,
+                               path  = paste0(jp_tab_dir, "corn_jp_mean_vcov.rds"),
+                               term_prefix = "rot_crop") {
+
+  keep      <- grepl(term_prefix, colnames(draws))
+  draws_kp  <- draws[, keep, drop = FALSE]
+  colnames(draws_kp) <- gsub(term_prefix, "", colnames(draws_kp))
+
+  vcov_mat <- cov(draws_kp, use = "pairwise.complete.obs")
+
+  saveRDS(vcov_mat, path)
+  message("Wrote ", path, " (", nrow(vcov_mat), " x ", ncol(vcov_mat),
+          " bootstrap vcov, ", sum(complete.cases(draws_kp)), " complete replicates)")
+  invisible(vcov_mat)
+}
+
 # ── Usage (after boot_moments <- boot_jp_moments(...)) ───────────────────────
 # source("code/write_jp_tables.R")
-# write_jp_skew_tex(boot_moments)                 # tables/corn_jp_skew.tex
-# write_jp_var_tex(boot_moments)                  # tables/corn_jp_var.tex  (OLS->FGLS!)
+write_jp_skew_tex(boot_moments)                 # tables/corn_jp_skew.tex
+write_jp_var_tex(boot_moments)                  # tables/corn_jp_var.tex  (OLS->FGLS!)
+write_jp_mean_vcov(boot_moments)                # tables/corn_jp_mean_vcov.rds
 #
 # NOTE: with B = 499 the bootstrap p-value is granular in steps of ~2/499 ~ 0.004,
 # fine for the .05/.10 stars but coarse for the .01 threshold; run B >= 999 for
