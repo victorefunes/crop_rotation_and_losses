@@ -1,0 +1,198 @@
+---
+title: "IL RCI mismatches"
+author: "Victor Funes"
+date: "2026-08-25"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Load data and libraries
+
+```{r cars}
+library(arrow)
+library(data.table)
+library(tidyverse)
+library(statar)
+library(fixest)
+library(broom)
+
+setwd("C:/Users/vf006/Box/crop_rotations_and_losses/code")
+```
+
+I am using the file "d_igis13_12_1_2025.with_rci.parquet", the corn QDANN database with the CDL crop sequences. I convert yields tu bu/ac, thats what the 62.77 denominator. does.
+
+```{r}
+corn_df <- read_parquet(
+  "D:/Crop data/d_igis13_12_1_2025.with_rci.parquet") 
+
+corn_df <- corn_df |>
+  filter(STATE_ABBR == "IL") |> 
+  mutate(tile_field_ID = paste0("T", STATE_FIPS, "_", tile, "_", field_id),
+         corn_yield = corn_yield / 62.77)  |> 
+  arrange(tile_field_ID, year) 
+
+setDT(corn_df)  
+```
+
+Function `add_crop_year` adds the present year crop variable. Notice that I am dropping all rows that have missing values for years -5 to -3 because my analysis requires only complete rotation sequences (it can be dropped).
+
+```{r}
+add_crop_year <- function(dt) {
+  stopifnot(is.data.table(dt))
+  
+  # Drop any stale crop_year column from a previous run, so the regex below
+  # can't accidentally re-capture it
+  if ("crop_year" %in% names(dt)) {
+    dt[, crop_year := NULL]
+  }
+  
+  # Match crop_YYYY columns only (exactly 4 digits) -- excludes crop_year,
+  # rot_seq, or anything else that happens to start with "crop_"
+  crop_cols  <- grep("^crop_[0-9]{4}$", names(dt), value = TRUE)
+  crop_years <- as.integer(sub("crop_", "", crop_cols))
+  
+  stopifnot(length(crop_cols) > 0, !anyNA(crop_years))
+  
+  m       <- as.matrix(dt[, ..crop_cols])
+  col_idx <- match(dt$year, crop_years)
+  
+  stopifnot(length(col_idx) == nrow(dt))
+  
+  dt[, crop_year := m[cbind(seq_len(.N), col_idx)]]
+  invisible(dt)
+}
+  
+add_crop_year(corn_df)
+
+corn_df <- corn_df |>
+  rename(crop_0 = crop_year,
+         crop_1 = prioryr_crop,
+         crop_2 = prior2yr_crop,
+         crop_3 = prior3yr_crop,
+         crop_4 = prior4yr_crop,
+         crop_5 = prior5yr_crop,
+         crop_6 = prior6yr_crop) |>
+  filter(!(is.na(crop_5) & is.na(crop_4) & is.na(crop_3)))    
+```
+
+Additional filter: remove rows labeled "Clouds/No Data":
+```{r}
+cols <- paste0("crop_", 1:5)
+corn_df <- corn_df[corn_df[, !Reduce(`|`, lapply(.SD, \(x) trimws(x) == "Clouds/No Data")), .SDcols = cols]] 
+```
+
+
+What is on `crop_0`? it must be all corn.
+```{r}
+corn_df |>
+  tab(crop_0)
+```
+Rename built-in RCI as "RCI", and recreate the rotation sequences.
+```{r}
+corn_df <- corn_df |>
+  rename(RCI = annual_RCI) |>
+  mutate(rot_crop = paste0(crop_5, "-", crop_4, "-", crop_3, "-", 
+          crop_2, "-", crop_1, "-", crop_0))   
+```
+
+Make a table of rotation sequence $\times$ RCI values, every sequence should have a unique RCI value.
+```{r}
+rot_tab <- corn_df |>
+    group_by(rot_crop, RCI) |>
+    summarise(n = n()) |>
+    arrange(rot_crop, RCI) |>
+    ungroup() |>
+    mutate(rot_crop = factor(rot_crop))
+```
+Look at perfect rotation, it should be 2.24, but we have several mismatches.
+```{r}
+rot_tab |>
+  filter(rot_crop == "Soybeans-Corn-Soybeans-Corn-Soybeans-Corn")
+```
+
+Same for corn monoculture, RCI should be 0.
+
+```{r}
+rot_tab |>
+  filter(rot_crop == "Corn-Corn-Corn-Corn-Corn-Corn")
+```
+
+Identify unique rotation patterns, we have a total of 16322.
+```{r}
+rot_unique <- rot_tab |>
+    distinct(rot_crop)
+dim(rot_unique)
+```
+
+Every distinct rotation sequence should have a unique RCI value, in order to do so I use the vectorized version of Yvonne's code (attached to this markdown file)
+```{r}
+source("rci_vectorized.R")
+
+rot_unique <- rot_unique |>
+  separate(rot_crop, into = paste0("crop", 1:6), sep = "-", remove = FALSE) |>
+  mutate(RCI = rci(crop1, crop2, crop3, crop4, crop5, crop6)) |>
+  select(-starts_with("crop")) 
+```
+
+```{r}
+rot_unique |> 
+  filter(rot_crop == "Corn-Corn-Corn-Corn-Corn-Corn")
+```
+
+```{r}
+rot_unique |> 
+  filter(rot_crop == "Soybeans-Corn-Soybeans-Corn-Soybeans-Corn")
+```
+
+Join both tables.
+```{r}
+rot_tab <- rot_tab |>
+    left_join(rot_unique |> 
+                rename(RCI_unique = RCI), 
+              by = "rot_crop") |>
+    arrange(rot_crop, RCI)   
+
+rot_tab |>
+  head()
+```
+
+Identify matches between `annual_RCI` and re-calculated `RCI`.
+```{r}
+rot_tab <- rot_tab |>
+    mutate(RCI_match = !is.na(RCI) & !is.na(RCI_unique) & RCI == RCI_unique)
+
+rot_tab |>
+  head()
+```
+
+Percent matches.
+```{r}
+rot_sum <- rot_tab |>
+    group_by(rot_crop) |>
+    summarise(n_match = sum(n[RCI_match], na.rm = TRUE),
+              n_total = sum(n, na.rm = TRUE)) |>
+    mutate(pct_match = n_match / n_total * 100) |>
+    ungroup()
+```
+
+Interestingly, monoculture has a 62% match between both RCIs, while perfect rotation is 82%
+```{r}
+rot_sum |> 
+  filter(rot_crop == "Corn-Corn-Corn-Corn-Corn-Corn")
+```
+
+```{r}
+rot_sum|> 
+  filter(rot_crop == "Soybeans-Corn-Soybeans-Corn-Soybeans-Corn")
+```
+
+How many zero matches?
+```{r}
+rot_sum |>
+  filter(pct_match == 0) |>
+  dim()
+```
+

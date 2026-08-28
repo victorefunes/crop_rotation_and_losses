@@ -1,30 +1,6 @@
 ## ============================================================================
 ## corn_RCI.R
 ## Just-Pope production risk analysis — CORN
-## Authors: Lawson Connor, Victor Funes-Leal, Eunchun Park
-## University of Arkansas
-## ----------------------------------------------------------------------------
-## Tables produced:
-##   tab:corn_rot       — Rotation patterns and corn yields
-##   tab:corn_rci       — Rotational Complexity and corn yields
-##   tab:corn_rot_vpd   — Rotation x VPD interaction, corn
-##   tab:corn_rci_vpd   — RCI x VPD interaction, corn
-##   tab:corn_jp_mean   — Just-Pope stage 1: corn yield mean
-##   tab:corn_jp_var    — Just-Pope stage 2: corn yield variance (OLS)
-##   tab:corn_rci_jp    — Just-Pope factor RCI: corn yield moments
-##
-## Figures produced:
-##   rot_pca_plot       — PCA biplot of rotation features (shared)
-##   corn_rot_plot      — Response of corn yields to rotation sequences
-##   corn_rci_plot      — Response of corn yields to RCI
-##   corn_var_plot      — Response of std dev of corn yields to rotation sequences
-##   corn_coeff_plot    — Mean vs variance coefficients scatter (corn)
-##   corn_jp_plot       — Just-Pope mean-variance decomposition (corn)
-##   rci_plot           — Nonlinear effect of RCI on corn yield mean and variance
-##   corn_yield_map     — Spatial map of corn yields (2016)
-##   rci_map            — Spatial map of RCI values (2016)
-##   nccpi_corn_map     — Spatial map of NCCPI corn (2016)
-## ============================================================================
 library(arrow)
 library(tidyverse)
 library(statar)
@@ -146,15 +122,25 @@ corn_df[, has_wheat := Reduce(`|`, lapply(.SD, \(v) v %in% wheat_codes)),
 corn_df[, has_alfalfa := Reduce(`|`, lapply(.SD, \(v) v %in% alfalfa_codes)),
         .SDcols = xcols]
 
+corn_df[, has_soy := Reduce(`|`, lapply(.SD, \(v) v %in% soy_code)),
+        .SDcols = xcols]
+
+# Perfect corn/soy rotation = strict yearly alternation over the 6-yr window
+# (crop_0 is always corn, so this means crop_1,3,5 = soy and crop_2,4 = corn)
+corn_df[, perfect_cs := crop_0 == corn_code & crop_1 == soy_code &
+                         crop_2 == corn_code & crop_3 == soy_code &
+                         crop_4 == corn_code & crop_5 == soy_code]
+
+# corn monoculture, corn/soy rotations (perfect vs other), corn/soy/wheat, other
 corn_df[, regime := fcase(
-  has_other,                  "other",                   # checked first — wins
-  !has_wheat & !has_alfalfa,  "corn_soy",
-   has_wheat & !has_alfalfa,  "corn_soy_wheat",
-  !has_wheat &  has_alfalfa,  "corn_soy_alfalfa",
-   has_wheat &  has_alfalfa,  "corn_soy_wheat_alfalfa"
+  has_other | has_alfalfa,    "other",                   # checked first — wins
+  has_wheat,                  "corn_soy_wheat",
+  has_soy & perfect_cs,       "corn_soy_perfect",
+  has_soy,                    "corn_soy_other",
+  default =                   "corn_monoculture"
 )]
 corn_df[, regime := factor(regime, levels = c(
-  "corn_soy","corn_soy_wheat","corn_soy_alfalfa","corn_soy_wheat_alfalfa","other"))]
+  "corn_monoculture","corn_soy_perfect","corn_soy_other","corn_soy_wheat","other"))]
 
 corn_df[, .N, by = regime][order(-N)]
  
@@ -163,6 +149,131 @@ corn_df <- corn_df |>
 
 # Free raw data — no longer needed
 gc() 
+
+source("rci_shapley_decomp.R")
+
+out <- decompose_rci(corn_df)                       # per field-year contributions
+out[!is.na(dRCI), .(max_abs_check = max(abs(check)))]        # should be ~1e-12
+
+# # sample-level attribution: of the average RCI change, how much is each margin?
+out[dRCI > 0, lapply(.SD, mean), .SDcols = patterns("^shap_")]
+#
+# # share of total ΔRCI variation carried by each component:
+out[!is.na(dRCI), lapply(.SD, function(s) sum(s)/sum(dRCI)),
+     .SDcols = patterns("^shap_")]
+
+corn_df <- corn_df |>
+  left_join(out, by = c("tile_field_ID", "year")) 
+
+rm(out); gc()
+
+corn_df[!is.na(dRCI), lapply(.SD, function(s) sum(s)/sum(dRCI)),
+     .SDcols = patterns("^shap_"), by = regime]
+
+corn_df[!is.na(dRCI), lapply(.SD, function(s) mean(s)),
+     .SDcols = patterns("^shap_"), by = regime]
+
+
+# Categories:.default# 1. Corn monoculture
+# 2. Corn/soy rotations
+# 3. Corn/soy and wheat rotations
+
+#Q1 what is the correct specification?
+
+reg_pure <- feols(corn_yield~RCI:regime + regime +
+    pr_6 + pr_7 + pr_8 + I(pr_6^2) + I(pr_7^2) + I(pr_8^2) +
+    cGDD_6m + cGDD_7m + cGDD_8m + EDD_6 + EDD_7 + EDD_8 +
+    vpd_6 + vpd_7 + vpd_8 + soil_6 + soil_7 + soil_8 + 
+    rootznaws_mean| tile_field_ID + year, corn_df, 
+    cluster=~COUNTY_FIPS)
+reg_full <- feols(corn_yield~RCI*regime +
+    pr_6 + pr_7 + pr_8 + I(pr_6^2) + I(pr_7^2) + I(pr_8^2) +
+    cGDD_6m + cGDD_7m + cGDD_8m + EDD_6 + EDD_7 + EDD_8 +
+    vpd_6 + vpd_7 + vpd_8 + soil_6 + soil_7 + soil_8 + 
+    rootznaws_mean| tile_field_ID + year, corn_df, 
+    cluster=~COUNTY_FIPS)
+wald(reg_full, "^regime") 
+
+# the regime main effects are not redundant with tile_field_ID fixed effects — 
+# meaning regime does vary meaningfully within fields over time (or at least isn't fully 
+# absorbed by the FE), and dropping it (as RCI:regime-only does) would misattribute genuine 
+# regime-level yield differences into the RCI interaction slopes
+
+reg_factorial <- feols(
+  corn_yield ~ RCI*regime +
+    pr_6 + pr_7 + pr_8 + I(pr_6^2) + I(pr_7^2) + I(pr_8^2) +
+    cGDD_6m + cGDD_7m + cGDD_8m + EDD_6 + EDD_7 + EDD_8 +
+    vpd_6 + vpd_7 + vpd_8 + soil_6 + soil_7 + soil_8 + rootznaws_mean
+    | tile_field_ID + year,
+  data = corn_df, cluster = ~COUNTY_FIPS
+)
+etable(reg_factorial, keep = c("RCI", "regime"))
+
+ # This confirms the full-interaction spec was the right call — both the regime main effects and the 
+ # RCI×regime slopes are substantively different from each other and mostly significant:
+
+# Baseline regime (implicit reference category, presumably continuous corn) has RCI slope = 0.740.
+# corn_soy_perfect: RCI effect = 0.740 + 0.896 = 1.64 — much steeper RCI-yield sensitivity than baseline.
+# corn_soy_other: RCI effect = 0.740 + 1.582 = 2.32 — the steepest.
+# corn_soy_wheat: RCI effect = 0.740 − 0.694 ≈ 0.046 — essentially flat, RCI barely matters under this regime.
+# other: RCI effect = 0.740 + 0.600 = 1.34.
+
+# The interaction terms being significant (and of varying sign/magnitude relative to baseline) is 
+# exactly the pattern the earlier Wald test predicted — regime materially moderates the RCI-yield 
+# relationship, not just the intercept. This is good evidence you'd have gotten a distorted, blended 
+# RCI slope had you used RCI:regime alone without letting the intercepts (main effects) shift freely.
+
+
+library(marginaleffects)
+
+# Average marginal effect of RCI, by regime, this computes computes ∂corn_yield/∂RCI for each regime
+mfx <- slopes(reg_factorial, variables = "RCI", by = "regime",
+              newdata = datagrid(regime = unique(corn_df$regime)),
+              vcov = ~COUNTY_FIPS)
+mfx
+
+ggplot(mfx, aes(x = regime, y = estimate)) +
+  geom_pointrange(aes(ymin = conf.low, ymax = conf.high)) +
+  labs(y = "Marginal effect of RCI on corn yield", x = "Regime") +
+  theme_minimal()
+
+
+# Cluster selection
+reg_factorial_alt <- feols(
+  corn_yield ~ RCI*regime +
+    pr_6 + pr_7 + pr_8 + I(pr_6^2) + I(pr_7^2) + I(pr_8^2) +
+    cGDD_6m + cGDD_7m + cGDD_8m + EDD_6 + EDD_7 + EDD_8 +
+    vpd_6 + vpd_7 + vpd_8 + soil_6 + soil_7 + soil_8 + rootznaws_mean
+    | tile_field_ID + year,
+  data = corn_df, cluster = ~COUNTY_FIPS + year
+)
+etable(reg_factorial, reg_factorial_alt, keep = c("RCI", "regime"))
+
+V <- vcov(reg_factorial_alt, cluster = ~COUNTY_FIPS + year)
+
+# This is a known artifact of the Cameron-Gelbach-Miller (CGM) multiway clustering 
+# formula — it's not additive across dimensions the way one-way clustering is, and 
+# with a large number of fixed effects (tile_field_ID has presumably thousands of levels) 
+# relative to the cluster counts (102 counties × 15 years), the resulting covariance estimate 
+# can end up not positive semi-definite. fixest automatically applies an eigenvalue correction 
+# (clips negative eigenvalues to zero) to make it usable — this is standard practice, the same 
+# fix Stata's reghdfe/cgmreg and other implementations use, so it's not a sign your model is broken.
+
+mfx <- slopes(reg_factorial, variables = "RCI", by = "regime",
+              newdata = datagrid(regime = unique(corn_df$regime)),
+              vcov = V)
+mfx
+
+ggplot(mfx, aes(x = regime, y = estimate)) +
+  geom_pointrange(aes(ymin = conf.low, ymax = conf.high)) +
+  labs(y = "Marginal effect of RCI on corn yield", x = "Regime") +
+  theme_minimal()
+
+# Why not FEs at the tile_field_ID+year level?
+# switching to tile_field_ID + year would likely understate your SEs relative to COUNTY_FIPS + year,
+# it drops the meaningful spatial clustering in favor of a within-field-only dimension that's largely 
+# redundant with your FE structure.
+
 
 
 # Switching rgression with factorial interactions of RCI, has_wheat, and has_alfalfa
@@ -182,15 +293,6 @@ avg_slopes(switch_reg_factorial, variables = "RCI",
           by = c("has_wheat", "has_alfalfa"))
 
 
-reg_factorial <- feols(
-  corn_yield ~ RCI * regime +
-    pr_6 + pr_7 + pr_8 + I(pr_6^2) + I(pr_7^2) + I(pr_8^2) +
-    cGDD_6m + cGDD_7m + cGDD_8m + EDD_6 + EDD_7 + EDD_8 +
-    vpd_6 + vpd_7 + vpd_8 + soil_6 + soil_7 + soil_8 + rootznaws_mean
-    | tile_field_ID + year,
-  data = corn_df, cluster = ~tile_field_ID + year
-)
-etable(reg_factorial, keep = "RCI")
 
 library(splines)
 reg_curve <- feols(
@@ -237,6 +339,8 @@ switch_reg_factor <- feols(
 etable(switch_reg_factor, keep = "RCI")
 gc()
 
+# what crops drive the results in switch-reg_factor?
+# Decompse RCi by changes in iots elements
 
 ## Stigler's model
 setorder(corn_df, tile_field_ID, year)
@@ -250,13 +354,88 @@ corn_df[, first_treat := {yrs <- year[treated_now]
   if (length(yrs)) min(yrs) else Inf
 }, by = tile_field_ID]
 
-est_es <- feols(
-  corn_yield ~ sunab(first_treat, year) +        # Sun-Abraham: clean leads/lags
+# Pre-compute the relative period so binning `first_treat` (below) can't
+# interfere with sunab's automatic period-from-cohort calculation.
+corn_df[, rel_period := year - first_treat]
+
+# The full dynamic Sun-Abraham decomposition (cohort x relative-period
+# interactions) is unidentified with tile_field_ID FE: ~300K field levels at
+# ~7.5 obs/field leaves too little within-field variation to separately pin
+# down ~20-30 interaction parameters (confirmed by comparing to a single
+# static treated_now dummy, which IS precisely estimated under the same FE).
+# So: (1) headline effect from a static ATT, (2) a coarse 3-bin event study
+# (pre / event-year / post) as a lightweight pre-trends check, both cheap
+# enough in parameters to be identified at this FE cardinality.
+
+# (1) Static ATT — headline effect
+est_att <- feols(
+  corn_yield ~ treated_now +
     pr_6 + pr_7 + pr_8 + I(pr_6^2) + I(pr_7^2) + I(pr_8^2) +
     cGDD_6m + cGDD_7m + cGDD_8m + EDD_6 + EDD_7 + EDD_8 +
-    vpd_6 + vpd_7 + vpd_8 + soil_6 + soil_7 + soil_8 + rootznaws_mean
+    vpd_6 + vpd_7 + vpd_8 + soil_6 + soil_7 + soil_8
     | tile_field_ID + year,
-  data = corn_df, cluster = ~COUNTY_FIPS)
+  data = corn_df, vcov = "hetero", mem.clean = TRUE)
+etable(est_att)
 
-iplot(est_es)                                     # pre-event coefficients ARE the placebo
-wald(est_es, "year::-[2-9]")                      # joint test that leads = 0
+# (2) Coarse pre/event/post event study — pre-trends validity check.
+# rootznaws_mean is dropped: it's time-invariant per field, so it's always
+# fully absorbed by tile_field_ID FE (confirmed collinear in every field-FE
+# spec tested).
+corn_df[, event_bin := fcase(
+  is.infinite(first_treat), "control",
+  rel_period <= -1,         "pre",
+  rel_period == 0,          "event",
+  rel_period >= 1,          "post"
+)]
+corn_df[, event_bin := factor(event_bin,
+  levels = c("control", "pre", "event", "post"))]
+
+# "control" fields never leave the reference category, so within tile_field_ID
+# FE they carry zero identifying variation for pre/event/post — they only
+# inflate the sample without helping. Restrict to switcher fields, where the
+# comparison is a genuine within-field transition (pre -> event -> post).
+switchers_df <- corn_df[event_bin != "control"]
+switchers_df[, event_bin := droplevels(event_bin)]   # drops the unused "control"
+                                                       # level so pre/event/post
+                                                       # don't sum to a constant
+
+est_es <- feols(
+  corn_yield ~ event_bin +
+    pr_6 + pr_7 + pr_8 + I(pr_6^2) + I(pr_7^2) + I(pr_8^2) +
+    cGDD_6m + cGDD_7m + cGDD_8m + EDD_6 + EDD_7 + EDD_8 +
+    vpd_6 + vpd_7 + vpd_8 + soil_6 + soil_7 + soil_8
+    | tile_field_ID + year,
+  data = switchers_df, vcov = "hetero", mem.clean = TRUE)
+
+etable(est_es)
+
+## Callaway & Sant'Anna group-time ATT — alternative estimator that computes
+## each (cohort, calendar-year) effect from its own 2x2 DiD against a
+## not-yet-treated comparison group, instead of one giant two-way-FE
+## regression. Sidesteps the tile_field_ID cardinality problem entirely.
+library(did)
+
+corn_df[, first_treat_cs := fifelse(is.infinite(first_treat), 0, first_treat)]
+corn_df[, field_id_num := .GRP, by = tile_field_ID]
+
+cs_out <- att_gt(
+  yname = "corn_yield",
+  tname = "year",
+  idname = "field_id_num",
+  gname = "first_treat_cs",
+  xformla = ~ pr_6 + pr_7 + pr_8 +
+    cGDD_6m + cGDD_7m + cGDD_8m + EDD_6 + EDD_7 + EDD_8 +
+    vpd_6 + vpd_7 + vpd_8 + soil_6 + soil_7 + soil_8,
+  data = corn_df,
+  control_group = "notyettreated",
+  allow_unbalanced_panel = TRUE,
+  bstrap = FALSE,
+  panel = TRUE
+)
+summary(cs_out)
+
+cs_dynamic <- aggte(cs_out, type = "dynamic", na.rm = TRUE, min_e = -4, max_e = 4)
+summary(cs_dynamic)
+
+cs_simple <- aggte(cs_out, type = "simple", na.rm = TRUE)
+summary(cs_simple)

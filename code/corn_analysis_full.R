@@ -211,10 +211,10 @@ corn_jp_data <- corn_jp_data |>
 corn_yield_formula <- make_jp_formula("corn_yield", "rot_crop", all_controls)
  
 feols(corn_yield ~ rot_crop | tile_field_ID + year,
-      data = corn_jp_data, cluster = ~COUNTY_FIPS) -> corn_rot_nc
+      data = corn_jp_data, cluster = ~COUNTY_FIPS+year) -> corn_rot_nc
  
 feols(corn_yield_formula,
-      data = corn_jp_data, cluster = ~COUNTY_FIPS) -> corn_rot
+      data = corn_jp_data, cluster = ~COUNTY_FIPS+year) -> corn_rot
 
 # Order rot_crop coefficient rows by estimate (with-controls model), decreasing
 rot_order <- broom::tidy(corn_rot) |>
@@ -369,12 +369,12 @@ rci_keep <- corn_jp_data |>
 corn_jp_data |>
   filter(RCI %in% rci_keep) |>
   mutate(RCI = factor(RCI)) |>
-  feols(corn_rci_nc, data = _, cluster = ~COUNTY_FIPS) -> corn_rci_nc
+  feols(corn_rci_nc, data = _, cluster = ~COUNTY_FIPS+year) -> corn_rci_nc
 
 corn_jp_data |>
   filter(RCI %in% rci_keep) |>
   mutate(RCI = factor(RCI)) |>
-  feols(corn_rci_cs, data = _, cluster = ~COUNTY_FIPS) -> corn_rci_cs
+  feols(corn_rci_cs, data = _, cluster = ~COUNTY_FIPS+year) -> corn_rci_cs
  
 etable(corn_rci_nc, corn_rci_cs,
        tex      = TRUE,
@@ -424,14 +424,14 @@ corn_rci_vpd_formula <- make_jp_formula("corn_yield", "RCI * vpd_name",
                                          all_controls)
  
 feols(corn_yield ~ rot_crop + vpd_name | tile_field_ID + year,
-      data = corn_jp_data, cluster = ~COUNTY_FIPS) -> corn_rot_vpd_nc                                         
+      data = corn_jp_data, cluster = ~COUNTY_FIPS+year) -> corn_rot_vpd_nc                                         
  
 corn_jp_data |>
-  feols(corn_vpd_formula, data = _, cluster = ~COUNTY_FIPS) -> corn_rot_vpd
+  feols(corn_vpd_formula, data = _, cluster = ~COUNTY_FIPS+year) -> corn_rot_vpd
 
 corn_jp_data |>
   mutate(RCI = factor(RCI)) |>
-  feols(corn_rci_vpd_formula, data = _, cluster = ~COUNTY_FIPS) -> corn_rci_vpd
+  feols(corn_rci_vpd_formula, data = _, cluster = ~COUNTY_FIPS+year) -> corn_rci_vpd
 
 # Order rot_crop coefficient rows by estimate, decreasing
 rot_vpd_order <- broom::tidy(corn_rot_vpd) |>
@@ -481,10 +481,10 @@ fml_corn_lag1_lag2 <- make_jp_formula("corn_yield", "soy_lag1 + soy_lag2",
 fml_corn_index     <- make_jp_formula("corn_yield", "rot_index", all_controls_fgls)
 fml_corn_mean      <- make_jp_formula("corn_yield", "rot_crop", all_controls_fgls)
  
-feols(fml_corn_lag1,      data = corn_jp_data, cluster = ~tile_field_ID+year) -> corn_jp_s1_lag1
-feols(fml_corn_lag1_lag2, data = corn_jp_data, cluster = ~tile_field_ID+year) -> corn_jp_s1_lag2
-feols(fml_corn_index,     data = corn_jp_data, cluster = ~tile_field_ID+year) -> corn_jp_s1_idx
-feols(fml_corn_mean,      data = corn_jp_data, cluster = ~tile_field_ID+year) -> corn_jp_s1
+feols(fml_corn_lag1,      data = corn_jp_data, cluster = ~COUNTY_FIPS+year) -> corn_jp_s1_lag1
+feols(fml_corn_lag1_lag2, data = corn_jp_data, cluster = ~COUNTY_FIPS+year) -> corn_jp_s1_lag2
+feols(fml_corn_index,     data = corn_jp_data, cluster = ~COUNTY_FIPS+year) -> corn_jp_s1_idx
+feols(fml_corn_mean,      data = corn_jp_data, cluster = ~COUNTY_FIPS+year) -> corn_jp_s1
  
 bh_note_corn <- paste0(
   "Benjamini-Hochberg FDR correction across ", nrow(pvals_corn),
@@ -595,7 +595,7 @@ fml_z_corn_mean <- make_jp_formula("corn_yield",
                                     all_controls_fgls)
  
 feols(fml_z_corn_mean, data = corn_jp_data,
-      cluster = ~tile_field_ID + year) -> corn_z_s1
+      cluster = ~COUNTY_FIPS+year) -> corn_z_s1
  
 # Z-vector stage 2 — corn variance
 corn_jp_data <- corn_z_s1 |>
@@ -608,7 +608,7 @@ fml_z_corn_var <- make_jp_formula("resid_sq_z",
                                    all_controls_fgls)
  
 feols(fml_z_corn_var, data = corn_jp_data,
-      cluster = ~tile_field_ID + year) -> corn_z_s2
+      cluster = ~COUNTY_FIPS+year) -> corn_z_s2
  
 # ── Save Z-vector models for tables_combined.R ────────────────────────────────
 #saveRDS(
@@ -854,7 +854,6 @@ corn_stage2_var <- mean(fitted(corn_jp_s2))
 rm(corn_s1_coef, corn_s2_coef, corn_jp_summary, corn_jp_plot,
    corn_coeff_plot, corn_var_plot); gc()
 
-
 # ── Stage 3: conditional skewness / downside risk (corn) ──────────────────────
 # Antle (1983) moment-based extension. resid is already on corn_jp_data from the
 # stage-2 join; the third central moment is the natural downside-risk statistic:
@@ -916,7 +915,7 @@ corn_rci_jp_data <- corn_jp_data |>
  
 fml_corn_rci_mean <- make_jp_formula("corn_yield", "RCI", all_controls_fgls)
 feols(fml_corn_rci_mean, data = corn_rci_jp_data,
-      cluster = ~tile_field_ID+year) -> corn_rci_jp_s1
+      cluster = ~COUNTY_FIPS+year) -> corn_rci_jp_s1
  
 corn_rci_jp_s1 |>
   augment(newdata = corn_rci_jp_data) |>
@@ -926,7 +925,7 @@ corn_rci_jp_s1 |>
  
 fml_corn_rci_var <- make_jp_formula("resid_sq", "RCI", all_controls_fgls)
 feols(fml_corn_rci_var, data = corn_rci_jp_data,
-      cluster = ~tile_field_ID+year) -> corn_rci_jp_s2
+      cluster = ~COUNTY_FIPS+year) -> corn_rci_jp_s2
  
 # Table: tab:corn_rci_jp
 etable(corn_rci_jp_s1, corn_rci_jp_s2,
