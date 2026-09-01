@@ -1,0 +1,230 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{bbm}
+\newcommand{\ind}{\mathbbm{1}}
+\newcommand{\RCI}{\mathrm{RCI}}
+\title{Decomposing Changes in the Rotational Complexity Index}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{The rotational complexity index}
+
+For a field observed over a six-year window, let $c=(c_1,\dots,c_6)$ be the
+sequence of crop codes. Following Socolar et al.\ (2021), the rotational
+complexity index is built from four components:
+\begin{align}
+n(c)   &= \#\{\text{distinct crops in } c\} && \text{(richness)},\\
+T_1(c) &= \textstyle\sum_{t=1}^{5}\ind[c_{t+1}\neq c_t] && \text{(one-year turnover)},\\
+T_2(c) &= \textstyle\sum_{t=1}^{4}\ind[c_{t+2}\neq c_t] && \text{(two-year turnover)},\\
+T_p(c) &= \textstyle\sum_{t=2}^{6}\ind[c_t=c_{t-1}]\,\ind[c_t\in\mathcal{P}]
+          && \text{(perennial pseudo-turnover)},
+\end{align}
+where $\mathcal{P}$ is the set of perennial codes (alfalfa, pasture, etc.).
+The index is
+\begin{equation}
+\RCI(c)=\sqrt{\,n(c)\cdot S(c)\,},
+\qquad
+S(c)=\tfrac{1}{2}\bigl(T_1(c)+T_2(c)+T_p(c)\bigr).
+\label{eq:rci}
+\end{equation}
+$T_p$ is a correction, not an independent penalty: it restores the turnover
+credit that a repeated perennial forfeits in $T_1$ and $T_2$, so that keeping a
+soil-building perennial in place is not scored as a loss of complexity. Note the
+factor $\tfrac12$ inside $S$; it is required to reproduce Socolar's published
+values (e.g.\ CSCSCS $=\sqrt5\approx2.24$, six distinct crops $=\sqrt{27}\approx5.2$)
+and is sometimes dropped in informal restatements of the formula.
+
+\section{Decomposing a change in RCI}
+
+We attribute a change in complexity between a ``before'' window $A$ and an
+``after'' window $B$ to its components. Summarize each window by the vector
+$\theta=(n,T_1,T_2,T_p)$ and write $\RCI = g(\theta)$ with
+$g(\theta)=\sqrt{\tfrac12\,\theta_n(\theta_{T_1}+\theta_{T_2}+\theta_{T_p})}$.
+The target is
+\begin{equation}
+\Delta\RCI = g(\theta^B)-g(\theta^A).
+\end{equation}
+
+Because $g$ is a square root of a product, it is nonlinear in its inputs: a
+change in RCI has no exact additive split into per-component pieces, and a naive
+first-order (Taylor) attribution leaves a remainder that grows with the size of
+the change. We therefore use the \emph{Shapley} decomposition, which is exact.
+Treating the four components as ``players'' whose ``payoff'' is $g$, define the
+characteristic function $v(Q)=g(\theta^{Q})$, where $\theta^{Q}$ takes the
+$B$-value for components in $Q\subseteq K=\{n,T_1,T_2,T_p\}$ and the $A$-value for
+the rest. The contribution of component $k$ is its average marginal effect over
+all orderings in which components are switched from $A$ to $B$:
+\begin{equation}
+\phi_k=\!\!\sum_{Q\subseteq K\setminus\{k\}}
+\frac{|Q|!\,(|K|-|Q|-1)!}{|K|!}\,
+\bigl[v(Q\cup\{k\})-v(Q)\bigr].
+\label{eq:shapley}
+\end{equation}
+The decisive property is \emph{efficiency}: the contributions sum to the total
+change with no residual,
+\begin{equation}
+\sum_{k\in K}\phi_k=g(\theta^B)-g(\theta^A)=\Delta\RCI .
+\label{eq:efficiency}
+\end{equation}
+Shapley values also satisfy symmetry (equal contributions for
+interchangeable components), the null-player property (a component with
+$\theta_k^A=\theta_k^B$ receives $\phi_k=0$), and additivity across fields, so
+per-field contributions can be summed or averaged to give sample-level
+attributions whose shares add to $100\%$.
+
+\section{Two component groupings}
+
+Because $T_p$ exists only to offset $T_1$ (and $T_2$), the two move in opposite
+directions whenever a perennial run lengthens: $T_1$ falls, $T_p$ rises. Read
+separately, the negative $T_1$ contribution can be misread as ``less
+complexity.'' We therefore report two groupings, both exact by
+\eqref{eq:efficiency}:
+\begin{itemize}
+\item[(i)] \textbf{Four-way}: $K=\{n,\,T_1,\,T_2,\,T_p\}$. Isolates the perennial
+correction as its own channel.
+\item[(ii)] \textbf{Merged three-way}: $K=\{n,\,\tilde T_1,\,T_2\}$ with effective
+year-to-year turnover $\tilde T_1=T_1+T_p$. Folds the correction into the
+turnover it corrects, giving the net (interpretable) turnover contribution. This
+is the preferred view for perennial (alfalfa) regimes.
+\end{itemize}
+For purely annual transitions $T_p\equiv0$, so the two groupings coincide.
+
+\section{Worked example and expected results}
+
+Consider a field moving from a corn--soybean rotation to a five-year alfalfa
+run followed by corn:
+\[
+A=\text{C\,S\,C\,S\,C\,S}\quad\longrightarrow\quad B=\text{A\,A\,A\,A\,A\,C}
+\qquad(\text{A}=\text{alfalfa, perennial}).
+\]
+The components and index are:
+\begin{center}
+\begin{tabular}{lccccc}
+\toprule
+ & $n$ & $T_1$ & $T_2$ & $T_p$ & $\RCI$ \\
+\midrule
+$A$ (C S C S C S) & 2 & 5 & 0 & 0 & $\sqrt5\approx2.236$ \\
+$B$ (A A A A A C) & 2 & 1 & 1 & 4 & $\sqrt6\approx2.449$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+so $\Delta\RCI = 2.449-2.236 = +0.213$. The Shapley contributions under both
+groupings are:
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+Component & Four-way $\phi$ & Merged $\phi$ \\
+\midrule
+$n$ (richness)              & $0.000$  & $0.000$ \\
+$T_1$                       & $-0.949$ & --- \\
+$T_p$ (perennial)           & $+0.925$ & --- \\
+$\tilde T_1=T_1+T_p$        & ---      & $0.000$ \\
+$T_2$                       & $+0.238$ & $+0.213$ \\
+\midrule
+$\sum\phi\;(=\Delta\RCI)$   & $+0.213$ & $+0.213$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\medskip
+\noindent\textbf{Reading the result.} Richness is unchanged ($n:2\to2$), so
+$\phi_n=0$ by the null-player property. In the four-way split the perennial run
+produces a large negative $T_1$ ($-0.949$) almost exactly cancelled by a large
+positive $T_p$ ($+0.925$); taken alone the $T_1$ term is misleading. The merged
+view resolves this: effective year-to-year turnover is unchanged
+($\tilde T_1:5\to5$, so $\phi_{\tilde T_1}=0$), and \emph{the entire increase in
+complexity is carried by two-year turnover} ($+0.213$). This is the substantive
+statement one wants to report. Note that regrouping is not the same as summing
+columns: $\phi_{T_2}$ itself shifts ($0.238\!\to\!0.213$) and
+$\phi_{T_1}+\phi_{T_p}=-0.024\neq\phi_{\tilde T_1}=0$, because the Shapley
+allocation is recomputed over the reduced set of players rather than collapsed
+from the four-way one.
+
+\medskip
+\noindent\textbf{What to expect in general.}
+\begin{itemize}
+\item \emph{Exact additivity.} The contributions reproduce $\Delta\RCI$ to
+numerical precision ($|\sum_k\phi_k-\Delta\RCI|\sim10^{-12}$); this is a built-in
+check, not a fitted quantity.
+\item \emph{Perennial regimes.} Expect $\phi_{T_1}$ and $\phi_{T_p}$ to be large
+and opposite in the four-way split; the merged $\tilde T_1$ contribution is the
+honest net effect. In annual regimes the two groupings are identical.
+\item \emph{Coupled channels.} $n$ and turnover are not independent levers: adding
+a new species raises richness \emph{and} tends to raise turnover, so their
+contributions should be interpreted jointly, not as separable causes. Shapley
+allocates the interaction correctly, but the narrative should reflect the
+coupling.
+\item \emph{Aggregation.} By additivity, the share of the sample's total (or
+mean) $\Delta\RCI$ attributable to each component is well defined and sums to one,
+supporting statements such as ``$x\%$ of the average complexity gain was
+two-year turnover.''
+\end{itemize}
+
+\section{Marginal (Taylor) decomposition}
+
+An alternative attribution differentiates \eqref{eq:rci} and weights each
+component change by its local sensitivity. Writing $S=\tfrac12(T_1+T_2+T_p)$, the
+partial derivatives are
+\begin{equation}
+\frac{\partial\RCI}{\partial n}=\frac{S}{2\,\RCI}
+=\frac{T_1+T_2+T_p}{4\,\RCI},
+\qquad
+\frac{\partial\RCI}{\partial T_1}
+=\frac{\partial\RCI}{\partial T_2}
+=\frac{\partial\RCI}{\partial T_p}
+=\frac{n}{4\,\RCI},
+\end{equation}
+giving the first-order attribution
+\begin{equation}
+\Delta\RCI\;\approx\;
+\frac{T_1+T_2+T_p}{4\,\RCI}\,\Delta n
+\;+\;\frac{n}{4\,\RCI}\,(\Delta T_1+\Delta T_2+\Delta T_p),
+\label{eq:taylor}
+\end{equation}
+with the gradient evaluated at a chosen base point (e.g.\ window $A$). The
+derivatives are themselves informative: richness matters more where turnover is
+already high, and turnover matters more where richness is high, so the same
+$\Delta$ in a component moves RCI by different amounts depending on the rotation
+it starts from.
+
+Unlike \eqref{eq:shapley}, this split is \emph{not exact}. It carries a
+second-order remainder that grows with the size of the change and depends on the
+base point at which the gradient is evaluated. For the worked example above,
+evaluating \eqref{eq:taylor} at window $A$ gives component pieces
+$(\phi_n,\phi_{T_1},\phi_{T_2},\phi_{T_p})=(0.000,-0.894,+0.224,+0.894)$
+summing to $+0.224$, which overshoots the true $\Delta\RCI=+0.213$ by about
+$5\%$; the residual does not vanish and is not distributed to any component.
+Because rotation components change in discrete, often large steps, this gap is
+the rule rather than the exception.
+
+The marginal decomposition is therefore the right tool for a \emph{sensitivity}
+question---``around a typical rotation, which lever moves RCI most?''---but not
+for attributing an observed change, where the residual leaves the pieces failing
+to reconcile to $\Delta\RCI$. We use \eqref{eq:shapley} for attribution and
+reserve \eqref{eq:taylor} for interpreting local responsiveness.
+
+\section{Implementation notes}
+
+The change is computed between windows for the same field. Two design choices
+matter. First, the \emph{unit of change}: overlapping year-to-year windows share
+five of six years, so their differences largely reflect the window boundary
+sliding rather than a shift in the cropping system; non-overlapping era windows
+(e.g.\ 2008--2013 vs.\ 2014--2019) make $\Delta\RCI$ a genuine regime change and
+avoid the induced autocorrelation. Second, \emph{completeness}: any window
+containing a non-agricultural year yields an undefined $\RCI$ and is dropped, so
+the decomposition is run on fields with a complete window at both endpoints of
+the comparison.
+
+\begin{thebibliography}{9}
+\bibitem{socolar2021}
+Socolar, Y., Goldstein, B.~R., de Valpine, P., \& Bowles, T.~M. (2021).
+Biophysical and policy factors predict simplified crop rotations in the US
+Midwest. \emph{Environmental Research Letters}, 16(5), 054045.
+\end{thebibliography}
+
+\end{document}
