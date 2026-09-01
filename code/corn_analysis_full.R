@@ -26,9 +26,7 @@
 ##   nccpi_corn_map     — Spatial map of NCCPI corn (2016)
 ## ============================================================================
 library(arrow)
-library(tidyverse)
 library(statar)
-library(fixest)
 setwd("C:/Users/vf006/Box/crop_rotations_and_losses/code")
 
 source("rotation_setup_wa.R")
@@ -564,9 +562,11 @@ gc()
 # This is the paper's main result table (Table 1 in the draft PDF).
 # Four structural features: late_soy, soy_gap, soy_cons, nsoy
 # Run on both corn and soy data, both mean and variance stages.
-# NOTE: requires late_soy, soy_gap, soy_cons, nsoy to be in corn_jp_data.
+# NOTE: requires late_soy, soy_gap, soy_cons, to be in corn_jp_data.
 # These must be constructed before this chunk runs.
  
+
+# nsoy dropped due to collinearity
 # Construct Z-vector variables if not already present
 # late_soy: negative integer = how many periods ago was the last soy harvest
 corn_jp_data <- corn_jp_data |>
@@ -585,13 +585,13 @@ corn_jp_data <- corn_jp_data |>
       pos <- which(v == "S")
       if (length(pos) < 2) 0L else min(diff(pos))
     }),
-    nsoy      = sapply(seq_vec, function(v) sum(v == "S"))
+    #nsoy      = sapply(seq_vec, function(v) sum(v == "S"))
   ) |>
   select(-seq_vec)
  
 # Z-vector stage 1 — corn mean
 fml_z_corn_mean <- make_jp_formula("corn_yield",
-                                    "late_soy + soy_gap + soy_cons + nsoy",
+                                    "late_soy + soy_gap + soy_cons",
                                     all_controls_fgls)
  
 feols(fml_z_corn_mean, data = corn_jp_data,
@@ -604,7 +604,7 @@ corn_jp_data <- corn_z_s1 |>
   select(-starts_with("."))
  
 fml_z_corn_var <- make_jp_formula("resid_sq_z",
-                                   "late_soy + soy_gap + soy_cons + nsoy",
+                                   "late_soy + soy_gap + soy_cons",
                                    all_controls_fgls)
  
 feols(fml_z_corn_var, data = corn_jp_data,
@@ -666,14 +666,14 @@ score_df <- corn_jp_data |>
     late_soy = mean(late_soy, na.rm = TRUE),
     soy_gap  = mean(soy_gap,  na.rm = TRUE),
     soy_cons = mean(soy_cons, na.rm = TRUE),
-    nsoy     = mean(nsoy,     na.rm = TRUE),
+    #nsoy     = mean(nsoy,     na.rm = TRUE),
     .groups  = "drop"
   ) |>
   mutate(
     score = z_coefs["late_soy"] * late_soy +
             z_coefs["soy_gap"]  * soy_gap  +
-            z_coefs["soy_cons"] * soy_cons +
-            z_coefs["nsoy"]     * nsoy
+            z_coefs["soy_cons"] * soy_cons
+            #z_coefs["nsoy"]     * nsoy   # dropped: collinear with soy_gap (r=0.65)
   )
  
 # Step 2: extract sequence-level coefficients from the FULL sequence models
@@ -905,6 +905,16 @@ etable(corn_jp_s2, corn_jp_s3,
 
 rm(corn_jp_s2, corn_jp_s3); gc()
 
+# Collinearity check on the retained Z-vector features (documents why nsoy was
+# dropped: in the 4-feature version nsoy correlated with soy_gap at r=0.65,
+# making its partial sign unstable across samples).
+cor(dplyr::select(corn_jp_data, late_soy, soy_cons, soy_gap))
+# feature ranges
+corn_jp_data |>
+  dplyr::summarise(dplyr::across(c(late_soy, soy_cons, soy_gap),
+                                 list(min = min, max = max, mean = mean)))
+
+
 # ── 6. Just-Pope factor RCI — corn ───────────────────────────────────────────
 # Table: tab:corn_rci_jp | Figure: rci_plot
  
@@ -975,6 +985,8 @@ ggsave(paste0(fig_dir, "corn_rci_plot.png"), rci_plot,
        width = 9, height = 7, dpi = 300)
  
 rm(corn_rci_jp_data, corn_rci_jp_s1, corn_rci_jp_s2, rci_plot_df, rci_plot); gc()
+
+
  
 # ── 7. FGLS + bootstrap — corn ────────────────────────────────────────────────
  
@@ -1098,4 +1110,3 @@ rm(corn_county, corn_det); gc()
 cat("\n=== Corn analysis complete ===\n")
 cat("All tables saved to:", tab_dir, "\n")
 cat("All figures saved to:", fig_dir, "\n")
- 

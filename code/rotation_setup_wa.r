@@ -36,21 +36,6 @@ fig_dir <- "C:/Users/vf006/Box/crop_rotations_and_losses/figures/"
 # 24 winter wheat). Kept as numeric-code strings so rot_crop needs no recoding;
 # readable labels are supplied by dict_corn below.
 
-#corn_soy_patterns <- tibble(pattern = c(
-#  "5-1-5-1-5-1",   "1-1-1-1-1-1",   "1-1-5-1-5-1",   "1-5-1-1-5-1",
-#  "1-5-1-5-1-1",   "1-1-1-1-5-1",   "1-5-1-1-1-1",   "1-1-1-5-1-1",
-#  "1-1-5-1-1-1",   "5-1-1-1-5-1",   "5-1-5-1-1-1",   "5-1-1-5-1-1",
-#  "1-5-1-5-5-1",   "5-1-1-1-1-1",   "1-5-5-1-5-1",   "5-5-5-1-5-1",
-#  "5-1-5-5-5-1",   "5-5-1-5-5-1",   "5-5-5-5-5-1",   "1-5-24-1-5-1",
-#  "24-1-5-1-5-1",  "5-5-1-1-5-1",   "1-5-5-5-5-1",   "1-5-1-5-24-1",
-#  "5-1-5-5-1-1",   "5-5-1-5-1-1",   "5-1-1-5-5-1",   "1-1-1-5-5-1",
-#  "1-5-5-1-1-1",   "5-5-1-1-1-1",   "5-24-1-5-24-1", "1-1-5-5-1-1",
-#  "1-5-5-5-1-1",   "5-24-5-1-5-1",  "1-1-5-5-5-1",   "5-5-5-1-1-1",
-#  "5-1-5-24-5-1",  "5-5-5-5-1-1",   "5-24-1-1-5-1",  "1-1-5-24-1-1",
-#  "1-1-1-5-24-1",  "5-1-1-5-24-1",  "5-24-1-5-1-1",  "5-1-5-24-1-1",
-#  "1-5-24-1-1-1",  "5-1-24-1-5-1",  "5-1-5-1-24-1",  "24-1-1-1-1-1",
-#  "5-24-1-5-5-1"
-#))
 
 corn_soy_patterns <- tibble(pattern = c(
   "1-1-1-1-5-1", "1-1-1-5-1-1", "1-1-1-5-24-1", "1-1-1-5-5-1",
@@ -63,31 +48,6 @@ corn_soy_patterns <- tibble(pattern = c(
   "1-1-1-1-1-1" 
 ))
 
-
-# ── RCI correction ────────────────────────────────────────────────────────────
-# Removes mismatched RCI / rot_crop combinations (data quality fix). These are
-# the original corn-soy entries; if a wheat sequence shows an analogous RCI
-# mismatch, add it here the same way.
-
-#rci_correction <- function(df) {
-#  df |>
-#    mutate(data_rm = case_when(
-#      rot_crop == "1-1-1-1-1-1" & RCI != 0 ~ 1,
-#      rot_crop == "5-1-5-1-5-1" & RCI != 2.24 ~ 1,
-#      rot_crop == "5-1-5-1-1-1" & RCI == 2.24 ~ 1,
-#      rot_crop == "5-1-1-5-1-5" & RCI == 2.24 ~ 1,
-#      rot_crop == "1-5-5-1-5-1" & RCI == 2.24 ~ 1,
-#      rot_crop == "1-5-1-5-5-1" & RCI == 2.24 ~ 1,
-#      rot_crop == "1-5-1-1-1-5" & RCI == 1.73 ~ 1,
-#      rot_crop == "1-1-1-5-1-5" & RCI == 0    ~ 1,
-#      rot_crop == "1-1-1-1-1-5" & RCI == 0    ~ 1,
-#      rot_crop == "1-5-1-1-5-1" & RCI == 2.24 ~ 1,
-#      rot_crop == "1-5-1-5-1-5" & RCI == 0    ~ 1,
-#      rot_crop == "1-5-1-5-1-5" & RCI == 2.45 ~ 1,
-#      .default = 0)) |>
-#    filter(data_rm == 0) |>
-#    select(-data_rm)
-#}
 
 # ── Degree-day functions (Schlenker-Roberts 2009) ─────────────────────────────
 
@@ -117,9 +77,7 @@ all_controls <- c(
   "cGDD_6m", "cGDD_7m", "cGDD_8m",
   "EDD_6", "EDD_7", "EDD_8",
   "vpd_6", "vpd_7", "vpd_8",
-  "soil_6", "soil_7", "soil_8",
-  "rootznaws_mean"
-)
+  "soil_6", "soil_7", "soil_8")
 
 # Controls for FGLS bootstrap — drop collinear soil vars
 all_controls_fgls <- setdiff(all_controls, c("nccpi3all_mean", "soc0_100_mean"))
