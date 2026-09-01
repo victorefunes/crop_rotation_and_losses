@@ -49,21 +49,28 @@ rci_from_comp <- function(number, t1, t2, corr)
   sqrt(number * (t1 + t2 + corr) / 2)
 
 # ---- 2. vectorized Shapley over the whole panel ----------------------------
-# A, B: data.tables/matrices with columns number, t1, t2, corr (same nrow)
-# returns n x 4 matrix of contributions; rowSums == RCI(B) - RCI(A) exactly
-shapley_drci <- function(A, B) {
-  comps <- c("number","t1","t2","corr")
+# A, B: data.tables/matrices with columns `comps` (same nrow, rows aligned).
+# comps must include "number"; RCI = sqrt(number * sum(other comps) / 2).
+# Default comps = the 4 standard margins; pass c("number","t1c","t2") for the
+# merged-perennial split. Returns n x length(comps) matrix of contributions;
+# rowSums == RCI(B) - RCI(A) exactly (telescoping, order-independent).
+shapley_drci <- function(A, B, comps = c("number","t1","t2","corr")) {
+  stopifnot("number" %in% comps)
   A <- as.matrix(A[, ..comps]); B <- as.matrix(B[, ..comps])
-  n <- nrow(A)
+  n     <- nrow(A)
+  other <- setdiff(comps, "number")
+
+  rc <- function(S) {
+    turn <- if (length(other) == 1L) S[, other] else rowSums(S[, other, drop = FALSE])
+    sqrt(S[, "number"] * turn / 2)
+  }
 
   permn <- function(x) if (length(x) == 1L) list(x) else
     unlist(lapply(seq_along(x),
       function(i) lapply(permn(x[-i]), function(p) c(x[i], p))), recursive = FALSE)
   perms <- permn(comps)
 
-  contrib <- matrix(0, n, 4L, dimnames = list(NULL, comps))
-  rc <- function(S) rci_from_comp(S[,"number"], S[,"t1"], S[,"t2"], S[,"corr"])
-
+  contrib <- matrix(0, n, length(comps), dimnames = list(NULL, comps))
   for (p in perms) {
     cur  <- A                                   # start all-at-A
     prev <- rc(cur)
@@ -74,7 +81,7 @@ shapley_drci <- function(A, B) {
       prev <- now
     }
   }
-  contrib / length(perms)                        # average over the 24 orderings
+  contrib / length(perms)                        # average over all orderings
 }
 
 # ---- 3. driver: per-field year-over-year decomposition ---------------------

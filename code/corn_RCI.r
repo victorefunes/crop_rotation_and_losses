@@ -5,6 +5,8 @@ library(arrow)
 library(tidyverse)
 library(statar)
 library(fixest)
+library(marginaleffects)
+
 setwd("C:/Users/vf006/Box/crop_rotations_and_losses/code")
 
 source("rotation_setup_wa.R")
@@ -102,24 +104,45 @@ xcols <- paste0("crop_", 0:5)
 
 corn_code     <- 1L
 soy_code      <- 5L
-wheat_codes   <- c(22L, 23L, 24L, 26L, 225L, 236L, 238L)   # MATCH your has_wheat definition
+# Cereals broadly: wheat (all classes) + other small grains + sorghum,
+# plus their double-crop combinations with corn/soy (MATCH has_cereal below)
+cereal_codes  <- c(
+  21L,  22L,  23L,  24L,  25L,  27L,  28L,  29L,  30L,  205L,  4L,   # standalone
+  26L,  225L, 226L, 228L, 236L, 237L, 238L, 240L, 254L,               # dbl-crop w/ corn or soy
+  234L, 235L                                                          # dbl-crop sorghum + cereal
+)
 alfalfa_codes <- 36L
-core_codes    <- c(corn_code, soy_code, wheat_codes, alfalfa_codes)
+
+# The residual "other" bucket turned out to be ~89% Grassland/Pasture (176) and
+# Fallow/Idle Cropland (61) -- i.e. idled land, not genuine crop diversification.
+# Split it: land taken out of active production vs. perennial forage vs. actual
+# minor/specialty row crops. See corn_RCI.r conversation notes for the frequency
+# breakdown that motivated this split.
+fallow_pasture_codes <- c(176L, 61L)                # Grassland/Pasture, Fallow/Idle Cropland
+forage_codes         <- c(36L, 37L, 58L)             # Alfalfa, Other Hay/Non-Alfalfa, Clover/Wildflowers
+
+core_codes    <- c(corn_code, soy_code, cereal_codes, alfalfa_codes)
 
 # non-crop land covers that exist in corn_df but NOT in corn_jp_data — must be excluded
 nonag_codes <- c(0L, 63L, 64L, 65L, 81L, 82L, 83L, 87L, 88L, 111L, 112L,
                  121L, 122L, 123L, 124L, 131L, 141L, 142L, 143L, 152L, 190L, 195L)
 
 all_codes        <- sort(unique(unlist(corn_df[, ..xcols], use.names = FALSE)))
-other_crop_codes <- setdiff(all_codes, c(core_codes, nonag_codes))
+other_crop_codes <- setdiff(all_codes, c(core_codes, nonag_codes, fallow_pasture_codes, forage_codes))
 
 corn_df[, has_other := Reduce(`|`, lapply(.SD, \(v) v %in% other_crop_codes)),
         .SDcols = xcols]
 
-corn_df[, has_wheat := Reduce(`|`, lapply(.SD, \(v) v %in% wheat_codes)),
+corn_df[, has_cereal := Reduce(`|`, lapply(.SD, \(v) v %in% cereal_codes)),
         .SDcols = xcols]
 
 corn_df[, has_alfalfa := Reduce(`|`, lapply(.SD, \(v) v %in% alfalfa_codes)),
+        .SDcols = xcols]
+
+corn_df[, has_fallow_pasture := Reduce(`|`, lapply(.SD, \(v) v %in% fallow_pasture_codes)),
+        .SDcols = xcols]
+
+corn_df[, has_forage := Reduce(`|`, lapply(.SD, \(v) v %in% forage_codes)),
         .SDcols = xcols]
 
 corn_df[, has_soy := Reduce(`|`, lapply(.SD, \(v) v %in% soy_code)),
@@ -131,16 +154,23 @@ corn_df[, perfect_cs := crop_0 == corn_code & crop_1 == soy_code &
                          crop_2 == corn_code & crop_3 == soy_code &
                          crop_4 == corn_code & crop_5 == soy_code]
 
-# corn monoculture, corn/soy rotations (perfect vs other), corn/soy/wheat, other
+# corn monoculture, corn/soy rotations (perfect vs other), corn/soy/cereal,
+# other crops (forage + specialty merged), fallow/pasture.
+# Precedence: forage/specialty checked before fallow/pasture, since perennial
+# hay/alfalfa stands are frequently mis-coded as Grassland/Pasture (176) in
+# establishment or dormant years -- when both appear, the crop is the more
+# informative label than the incidental pasture code.
 corn_df[, regime := fcase(
-  has_other | has_alfalfa,    "other",                   # checked first — wins
-  has_wheat,                  "corn_soy_wheat",
-  has_soy & perfect_cs,       "corn_soy_perfect",
-  has_soy,                    "corn_soy_other",
-  default =                   "corn_monoculture"
+  has_forage | has_other,      "corn_other_crops",       # checked first — wins
+  has_fallow_pasture,          "corn_fallow_pasture",
+  has_cereal,                  "corn_soy_cereal",
+  has_soy & perfect_cs,        "corn_soy_perfect",
+  has_soy,                     "corn_soy_other",
+  default =                    "corn_monoculture"
 )]
 corn_df[, regime := factor(regime, levels = c(
-  "corn_monoculture","corn_soy_perfect","corn_soy_other","corn_soy_wheat","other"))]
+  "corn_monoculture","corn_soy_perfect","corn_soy_other","corn_soy_cereal",
+  "corn_other_crops","corn_fallow_pasture"))]
 
 corn_df[, .N, by = regime][order(-N)]
  
@@ -174,9 +204,12 @@ corn_df[!is.na(dRCI), lapply(.SD, function(s) mean(s)),
      .SDcols = patterns("^shap_"), by = regime]
 
 
-# Categories:.default# 1. Corn monoculture
+# Categories:.default
+# 1. Corn monoculture
 # 2. Corn/soy rotations
-# 3. Corn/soy and wheat rotations
+# 3. Corn/soy and cereal rotations
+# 4. Corn/other crops (forage: alfalfa, hay, clover; specialty: dry beans, veg, etc.)
+# 5. Corn/fallow or pasture (idled land, not genuine crop diversification)
 
 #Q1 what is the correct specification?
 
@@ -215,16 +248,15 @@ etable(reg_factorial, keep = c("RCI", "regime"))
 # Baseline regime (implicit reference category, presumably continuous corn) has RCI slope = 0.740.
 # corn_soy_perfect: RCI effect = 0.740 + 0.896 = 1.64 — much steeper RCI-yield sensitivity than baseline.
 # corn_soy_other: RCI effect = 0.740 + 1.582 = 2.32 — the steepest.
-# corn_soy_wheat: RCI effect = 0.740 − 0.694 ≈ 0.046 — essentially flat, RCI barely matters under this regime.
+# corn_soy_cereal: RCI effect = 0.740 − 0.694 ≈ 0.046 — essentially flat, RCI barely matters under this regime.
+# NOTE: figures above were from the pre-broadening (wheat-only) spec and need to be re-run
+# under the new corn_soy_cereal regime definition.
 # other: RCI effect = 0.740 + 0.600 = 1.34.
 
 # The interaction terms being significant (and of varying sign/magnitude relative to baseline) is 
 # exactly the pattern the earlier Wald test predicted — regime materially moderates the RCI-yield 
 # relationship, not just the intercept. This is good evidence you'd have gotten a distorted, blended 
 # RCI slope had you used RCI:regime alone without letting the intercepts (main effects) shift freely.
-
-
-library(marginaleffects)
 
 # Average marginal effect of RCI, by regime, this computes computes ∂corn_yield/∂RCI for each regime
 mfx <- slopes(reg_factorial, variables = "RCI", by = "regime",
@@ -274,11 +306,37 @@ ggplot(mfx, aes(x = regime, y = estimate)) +
 # it drops the meaningful spatial clustering in favor of a within-field-only dimension that's largely 
 # redundant with your FE structure.
 
+# other category: corn, soy and ores
+
+## Additional dummy for 2017/2018, trade war as an additional variable, already taken care by year FEs
+
+## Make sure the marginal effect interpretation is OK: done
+
+## Is corn monoculture the baseline regime? Yes
+
+## Time changes in RCI, using any cereals (now including in has_cereal), both temporal and spatial
+## Rotation plans:
+# 1) identify terminal plan
+# 2) identify transitional plans
+
+# Rolling windows: [2002-2008], [2009-2015], [2016-2022]
 
 
-# Switching rgression with factorial interactions of RCI, has_wheat, and has_alfalfa
+## (A) Is there even a first stage? Regress RCI on the proposed instruments,
+##     within the variation FE leave. If weak, no RCI IV can work.
+first <- feols(RCI ~ nccpi3corn_mean + soc0_100_mean | COUNTY_FIPS + year,
+               data = corn_df, vcov = ~ COUNTY_FIPS)
+fitstat(first, "f")            # partial F of the excluded instruments
+## RCI is near-constant within regime, so expect this to be weak once regime-
+## driven variation is accounted for.
+
+## (B) The better use: land-quality controls to test the selection story.
+
+
+
+# Switching regression with factorial interactions of RCI, has_cereal, and has_alfalfa
 switch_reg_factorial <- feols(
-  corn_yield ~ RCI * has_wheat * has_alfalfa +
+  corn_yield ~ RCI * has_cereal * has_alfalfa +
     pr_6 + pr_7 + pr_8 + I(pr_6^2) + I(pr_7^2) + I(pr_8^2) +
     cGDD_6m + cGDD_7m + cGDD_8m + EDD_6 + EDD_7 + EDD_8 +
     vpd_6 + vpd_7 + vpd_8 + soil_6 + soil_7 + soil_8 + rootznaws_mean
@@ -288,9 +346,9 @@ switch_reg_factorial <- feols(
 etable(switch_reg_factorial, keep = "RCI")
 
 avg_slopes(switch_reg_factorial, variables = "RCI",
-          newdata = datagrid(has_wheat = c(FALSE, TRUE), 
+          newdata = datagrid(has_cereal = c(FALSE, TRUE),
             has_alfalfa = c(FALSE, TRUE)),
-          by = c("has_wheat", "has_alfalfa"))
+          by = c("has_cereal", "has_alfalfa"))
 
 
 
@@ -347,7 +405,7 @@ setorder(corn_df, tile_field_ID, year)
 
 # 1) per-observation trigger: define the ONE event you want to anchor on.
 #    simplest = "field is no longer plain corn_soy this year"
-corn_df[, treated_now := regime != "corn_soy"]          # or: has_wheat | has_alfalfa | has_other
+corn_df[, treated_now := regime != "corn_soy"]          # or: has_cereal | has_alfalfa | has_other
 
 # 2) first year the trigger fires, per field; Inf if it never does
 corn_df[, first_treat := {yrs <- year[treated_now]
