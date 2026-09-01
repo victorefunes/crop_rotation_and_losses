@@ -310,6 +310,8 @@ BASE <- "corn_monoculture"
 corn_df[, regime := relevel(factor(regime), ref = BASE)]
 corn_df[, grid_cell := paste(X_c %/% 25000, Y_c %/% 25000, sep = "_")]
 stopifnot(all(Wws %in% names(corn_df)), uniqueN(corn_df$grid_cell) >= 50)
+
+regime_dict <- setNames(levels(corn_df$regime), paste0("regime", levels(corn_df$regime)))
  
 ## --- fit (no collinearity drop now: constant-RCI regimes were only a problem
 ##         because of the interaction; as level effects they're identified) ----
@@ -318,7 +320,8 @@ f_reg <- as.formula(sprintf("corn_yield ~ regime + %s + %s | %s",
                             paste(Wws, collapse = " + "),
                             paste(fe, collapse = " + ")))
 m_reg <- feols(f_reg, data = corn_df, vcov = ~ grid_cell)
-etable(m_reg, keep = c("regime", ws, Wws))
+etable(m_reg, keep = c("regime", ws, Wws), dict = regime_dict, tex = TRUE,
+       file = paste0(tab_dir, "slx_corn_regime.tex"), replace = TRUE)
  
 ## ==========================================================================
 ## RESULTS
@@ -400,7 +403,9 @@ f_hyb <- as.formula(sprintf("corn_yield ~ regime + regime_v:RCI + %s + %s | %s",
                             paste(fe, collapse = " + ")))
 m_hyb <- feols(f_hyb, data = corn_df, vcov = ~ grid_cell)
 etable(m_reg, m_hyb, keep = c("regime", "RCI"),
-       headers = c("regime-only (REPORTED)", "hybrid (DEGENERATE: SE~51, n halved)"))
+       headers = c("regime-only (REPORTED)", "hybrid (DEGENERATE: SE~51, n halved)"),
+       dict = regime_dict, tex = TRUE,
+       file = paste0(tab_dir, "slx_corn_regime_hybrid.tex"), replace = TRUE)
 ## Do NOT report m_hyb or a Wald test on its slopes -- the SEs beneath it are
 ## unstable (level/slope collinearity), so any joint test is uninterpretable.
  
@@ -419,6 +424,8 @@ f_ctrl <- as.formula(sprintf(
   paste(fe, collapse=" + ")))
 m_ctrl <- feols(f_ctrl, data = corn_df, vcov = ~ grid_cell)
 etable(m_reg, m_ctrl, keep = "regime",
-       headers = c("baseline", "+ land-quality controls"))
+       headers = c("baseline", "+ land-quality controls"),
+       dict = regime_dict, tex = TRUE,
+       file = paste0(tab_dir, "slx_corn_regime_ctrl.tex"), replace = TRUE)
 ## Regime gaps STABLE -> ranking isn't land-quality sorting (strengthens paper).
 ## Regime gaps SHRINK -> land quality explained part of it (also a real finding).

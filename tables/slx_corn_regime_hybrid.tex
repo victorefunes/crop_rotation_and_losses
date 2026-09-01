@@ -1,0 +1,34 @@
+
+\begingroup
+\centering
+\begin{tabular}{lcc}
+   \tabularnewline \midrule \midrule
+   Dependent Variable: & \multicolumn{2}{c}{corn\_yield}\\
+                                                   & regime-only (REPORTED) & hybrid (DEGENERATE: SE~51, n halved) \\   
+   Model:                                          & (1)                    & (2)\\  
+   \midrule
+   \emph{Variables}\\
+   regime\_vcorn\_fallow\_pasture $\times$ RCI     &                        & 2.780$^{***}$\\   
+                                                   &                        & (0.2003)\\   
+   regime\_vcorn\_other\_crops $\times$ RCI        &                        & -1.210$^{***}$\\   
+                                                   &                        & (0.4412)\\   
+   regime\_vcorn\_soy\_cereal $\times$ RCI         &                        & 0.5222$^{**}$\\   
+                                                   &                        & (0.2648)\\   
+   regime\_vcorn\_soy\_other $\times$ RCI          &                        & 0.8287$^{***}$\\   
+                                                   &                        & (0.1791)\\   
+   \midrule
+   \emph{Fixed-effects}\\
+   COUNTY\_FIPS                                    & Yes                    & Yes\\  
+   year                                            & Yes                    & Yes\\  
+   \midrule
+   \emph{Fit statistics}\\
+   Observations                                    & 2,288,053              & 1,136,956\\  
+   R$^2$                                           & 0.76166                & 0.75570\\  
+   Within R$^2$                                    & 0.15337                & 0.15956\\  
+   \midrule \midrule
+   \multicolumn{3}{l}{\emph{Clustered (grid\_cell) standard-errors in parentheses}}\\
+   \multicolumn{3}{l}{\emph{Signif. Codes: ***: 0.01, **: 0.05, *: 0.1}}\\
+\end{tabular}
+\par\endgroup
+
+
