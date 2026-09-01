@@ -4,27 +4,37 @@
 \begin{tabular}{lcc}
    \tabularnewline \midrule \midrule
    Dependent Variable: & \multicolumn{2}{c}{corn\_yield}\\
-                                                   & regime-only (REPORTED) & hybrid (DEGENERATE: SE~51, n halved) \\   
-   Model:                                          & (1)                    & (2)\\  
+                                         & regime-only     & hybrid \\   
+   Model:                                & (1)             & (2)\\  
    \midrule
    \emph{Variables}\\
-   regime\_vcorn\_fallow\_pasture $\times$ RCI     &                        & 2.780$^{***}$\\   
-                                                   &                        & (0.2003)\\   
-   regime\_vcorn\_other\_crops $\times$ RCI        &                        & -1.210$^{***}$\\   
-                                                   &                        & (0.4412)\\   
-   regime\_vcorn\_soy\_cereal $\times$ RCI         &                        & 0.5222$^{**}$\\   
-                                                   &                        & (0.2648)\\   
-   regime\_vcorn\_soy\_other $\times$ RCI          &                        & 0.8287$^{***}$\\   
-                                                   &                        & (0.1791)\\   
+   corn\_soy\_perfect                    & 2.371$^{***}$   &   \\   
+                                         & (0.2602)        &   \\   
+   corn\_soy\_other                      & 0.5325$^{**}$   & -2.674\\   
+                                         & (0.2420)        & (50.69)\\   
+   corn\_soy\_cereal                     & -0.9645$^{***}$ & -4.162\\   
+                                         & (0.2930)        & (50.61)\\   
+   corn\_other\_crops                    & -5.482$^{***}$  & -2.851\\   
+                                         & (0.6183)        & (50.88)\\   
+   corn\_fallow\_pasture                 & -6.659$^{***}$  & -16.95\\   
+                                         & (0.3293)        & (50.77)\\   
+   corn\_fallow\_pasture $\times$ RCI    &                 & 2.780$^{***}$\\   
+                                         &                 & (0.2003)\\   
+   corn\_other\_crops $\times$ RCI       &                 & -1.210$^{***}$\\   
+                                         &                 & (0.4412)\\   
+   corn\_soy\_cereal $\times$ RCI        &                 & 0.5222$^{**}$\\   
+                                         &                 & (0.2648)\\   
+   corn\_soy\_other $\times$ RCI         &                 & 0.8287$^{***}$\\   
+                                         &                 & (0.1791)\\   
    \midrule
    \emph{Fixed-effects}\\
-   COUNTY\_FIPS                                    & Yes                    & Yes\\  
-   year                                            & Yes                    & Yes\\  
+   COUNTY\_FIPS                          & Yes             & Yes\\  
+   year                                  & Yes             & Yes\\  
    \midrule
    \emph{Fit statistics}\\
-   Observations                                    & 2,288,053              & 1,136,956\\  
-   R$^2$                                           & 0.76166                & 0.75570\\  
-   Within R$^2$                                    & 0.15337                & 0.15956\\  
+   Observations                          & 2,288,053       & 1,136,956\\  
+   R$^2$                                 & 0.76166         & 0.75570\\  
+   Within R$^2$                          & 0.15337         & 0.15956\\  
    \midrule \midrule
    \multicolumn{3}{l}{\emph{Clustered (grid\_cell) standard-errors in parentheses}}\\
    \multicolumn{3}{l}{\emph{Signif. Codes: ***: 0.01, **: 0.05, *: 0.1}}\\

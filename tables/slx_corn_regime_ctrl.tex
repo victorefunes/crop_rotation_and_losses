@@ -1,0 +1,36 @@
+
+\begingroup
+\centering
+\begin{tabular}{lcc}
+   \tabularnewline \midrule \midrule
+   Dependent Variable: & \multicolumn{2}{c}{corn\_yield}\\
+                           & baseline        & + land-quality controls \\   
+   Model:                  & (1)             & (2)\\  
+   \midrule
+   \emph{Variables}\\
+   corn\_soy\_perfect      & 2.371$^{***}$   & 2.290$^{***}$\\   
+                           & (0.2602)        & (0.2527)\\   
+   corn\_soy\_other        & 0.5325$^{**}$   & 0.5374$^{**}$\\   
+                           & (0.2420)        & (0.2392)\\   
+   corn\_soy\_cereal       & -0.9645$^{***}$ & -0.9756$^{***}$\\   
+                           & (0.2930)        & (0.2813)\\   
+   corn\_other\_crops      & -5.482$^{***}$  & -5.242$^{***}$\\   
+                           & (0.6183)        & (0.6563)\\   
+   corn\_fallow\_pasture   & -6.659$^{***}$  & -5.802$^{***}$\\   
+                           & (0.3293)        & (0.3364)\\   
+   \midrule
+   \emph{Fixed-effects}\\
+   COUNTY\_FIPS            & Yes             & Yes\\  
+   year                    & Yes             & Yes\\  
+   \midrule
+   \emph{Fit statistics}\\
+   Observations            & 2,288,053       & 2,288,053\\  
+   R$^2$                   & 0.76166         & 0.76636\\  
+   Within R$^2$            & 0.15337         & 0.17009\\  
+   \midrule \midrule
+   \multicolumn{3}{l}{\emph{Clustered (grid\_cell) standard-errors in parentheses}}\\
+   \multicolumn{3}{l}{\emph{Signif. Codes: ***: 0.01, **: 0.05, *: 0.1}}\\
+\end{tabular}
+\par\endgroup
+
+

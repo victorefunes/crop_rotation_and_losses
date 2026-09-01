@@ -320,8 +320,11 @@ f_reg <- as.formula(sprintf("corn_yield ~ regime + %s + %s | %s",
                             paste(Wws, collapse = " + "),
                             paste(fe, collapse = " + ")))
 m_reg <- feols(f_reg, data = corn_df, vcov = ~ grid_cell)
-etable(m_reg, keep = c("regime", ws, Wws), dict = regime_dict, tex = TRUE,
-       file = paste0(tab_dir, "slx_corn_regime.tex"), replace = TRUE)
+etable(m_reg, keep = "^corn", 
+        dict = regime_dict, 
+        tex = TRUE,
+        file = paste0(tab_dir, "slx_corn_regime.tex"), 
+        replace = TRUE)
  
 ## ==========================================================================
 ## RESULTS
@@ -365,7 +368,48 @@ impacts_ws[, total_p := 2 * pnorm(-abs(total/total_se))]
 cat("\n== Regime levels vs baseline ==\n");  print(reg_levels, digits = 4)
 cat("\n== Pairwise regime gaps ==\n");        print(gaps,       digits = 4)
 cat("\n== Weather/soil impacts ==\n");        print(impacts_ws, digits = 4)
- 
+
+## (3) Pairwise regime gaps -> LaTeX table (\input-able; matches house style) ---
+##     writes tables/slx_corn_regime_gaps.tex : one row per regime pair, sorted
+##     by |gap|, estimate + significance stars, delta-method SE beneath.
+pretty_lab <- c(
+  corn_monoculture    = "Corn monoculture",
+  corn_soy_perfect    = "Perfect corn-soybean",
+  corn_soy_other      = "Other corn-soybean",
+  corn_soy_cereal     = "Corn-soybean-cereal",
+  corn_other_crops    = "Corn + forage/specialty",
+  corn_fallow_pasture = "Corn + fallow/pasture"
+)
+.star <- function(p) ifelse(p < .01, "$^{***}$",
+                     ifelse(p < .05, "$^{**}$",
+                     ifelse(p < .1,  "$^{*}$", "")))
+
+.gaps_body <- unlist(lapply(seq_len(nrow(gaps)), function(i) {
+  g <- gaps[i]
+  c(sprintf("   %s $-$ %s & %.3f%s\\\\",
+            pretty_lab[[g$regime_a]], pretty_lab[[g$regime_b]],
+            g$gap, .star(g$p)),
+    sprintf("   & (%.3f)\\\\", g$se))
+}))
+
+writeLines(c(
+  "",
+  "\\begingroup",
+  "\\centering",
+  "\\begin{tabular}{lc}",
+  "   \\tabularnewline \\midrule \\midrule",
+  "   Contrast & Difference (bu/acre)\\\\",
+  "   \\midrule",
+  .gaps_body,
+  "   \\midrule \\midrule",
+  "   \\multicolumn{2}{l}{\\emph{Delta-method standard errors, 25\\,km grid-cell clustered, in parentheses}}\\\\",
+  "   \\multicolumn{2}{l}{\\emph{Signif. Codes: ***: 0.01, **: 0.05, *: 0.1}}\\\\",
+  "\\end{tabular}",
+  "\\par\\endgroup",
+  ""
+), paste0(tab_dir, "slx_corn_regime_gaps.tex"))
+cat("wrote ", paste0(tab_dir, "slx_corn_regime_gaps.tex"), "\n", sep = "")
+
 ## ==========================================================================
 ## CHECK (RESOLVED): the hybrid is DEGENERATE -> regime-only is the answer.
 ## ==========================================================================
@@ -395,16 +439,18 @@ cat("\n== Weather/soil impacts ==\n");        print(impacts_ws, digits = 4)
 ## The block below is kept ONLY to reproduce the failure for the record; it is
 ## NOT a reported specification. Note the ~51 SEs and the halved Observations.
 varying <- c("corn_soy_other","corn_soy_cereal","corn_fallow_pasture","corn_other_crops")
+
 corn_df[, regime_v := factor(fifelse(as.character(regime) %in% varying,
                                      as.character(regime), NA_character_))]
+regime_dict_v <- setNames(levels(corn_df$regime_v), paste0("regime_v", levels(corn_df$regime_v)))                                     
 f_hyb <- as.formula(sprintf("corn_yield ~ regime + regime_v:RCI + %s + %s | %s",
                             paste(ws, collapse = " + "),
                             paste(Wws, collapse = " + "),
                             paste(fe, collapse = " + ")))
 m_hyb <- feols(f_hyb, data = corn_df, vcov = ~ grid_cell)
-etable(m_reg, m_hyb, keep = c("regime", "RCI"),
-       headers = c("regime-only (REPORTED)", "hybrid (DEGENERATE: SE~51, n halved)"),
-       dict = regime_dict, tex = TRUE,
+etable(m_reg, m_hyb, keep = c("^corn", "RCI"),
+       headers = c("regime-only", "hybrid"),
+       dict = c(regime_dict, regime_dict_v), tex = TRUE,
        file = paste0(tab_dir, "slx_corn_regime_hybrid.tex"), replace = TRUE)
 ## Do NOT report m_hyb or a Wald test on its slopes -- the SEs beneath it are
 ## unstable (level/slope collinearity), so any joint test is uninterpretable.
@@ -423,7 +469,7 @@ f_ctrl <- as.formula(sprintf(
   paste(ws, collapse=" + "), paste(Wws, collapse=" + "),
   paste(fe, collapse=" + ")))
 m_ctrl <- feols(f_ctrl, data = corn_df, vcov = ~ grid_cell)
-etable(m_reg, m_ctrl, keep = "regime",
+etable(m_reg, m_ctrl, keep = "^corn",
        headers = c("baseline", "+ land-quality controls"),
        dict = regime_dict, tex = TRUE,
        file = paste0(tab_dir, "slx_corn_regime_ctrl.tex"), replace = TRUE)

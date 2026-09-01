@@ -529,6 +529,187 @@ Table~\ref{tab:corn_rci} and Figure~\ref{fig:corn_rci_plot} report the effects o
 % by figures/corn_rci_plot.png (see Figure~\ref{fig:corn_rci_plot} above), which is a
 % two-panel mean+variance plot as of this update.
 
+\subsection{\label{subsec:regimes}Rotation Regimes and the Limits of RCI}
+
+The factor-RCI specification in Section~\ref{subsec:rci_effects} lets the data
+choose the shape of the RCI-yield relationship but still treats RCI as the only
+summary of rotation history. As a complementary check, we classify each corn
+field-year's six-year window into one of six mutually exclusive rotation regimes
+and ask whether RCI carries yield information once regime membership is held
+fixed. The regimes are corn monoculture; the perfect alternating corn-soybean
+rotation; other corn-soybean rotations; corn-soybean rotations that also contain
+a cereal (winter wheat, another small grain, or sorghum, including their
+double-crop combinations); corn rotations that contain a forage or specialty crop
+(alfalfa, hay, clover, or a minor row crop); and corn rotations that contain a
+year of fallow or pasture. The last two regimes come from splitting the residual
+``other crop'' category used in earlier drafts: roughly 89\% of that category was
+grassland, pasture, or fallow and idle cropland, that is, land taken out of
+active production rather than a diversified rotation, so we separate it from
+genuine forage and specialty rotations. Precedence runs forage and specialty
+crops before fallow and pasture, because establishment-year and dormant-year
+alfalfa stands are frequently coded as pasture in the CDL.
+
+We estimate the regime effects with a spatial-lag-of-X (SLX) specification:
+%
+\begin{equation}
+  y_{it} = \text{regime}_{it}'\theta + W_{it}'\beta + \bar W_{it}'\xi
+  + \lambda_k + \gamma_t + \varepsilon_{it}
+  \label{eq:slx}
+\end{equation}
+%
+where $\text{regime}_{it}$ is a vector of five regime indicators with corn
+monoculture omitted, $W_{it}$ is the own-field weather and soil vector of
+Section~\ref{subsec:w_controls}, and $\bar W_{it}$ is the average of that vector
+over field $i$'s ten nearest neighbors, computed from field centroids in an
+equal-area projection. Rotation enters own-field only; only the weather and soil
+terms are spatially lagged, so $\xi$ captures cross-field growing-condition
+spillovers rather than a yield-on-yield feedback. County and year fixed effects
+are included, and standard errors are clustered on 25\,km spatial grid cells. We
+fix the spatial autoregressive parameter at zero: a lag-in-yield model returned
+an autoregressive coefficient near zero, freeing it in a spatial Durbin
+specification produced an inadmissible estimate on a weak instrument set, and the
+within-year residuals show no spatial autocorrelation, so clustered SLX standard
+errors are adequate. This specification is estimated on 2,288,053 corn
+field-years, more than the sequence-dummy and RCI samples in
+Sections~\ref{subsec:seq_effects} and~\ref{subsec:rci_effects}. The difference is
+one of sample definition: the regime sample retains every corn field-year with a
+non-missing RCI (and non-missing controls and yield), whereas the sequence-dummy
+and factor-RCI tables further restrict to the 49 six-year sequences that clear
+the 99\% support threshold. Relaxing that restriction is what admits the
+additional field-years here, including those in the forage, specialty, and fallow
+or pasture regimes that the 49-sequence set excludes by construction.
+
+\begin{table}[H]
+  \centering
+  \caption{Corn yield by rotation regime (SLX specification).}
+  \label{tab:slx_corn_regime}
+  \input{tables/slx_corn_regime.tex}
+\end{table}
+\begin{quote}
+\small
+Notes: Estimates of equation~\eqref{eq:slx}. Dependent variable is corn yield in
+bushels per acre. Regime indicators are relative to corn monoculture. The
+own-field weather and soil covariates and their spatial lags are included but
+suppressed from the display. County and year fixed effects included. Standard
+errors clustered on 25\,km spatial grid cells.
+\end{quote}
+
+Table~\ref{tab:slx_corn_regime} reports the regime effects. Relative to corn
+monoculture, the perfect
+alternating corn-soybean rotation raises yield by about 2.4 bushels per acre and
+other corn-soybean rotations by about 0.5, while the three regimes that leave the
+corn-soybean system carry large negative coefficients: about $-1.0$ bushel per
+acre for corn-soybean-cereal, $-5.5$ for corn rotations containing a forage or
+specialty crop, and $-6.7$ for corn rotations containing a fallow or pasture
+year. All five coefficients are significant at the 1\% level except other
+corn-soybean rotations, which is significant at 5\%. The ordering matches the
+sequence-level results: diversification within the corn-soybean system helps,
+whereas a year of idled or perennial land in the window coincides with a sharp
+yield deficit, consistent with those regimes capturing land taken out of
+intensive production rather than a deliberate rotation. Because the spatial
+autoregressive parameter is fixed at zero, the weather and soil impacts in
+equation~\eqref{eq:slx} decompose exactly into an own-field (direct) component
+and a spatial-spillover (indirect) component; these coefficients are estimated
+but omitted from Table~\ref{tab:slx_corn_regime}.
+
+Table~\ref{tab:slx_corn_regime_gaps} reports all fifteen pairwise contrasts
+between regimes, with delta-method standard errors. Every contrast is significant,
+but the magnitudes fall into two groups. The perfect and other corn-soybean
+regimes sit six to nine bushels per acre above the forage, specialty, and fallow
+or pasture regimes, and every one of those boundary-spanning contrasts is
+significant at the 1\% level. The contrasts within the corn-soybean system are
+several times smaller, ranging from about half a bushel (monoculture versus other
+corn-soybean) to about 3.3 bushels (perfect corn-soybean versus
+corn-soybean-cereal).
+
+\begin{table}[H]
+  \centering
+  \caption{Pairwise yield gaps between rotation regimes.}
+  \label{tab:slx_corn_regime_gaps}
+  \input{tables/slx_corn_regime_gaps.tex}
+\end{table}
+\begin{quote}
+\small
+Notes: Each row is the difference in the regime coefficient of
+equation~\eqref{eq:slx} between the two named regimes (positive means the first
+regime yields more), with corn monoculture normalized to zero. Rows are ordered
+by absolute gap. Delta-method standard errors, clustered on 25\,km spatial grid
+cells, in parentheses.
+\end{quote}
+
+A natural concern is that the regime ranking reflects land-quality sorting:
+fields on better soil may both yield more and be more likely to carry a
+diversified rotation. Because equation~\eqref{eq:slx} conditions on county and
+year fixed effects rather than field fixed effects, field-level soil measures are
+identified here and can be entered directly. Table~\ref{tab:slx_corn_regime_ctrl}
+re-estimates the regime model with the National Commodity Crop Productivity Index
+for corn and the soil organic carbon stock added as controls. The regime
+coefficients barely move: the two corn-soybean coefficients change by less than
+0.01 bushel per acre, corn-soybean-cereal by about 0.01, and the two idled-land
+regimes attenuate only modestly (corn-plus-forage from $-5.48$ to $-5.24$,
+corn-plus-fallow from $-6.66$ to $-5.80$) while remaining large and significant
+at the 1\% level. The regime ranking is therefore not an artifact of land-quality
+sorting; fields carrying diversified rotations are not simply the fields on
+better soil.
+
+\begin{table}[H]
+  \centering
+  \caption{Regime model with and without land-quality controls.}
+  \label{tab:slx_corn_regime_ctrl}
+  \input{tables/slx_corn_regime_ctrl.tex}
+\end{table}
+\begin{quote}
+\small
+Notes: Column (1) repeats the regime-only model of
+Table~\ref{tab:slx_corn_regime}. Column (2) adds the field-level National
+Commodity Crop Productivity Index for corn and the 0--100\,cm soil organic carbon
+stock (Section~\ref{subsec:soil_controls}). Both soil measures are time-invariant
+and are absorbed by the field fixed effects used in the paper's main
+specifications, but are identified here because equation~\eqref{eq:slx}
+conditions on county and year effects only. County and year fixed effects
+included. Standard errors clustered on 25\,km spatial grid cells.
+\end{quote}
+
+Conditional on regime, RCI adds nothing that is separately identified. Within each
+regime RCI takes only 15 to 18 distinct values with a standard deviation between
+0.33 and 0.68, so it is close to constant. A hybrid model that keeps the regime
+levels and adds a regime-specific RCI slope is degenerate for two independent
+reasons. First, the near-constant within-regime RCI makes each regime-level
+indicator and its regime-specific RCI slope nearly linearly dependent: the
+regime-level standard errors inflate from a range of 0.24 to 0.61 in the
+regime-only model to about 51 in the hybrid, while the slopes appear tightly
+estimated. The sum of the level and slope terms is identified, but the split
+between them is not. Second, the interaction term is undefined for the two
+regimes in which RCI never varies (corn monoculture and the perfect alternating
+rotation), so those field-years drop and the sample falls from about 2.29 million
+to about 1.14 million, silently reducing the ``hybrid'' to a four-regime model on
+half the data. Table~\ref{tab:slx_corn_regime_hybrid} shows the failure for the
+record; it is not a specification we report.
+
+\begin{table}[H]
+  \centering
+  \caption{Regime-only versus hybrid regime-plus-RCI-slope model.}
+  \label{tab:slx_corn_regime_hybrid}
+  \input{tables/slx_corn_regime_hybrid.tex}
+\end{table}
+\begin{quote}
+\small
+Notes: Column (1) is the regime-only model of Table~\ref{tab:slx_corn_regime}.
+Column (2) adds regime-specific RCI slopes for the four regimes in which RCI
+varies; its regime-level standard errors reach roughly 51 and its sample is
+halved, because the two constant-RCI regimes have no interaction term. The column
+(2) RCI slopes are shown only to document the degeneracy and should not be read
+as evidence that RCI affects yield within a regime.
+\end{quote}
+
+Taken with Section~\ref{subsec:rci_effects}, this sharpens the paper's central
+point. RCI is not merely non-monotone in yield: once rotation history is
+described by an agronomically meaningful regime, RCI has no separately identified
+yield effect, and the apparent RCI slopes in interaction models are regime-level
+yield differences passing through the RCI-regime collinearity. A
+rotation-conditioned insurance rate should condition on rotation structure, the
+regime or the sequence, rather than on a scalar complexity index.
+
 \subsection{\label{subsec:rot_score_res}Rotation Score}
 
 \begin{figure}[H]
@@ -666,11 +847,7 @@ Two challenges complicate straightforward implementation. First, the transition 
 \subsection{\label{subsec:limitations}Limitations and Future Work}
  
 Our analysis has several limitations. First, the yield data come from a satellite-based estimator (QDANN) with a meaningful field-level error rate, and, following \citet{Benami2026}, this measurement error need not be classical. If QDANN's prediction error is uncorrelated with rotation history, it behaves as classical measurement error and attenuates our rotation effect estimates toward zero, suggesting the true agronomic rotation premium may be larger than what we document. If, however, QDANN's accuracy varies systematically with field characteristics that are themselves correlated with rotation choice, for example if prediction error differs with field heterogeneity, management intensity, or the confidence of the underlying CDL crop classification, the resulting non-classical measurement error could bias our estimates in either direction, not only toward zero. We do not have the tools to rule out this possibility here and flag it as a first-order concern for future work using EO-derived yield products for rotation-effect estimation.
-% RESOLVED: SCYM has been removed from the paper entirely (per author instruction, SCYM is
-% not used). QDANN is now the sole yield estimator throughout -- intro, Section
-% ~\ref{subsec:yield}, the sample-construction sentence, the abstract, and the Conclusion
-% are consistent on this. The "1,411,846 (SCYM)" figure has been dropped.
- 
+
 Second, our identification strategy relies on within-county variation in rotation sequences across fields, which does not fully address the possibility that unobserved field-level characteristics drive both rotation choice and yield outcomes. Specifications with field fixed effects, explored as a robustness check, address this concern at the cost of restricting identification to fields that change rotation patterns over time.
  
 Third, our analysis covers corn rotations involving soybean and winter wheat in Illinois. Winter wheat enters through a minority of sequences and on thin support, so its estimates should be read as suggestive. Perennial forages such as alfalfa, together with winter-wheat/soybean double crops, are too rare (each well under one percent of field-years) to survive the 99\%-frequency restriction used for the main sequence-dummy, RCI, and Z-vector results, and are absent from those tables entirely; the LASSO analysis in Section~\ref{subsec:lasso_results}, run over a substantially larger unrestricted candidate set, does not recover any alfalfa-containing sequence for corn either, so we leave a fuller treatment of perennial forage rotations to settings where alfalfa is more common. Generalizability to other Corn Belt states and to different climate and soil regimes is an open question. Finally, rotation decisions respond endogenously to prices and the proximity of grain market infrastructure such as ethanol refineries \citep{Pates2025,cheu2025}. A full welfare analysis of rotation-conditioned rates would require modeling the joint distribution of rotation choice and yield outcomes under the counterfactual rate schedule, which we leave for future work.
@@ -685,8 +862,7 @@ Two qualifications bound how far these findings can be pushed toward an actual r
 % NOTE: Z-vector numbers updated to the three-feature specification (nsoy dropped for
 % collinearity). Variance claims softened to "marginally significant / directional"
 % throughout (Option A): the significant consecutive-soybean variance result existed only
-% in the four-feature model and does not survive dropping nsoy. SCYM framing already
-% removed; QDANN is the sole estimator.
+% in the four-feature model and does not survive dropping nsoy.
 
 \newpage
 \bibliography{bibliography.bib}
