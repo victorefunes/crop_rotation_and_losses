@@ -198,25 +198,16 @@ Figure~\ref{fig:corn_yield_map} shows the spatial distribution of QDANN corn yie
 Field-level crop histories come from the USDA Cropland Data Layer (CDL), an annual raster product produced by NASS that classifies each 30-meter pixel into a crop or land-cover category using satellite imagery and agricultural survey reference data. CDL has been available annually since 2008 for the full contiguous United States and since 2003 for Illinois. We use annual CDL data from 2003 to 2022 for Illinois, providing up to 20 years of rotation history for each field.
 
 For each field-pixel and outcome year $t$, we construct a six-year rolling rotation sequence by recording the CDL-classified crop in each of years $t-1$ through $t-6$. Using the CDL numeric codes, we reclassify each year into one of three rotation crops: corn (code 1), soybean (code 5), and winter wheat (code 24). All remaining categories are treated as ``other.'' We restrict the analysis to field-year observations satisfying three conditions: corn is the outcome crop in year $t$; the six-year history contains only corn, soybean, or winter wheat, with no years classified as other crops, fallow, or non-agricultural land cover; and the field appears in at least two consecutive years in the panel after singleton removal. To keep the sequence space tractable and well-supported, we further retain only the 49 distinct six-year sequences that together account for approximately 99\% of qualifying field-years, dropping rarer sequences each observed in a negligible share of fields. After these restrictions, the qualifying corn sample contains 1,796,806 field-year observations for QDANN. Dropping the further 10,945 field-years with missing vapor pressure deficit leaves 1,785,861, and we estimate every field-level corn model---the sequence-effect, RCI, Just--Pope moment, Z-vector, and vapor-pressure-deficit specifications---on this common sample so that coefficients are comparable across tables.
-% RESOLVED: corn sample sizes now reconcile into two figures:
-%   - 1,796,806 -- qualifying QDANN sample before the missing-VPD filter.
-%   - 1,785,861 -- common estimation sample for ALL field-level corn tables in the current
-%     re-run: corn_rot, corn_rci, corn_jp_moments, corn_jp_var, corn_jp_skew, corn_zvector
-%     (folded into zvector.tex), corn_rot_vpd, corn_rci_vpd, corn_rci_jp. The 10,945-obs
-%     difference is exactly the field-years dropped for missing vapor pressure deficit.
-%   - 1,799,074 -- unrestricted candidate pool, corn_lasso only.
-% STILL TO DO: re-check the soy-side tables against these (the earlier soy figures, e.g.
-% soy_lasso N = 419,886 vs a full soy sample, predate this re-run and should be re-pulled).
 
 We characterize rotation histories in two complementary ways. The first is the full sequence of crop codes over the six-year window. All retained sequences end in corn by the outcome restriction and enter the corn yield regressions as indicators relative to corn monoculture (coded $C-C-C-C-C-C$), giving 48 non-monoculture sequence effects; of these, 31 are pure corn--soybean sequences and 17 contain at least one winter-wheat year. We refer to the latter as the corn-soybean-wheat system and separate the two systems in the sequence-effect figures. The second characterization uses the RCI of \citet{socolar2021}, described in Section~\ref{subsec:rci}.
 
 Two coding choices deserve note. First, winter wheat enters as a rotation-history covariate rather than as a modeled outcome: corn and soybean remain the outcome crops, and wheat appears only in the six-year predecessor window. Second, we initially considered extending the rotation set to alfalfa and to the winter-wheat/soybean double crop, both of which are agronomically distinct (alfalfa is a perennial nitrogen-fixing forage). In the Illinois sample, each accounts for well under one percent of field-years and does not appear in any of the 49 sequences clearing the 99\% support threshold used for the main sequence-dummy, RCI, and Z-vector tables, so we restrict those analyses to corn, soybean, and winter wheat. The LASSO analysis in Section~\ref{subsec:lasso_results}, which considers a substantially larger unrestricted candidate set, does not recover any alfalfa-containing sequence for corn, consistent with alfalfa being too rare in this sample to identify a corn-side effect.
 
 \subsection{\label{subsec:w_controls}Weather Controls}
-Monthly precipitation totals, vapor pressure deficit (VPD), and a soil moisture index are derived from GRIDMET \citep{Abatzoglou2013}, which is available at a spatial resolution of approximately 4 kilometers. We aggregate each variable to monthly totals or means for June, July, and August. Following \citet{SchlenkerRoberts2009}, we replace monthly mean temperature with growing degree days (GDD) accumulated between 8\textdegree C and 29\textdegree C, and extreme degree days (EDD) accumulated above 29\textdegree C. Climate water deficit data come from TerraClimate \citep{Abatzoglou2018}.
+We derive monthly precipitation totals, vapor pressure deficit (VPD), and a soil moisture index from GRIDMET \citep{Abatzoglou2013}, available at a spatial resolution of approximately 4 kilometers. We aggregate each variable to monthly totals or means for June, July, and August. Following \citet{SchlenkerRoberts2009}, we replace monthly mean temperature with growing degree days (GDD) accumulated between 8\textdegree C and 29\textdegree C, and extreme degree days (EDD) accumulated above 29\textdegree C. Climate water deficit data come from TerraClimate \citep{Abatzoglou2018}.
 
 \subsection{\label{subsec:soil_controls}Soil Controls}
-Soil characteristics come from gSSURGO, produced by the USDA Natural Resources Conservation Service at 30-meter resolution. We extract three field-level measures: the National Commodity Crop Productivity Index (NCCPI), root-zone available water storage (AWC), and soil organic carbon stock (SOC) in the 0-100-centimeter depth zone. All three are field-level and effectively time-invariant, and are not separately identified once county fixed effects and the monthly soil-moisture controls are included; we therefore drop them from the preferred specification and retain the monthly soil-moisture terms. Figure~\ref{fig:nccpi_corn_map} shows the spatial distribution of NCCPI across Illinois.
+Soil characteristics come from gSSURGO, produced by the USDA Natural Resources Conservation Service at 30-meter resolution. We extract three field-level measures: the National Commodity Crop Productivity Index (NCCPI), root-zone available water storage (AWC), and soil organic carbon stock (SOC) in the 0-100-centimeter depth zone. All three are field-level and effectively time-invariant, and we do not identify them separately once county fixed effects and the monthly soil-moisture controls are included; we therefore drop them from the preferred specification and retain the monthly soil-moisture terms. Figure~\ref{fig:nccpi_corn_map} shows the spatial distribution of NCCPI across Illinois.
 
 \subsection{\label{subsec:smaple_const}Sample Construction and Summary Statistics}
 We construct the estimation sample by merging the QDANN yield raster with CDL rotation sequences, GRIDMET and TerraClimate weather covariates, and gSSURGO soil variables at the 30-meter pixel level. The qualifying sample comprises 1,796,806 field-year observations; dropping field-years with missing vapor pressure deficit leaves 1,785,861, the common sample on which all field-level corn regressions reported below are estimated.
@@ -675,29 +666,9 @@ parentheses. $^{***}p<0.01$, $^{**}p<0.05$, $^{*}p<0.10$.
 % re-estimate under a common FE structure so the sequence coefficients are comparable across
 % tables.
 
-Table~\ref{tab:corn_rot_vpd} augments the sequence-mean specification with
-explicit growing-season weather terms, allowing rotation and drought effects to
-be read from a single model. Two patterns are clear. First, the drought bins are
-negative and increase in magnitude with severity: a somewhat dry July lowers corn
-yield by 1.29 bushels per acre and a dry July by 1.88 bushels per acre, both
-relative to a normal July and both statistically significant. Second, the
-month-specific VPD terms are not uniformly signed: July VPD carries a negative
-coefficient while June and August VPD enter positively. This sign pattern is
-consistent with the agronomy of corn: July spans the silking and pollination
-window, when high atmospheric moisture demand is most damaging, whereas moderate
-VPD earlier and later in the season need not depress yields.
+Table~\ref{tab:corn_rot_vpd} augments the sequence-mean specification with explicit growing-season weather terms, allowing rotation and drought effects to be read from a single model. Two patterns are clear. First, the drought bins are negative and increase in magnitude with severity: a somewhat dry July lowers corn yield by 1.29 bushels per acre and a dry July by 1.88 bushels per acre, both relative to a normal July and both statistically significant. Second, the month-specific VPD terms are not uniformly signed: July VPD carries a negative coefficient while June and August VPD enter positively. This sign pattern is consistent with corn agronomy: July spans the silking and pollination window, when high atmospheric moisture demand is most damaging, whereas moderate VPD earlier and later in the season need not depress yields.
 
-The rotation-sequence coefficients retain the ordering documented in
-Section~\ref{subsec:seq_effects}: sequences combining a recent soybean harvest
-with winter wheat (for example W-C-C-S-W-C and C-S-C-W-S-C) sit at the top of the
-table, while continuous-corn-adjacent sequences (C-S-C-C-C-C, S-C-C-C-C-C,
-S-S-C-C-C-C) carry negative and significant coefficients. That this ordering
-survives the inclusion of explicit weather controls indicates the rotation
-effects are not merely proxying for cross-field differences in drought exposure.
-For insurance rating, the joint result is that drought risk and rotation history
-enter corn yields through distinct channels: a rotation-conditioned rate would
-need to price the sequence effect on top of, rather than as a substitute for, the
-weather-driven component of yield risk.
+The rotation-sequence coefficients retain the ordering documented in Section~\ref{subsec:seq_effects}: sequences combining a recent soybean harvest with winter wheat (for example W-C-C-S-W-C and C-S-C-W-S-C) sit at the top of the table, while continuous-corn-adjacent sequences (C-S-C-C-C-C, S-C-C-C-C-C, S-S-C-C-C-C) carry negative and significant coefficients. That this ordering survives the inclusion of explicit weather controls indicates the rotation effects are not merely proxying for cross-field differences in drought exposure. For insurance rating, the joint result is that drought risk and rotation history enter corn yields through distinct channels: a rotation-conditioned rate would need to price the sequence effect on top of, rather than as a substitute for, the weather-driven component of yield risk.
 
 \subsection{\label{subsec:rci_vpd_effects}Rotational Complexity and Drought: Interaction Effects}
 
@@ -720,22 +691,7 @@ $^{**}p<0.05$, $^{*}p<0.10$.
 % buffering conclusion at extreme drought, consider a joint test (or a linear-in-RCI
 % interaction) rather than reading individual factor-level interaction coefficients.
 
-Table~\ref{tab:corn_rci_vpd} interacts factor RCI with the July drought bins to
-ask whether more complex rotations buffer corn yields against dry conditions, the
-field-level analogue of the resilience mechanism documented experimentally by
-\citet{bowles2020}. The evidence is mixed and, as elsewhere in this paper,
-non-monotone in RCI. Under \emph{somewhat dry} conditions the interaction terms
-are predominantly positive, and significantly so at several RCI levels (for
-example RCI = 2.00, 2.24, and 2.45), indicating that moderate rotational
-complexity partially offsets the roughly 2.7 bushel-per-acre penalty of a
-somewhat dry July. Under \emph{dry} conditions, however, the interactions change
-sign repeatedly across adjacent RCI levels and are individually imprecise, so the
-table does not support a clean claim that higher RCI buffers corn against severe
-drought. This pattern reinforces the paper's central message: RCI is too coarse
-and too non-monotone a summary of rotation structure to carry a stable
-interaction with weather risk, which is precisely the property that would be
-required for a linear RCI-based adjustment to crop insurance rates to be
-correctly specified.
+Table~\ref{tab:corn_rci_vpd} interacts factor RCI with the July drought bins to ask whether more complex rotations buffer corn yields against dry conditions, the field-level analogue of the resilience mechanism documented experimentally by \citet{bowles2020}. The evidence is mixed and, as elsewhere in this paper, non-monotone in RCI. Under \emph{somewhat dry} conditions the interaction terms are predominantly positive, and significantly so at several RCI levels (for example, RCI = 2.00, 2.24, and 2.45), indicating that moderate rotational complexity partially offsets the roughly 2.7 bushel-per-acre penalty of a somewhat dry July. Under \emph{dry} conditions, however, the interactions change sign repeatedly across adjacent RCI levels and are individually imprecise, so the table does not support a clean claim that higher RCI buffers corn against severe drought. This pattern reinforces the paper's central message: RCI is too coarse and too non-monotone a summary of rotation structure to carry a stable interaction with weather risk, which is precisely the property that would be required for a linear RCI-based adjustment to crop insurance rates to be correctly specified.
 
 \section{\label{sec:conclusions}Discussion and Conclusions}
 
