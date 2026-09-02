@@ -5,7 +5,6 @@
 \newtheorem*{remark}{Remark}
 \usepackage{graphicx}
 \usepackage{setspace}
-%\usepackage{pdflscape}\documentclass[12pt,letterpaper]{article}
 \usepackage{amsmath, amssymb, amsthm}
 %\newtheorem{theorem}{Proposition}
 \theoremstyle{remark}
@@ -22,14 +21,6 @@
 \usepackage{subcaption}
 \usepackage[colorlinks=true,linkcolor=black,urlcolor=blue,citecolor=black]{hyperref}
 \usepackage{float}
-% floatrow was previously loaded here for its \floatfoot command (used 14 times in this
-% document for figure notes), but floatrow explicitly refuses to coexist with the float
-% package: loading both causes floatrow to silently disable float and skip its
-% definition of the [H] "place exactly here" specifier. Since 17 floats in this document
-% rely on [H], and tables pulled in via \input (e.g. tables/soy_rot.tex, which specifies
-% [htbp] internally) need [H] forced onto them so they don't drift away from the
-% \begin{quote} notes that follow them in the source, float is kept and floatrow is
-% dropped. \floatfoot is redefined below as a plain macro so existing calls still work.
 \newcommand{\floatfoot}[1]{\par\vspace{2pt}\noindent#1}
 % Force every \begin{table}[...] -- including ones inside \input files -- to use [H]
 % instead of whatever placement they specify internally.
@@ -157,7 +148,7 @@ Because QDANN is a modeled quantity derived from a specific sensor, retrieval al
 \subsection{\label{subsec:rci}Rotational Complexity Index (RCI)}	
 We measure rotation diversity using the Rotational Complexity Index (RCI) developed by \citet{socolar2021}. The RCI was designed to capture both the richness and the turnover of crop sequences at the field level - two properties that prior diversity measures based on crop frequency or short observation windows failed to represent simultaneously. \citet{socolar2021} applied the index to 1.5 million fields across eight US Midwest states using six-year CDL sequences, establishing it as the standard field-scale measure of rotational complexity in the Corn Belt literature. Interest in a scalar summary of rotational diversity is motivated by long-term experimental evidence that diversification affects both yield levels and yield stability: \citet{bowles2020}, synthesizing multi-decade rotation trials across a continental precipitation gradient, find that more diverse maize rotations raise yields across all growing conditions and reduce yield losses under adverse conditions such as drought - precisely the mean and downside-risk margins that a rotation-conditioned insurance rate would seek to price.
 
-The RCI adapts the rotational diversity index of \citet{Tiemann2016}, which quantifies rotation diversity as a function of rotation length $l$ and number of crops $n$ $d = \sqrt{nl}$, to accommodate large-scale remotely sensed data where true rotation length is unobserved. Rather than trying to identify rotations of a known length, \citet{socolar2021} observe a fixed six-year sequence of crops in each field and replace rotation length with two species turnover terms. The resulting index is:
+The RCI adapts the rotational diversity index of \citet{Tiemann2016}, which quantifies rotation diversity as a function of rotation length $l$ and number of crops $n$, $d = \sqrt{nl}$, to accommodate large-scale remotely sensed data where true rotation length is unobserved. Rather than trying to identify rotations of a known length, \citet{socolar2021} observe a fixed six-year sequence of crops in each field and replace rotation length with two species turnover terms. The resulting index is:
 
 \begin{equation}
     RCI = \sqrt{n\times \dfrac{T_{1}+T_{2}+T_{p}}{2}}\label{eq:rci}
@@ -173,7 +164,7 @@ This nonlinearity directly challenges insurance rating. A linear premium adjustm
 
 \section{\label{sec:data}Data Description}
 
-Here we describe the panel construction in full, since it is the empirical foundation for the yield-effect estimates that follow.
+Here we describe the panel construction in full, since it underpins the yield-effect estimates that follow.
 
 \subsection{\label{subsec:yield}Yield Data}
 We use a satellite-based yield estimator, QDANN, derived from Landsat satellite imagery processed at 30-meter spatial resolution.
@@ -531,25 +522,9 @@ Table~\ref{tab:corn_rci} and Figure~\ref{fig:corn_rci_plot} report the effects o
 
 \subsection{\label{subsec:regimes}Rotation Regimes and the Limits of RCI}
 
-The factor-RCI specification in Section~\ref{subsec:rci_effects} lets the data
-choose the shape of the RCI-yield relationship but still treats RCI as the only
-summary of rotation history. As a complementary check, we classify each corn
-field-year's six-year window into one of six mutually exclusive rotation regimes
-and ask whether RCI carries yield information once regime membership is held
-fixed. The regimes are corn monoculture; the perfect alternating corn-soybean
-rotation; other corn-soybean rotations; corn-soybean rotations that also contain
-a cereal (winter wheat, another small grain, or sorghum, including their
-double-crop combinations); corn rotations that contain a forage or specialty crop
-(alfalfa, hay, clover, or a minor row crop); and corn rotations that contain a
-year of fallow or pasture. The last two regimes come from splitting the residual
-``other crop'' category used in earlier drafts: roughly 89\% of that category was
-grassland, pasture, or fallow and idle cropland, that is, land taken out of
-active production rather than a diversified rotation, so we separate it from
-genuine forage and specialty rotations. Precedence runs forage and specialty
-crops before fallow and pasture, because establishment-year and dormant-year
-alfalfa stands are frequently coded as pasture in the CDL.
+The factor-RCI specification in Section~\ref{subsec:rci_effects} lets the data choose the shape of the RCI-yield relationship but still treats RCI as the only summary of rotation history. As a complementary check, we classify each corn field-year's six-year window into one of six mutually exclusive rotation regimes and ask whether RCI carries yield information once we hold regime membership fixed. The regimes are corn monoculture; the perfect alternating corn-soybean rotation; other corn-soybean rotations; corn-soybean rotations that also contain a cereal (winter wheat, another small grain, or sorghum, including their double-crop combinations); corn rotations that contain a forage or specialty crop (alfalfa, hay, clover, or a minor row crop); and corn rotations that contain a year of fallow or pasture. The last two regimes come from splitting the residual ``other crop'' category used in earlier drafts: roughly 89\% of that category was grassland, pasture, or fallow and idle cropland, that is, land taken out of active production rather than a diversified rotation, so we separate it from genuine forage and specialty rotations. Precedence runs forage and specialty crops before fallow and pasture, because establishment-year and dormant-year alfalfa stands are frequently coded as pasture in the CDL.
 
-We estimate the regime effects with a spatial-lag-of-X (SLX) specification:
+We estimate the regime effects with a spatial-lag-of-X (SLX) specification \cite{Elhorst2014}:
 %
 \begin{equation}
   y_{it} = \text{regime}_{it}'\theta + W_{it}'\beta + \bar W_{it}'\xi
@@ -557,27 +532,8 @@ We estimate the regime effects with a spatial-lag-of-X (SLX) specification:
   \label{eq:slx}
 \end{equation}
 %
-where $\text{regime}_{it}$ is a vector of five regime indicators with corn
-monoculture omitted, $W_{it}$ is the own-field weather and soil vector of
-Section~\ref{subsec:w_controls}, and $\bar W_{it}$ is the average of that vector
-over field $i$'s ten nearest neighbors, computed from field centroids in an
-equal-area projection. Rotation enters own-field only; only the weather and soil
-terms are spatially lagged, so $\xi$ captures cross-field growing-condition
-spillovers rather than a yield-on-yield feedback. County and year fixed effects
-are included, and standard errors are clustered on 25\,km spatial grid cells. We
-fix the spatial autoregressive parameter at zero: a lag-in-yield model returned
-an autoregressive coefficient near zero, freeing it in a spatial Durbin
-specification produced an inadmissible estimate on a weak instrument set, and the
-within-year residuals show no spatial autocorrelation, so clustered SLX standard
-errors are adequate. This specification is estimated on 2,288,053 corn
-field-years, more than the sequence-dummy and RCI samples in
-Sections~\ref{subsec:seq_effects} and~\ref{subsec:rci_effects}. The difference is
-one of sample definition: the regime sample retains every corn field-year with a
-non-missing RCI (and non-missing controls and yield), whereas the sequence-dummy
-and factor-RCI tables further restrict to the 49 six-year sequences that clear
-the 99\% support threshold. Relaxing that restriction is what admits the
-additional field-years here, including those in the forage, specialty, and fallow
-or pasture regimes that the 49-sequence set excludes by construction.
+where $\text{regime}_{it}$ is a vector of five regime indicators with corn monoculture omitted, $W_{it}$ is the own-field weather and soil vector of Section~\ref{subsec:w_controls}, and $\bar W_{it}$ is the average of that vector over field $i$'s ten nearest neighbors, computed from field centroids in an equal-area projection. Rotation enters own-field only; only the weather and soil terms are spatially lagged, so $\xi$ captures cross-field growing-condition spillovers rather than a yield-on-yield feedback. We include county and year fixed effects, and we cluster standard errors at 25\, km spatial grid cells. We fix the spatial autoregressive parameter at zero: a lag-in-yield model returned an autoregressive coefficient near zero, freeing it in a spatial Durbin specification produced an inadmissible estimate on a weak instrument set, and the within-year residuals show no spatial autocorrelation, so clustered SLX standard errors are adequate. This specification is estimated on 2,288,053 corn field-years, more than the sequence-dummy and RCI samples in Sections~\ref{subsec:seq_effects} and~\ref{subsec:rci_effects}. The difference is
+one of sample definition: the regime sample retains every corn field-year with a non-missing RCI (and non-missing controls and yield), whereas the sequence-dummy and factor-RCI tables further restrict to the 49 six-year sequences that clear the 99\% support threshold. Relaxing that restriction is what admits the additional field-years here, including those in the forage, specialty, and fallow or pasture regimes that the 49-sequence set excludes by construction.
 
 \begin{table}[H]
   \centering
@@ -587,40 +543,12 @@ or pasture regimes that the 49-sequence set excludes by construction.
 \end{table}
 \begin{quote}
 \small
-Notes: Estimates of equation~\eqref{eq:slx}. Dependent variable is corn yield in
-bushels per acre. Regime indicators are relative to corn monoculture. The
-own-field weather and soil covariates and their spatial lags are included but
-suppressed from the display. County and year fixed effects included. Standard
-errors clustered on 25\,km spatial grid cells.
+Notes: Estimates of equation~\eqref{eq:slx}. The dependent variable is corn yield in bushels per acre. Regime indicators are relative to corn monoculture. We include own-field weather and soil covariates and their spatial lags but suppress them from the display. County and year fixed effects are included. Standard errors are clustered at the 25\, km spatial grid cell level.
 \end{quote}
 
-Table~\ref{tab:slx_corn_regime} reports the regime effects. Relative to corn
-monoculture, the perfect
-alternating corn-soybean rotation raises yield by about 2.4 bushels per acre and
-other corn-soybean rotations by about 0.5, while the three regimes that leave the
-corn-soybean system carry large negative coefficients: about $-1.0$ bushel per
-acre for corn-soybean-cereal, $-5.5$ for corn rotations containing a forage or
-specialty crop, and $-6.7$ for corn rotations containing a fallow or pasture
-year. All five coefficients are significant at the 1\% level except other
-corn-soybean rotations, which is significant at 5\%. The ordering matches the
-sequence-level results: diversification within the corn-soybean system helps,
-whereas a year of idled or perennial land in the window coincides with a sharp
-yield deficit, consistent with those regimes capturing land taken out of
-intensive production rather than a deliberate rotation. Because the spatial
-autoregressive parameter is fixed at zero, the weather and soil impacts in
-equation~\eqref{eq:slx} decompose exactly into an own-field (direct) component
-and a spatial-spillover (indirect) component; these coefficients are estimated
-but omitted from Table~\ref{tab:slx_corn_regime}.
+Table~\ref{tab:slx_corn_regime} reports the regime effects. Relative to corn monoculture, the perfect alternating corn-soybean rotation raises yield by about 2.4 bushels per acre and other corn-soybean rotations by about 0.5, while the three regimes that leave the corn-soybean system carry large negative coefficients: about $-1.0$ bushel per acre for corn-soybean-cereal, $-5.5$ for corn rotations containing a forage or specialty crop, and $-6.7$ for corn rotations containing a fallow or pasture year. All five coefficients are significant at the 1\% level except other corn-soybean rotations, which is significant at 5\%. The ordering matches the sequence-level results: diversification within the corn-soybean system helps, whereas a year of idled or perennial land in the window coincides with a sharp yield deficit, consistent with those regimes capturing land taken out of intensive production rather than a deliberate rotation. Because the spatial autoregressive parameter is fixed at zero, the weather and soil impacts in equation~\eqref{eq:slx} decompose exactly into an own-field (direct) component and a spatial-spillover (indirect) component; these coefficients are estimated but omitted from Table~\ref{tab:slx_corn_regime}.
 
-Table~\ref{tab:slx_corn_regime_gaps} reports all fifteen pairwise contrasts
-between regimes, with delta-method standard errors. Every contrast is significant,
-but the magnitudes fall into two groups. The perfect and other corn-soybean
-regimes sit six to nine bushels per acre above the forage, specialty, and fallow
-or pasture regimes, and every one of those boundary-spanning contrasts is
-significant at the 1\% level. The contrasts within the corn-soybean system are
-several times smaller, ranging from about half a bushel (monoculture versus other
-corn-soybean) to about 3.3 bushels (perfect corn-soybean versus
-corn-soybean-cereal).
+Table~\ref{tab:slx_corn_regime_gaps} reports all fifteen pairwise contrasts between regimes, with delta-method standard errors. Every contrast is significant, but the magnitudes fall into two groups. The perfect and other corn-soybean regimes sit six to nine bushels per acre above the forage, specialty, and fallow or pasture regimes, and every one of those boundary-spanning contrasts is significant at the 1\% level. The contrasts within the corn-soybean system are several times smaller, ranging from about half a bushel (monoculture versus other corn-soybean) to about 3.3 bushels (perfect corn-soybean versus corn-soybean-cereal).
 
 \begin{table}[H]
   \centering
@@ -630,27 +558,10 @@ corn-soybean-cereal).
 \end{table}
 \begin{quote}
 \small
-Notes: Each row is the difference in the regime coefficient of
-equation~\eqref{eq:slx} between the two named regimes (positive means the first
-regime yields more), with corn monoculture normalized to zero. Rows are ordered
-by absolute gap. Delta-method standard errors, clustered on 25\,km spatial grid
-cells, in parentheses.
+Notes: Each row is the difference in the regime coefficient of equation~\eqref{eq:slx} between the two named regimes (positive means the first regime yields more), with corn monoculture normalized to zero. Rows are ordered by absolute gap. Delta-method standard errors, clustered on 25\,km spatial grid cells, in parentheses.
 \end{quote}
 
-A natural concern is that the regime ranking reflects land-quality sorting:
-fields on better soil may both yield more and be more likely to carry a
-diversified rotation. Because equation~\eqref{eq:slx} conditions on county and
-year fixed effects rather than field fixed effects, field-level soil measures are
-identified here and can be entered directly. Table~\ref{tab:slx_corn_regime_ctrl}
-re-estimates the regime model with the National Commodity Crop Productivity Index
-for corn and the soil organic carbon stock added as controls. The regime
-coefficients barely move: the two corn-soybean coefficients change by less than
-0.01 bushel per acre, corn-soybean-cereal by about 0.01, and the two idled-land
-regimes attenuate only modestly (corn-plus-forage from $-5.48$ to $-5.24$,
-corn-plus-fallow from $-6.66$ to $-5.80$) while remaining large and significant
-at the 1\% level. The regime ranking is therefore not an artifact of land-quality
-sorting; fields carrying diversified rotations are not simply the fields on
-better soil.
+A natural concern is that the regime ranking reflects land-quality sorting: fields on better soil may both yield more and be more likely to carry a diversified rotation. Because equation~\eqref{eq:slx} conditions on county and year fixed effects rather than field fixed effects, field-level soil measures are identified here and can be entered directly. Table~\ref{tab:slx_corn_regime_ctrl} re-estimates the regime model with the National Commodity Crop Productivity Index for corn and the soil organic carbon stock added as controls. The regime coefficients barely move: the two corn-soybean coefficients change by less than 0.01 bushel per acre, corn-soybean-cereal by about 0.01, and the two idled-land regimes attenuate only modestly (corn-plus-forage from $-5.48$ to $-5.24$, corn-plus-fallow from $-6.66$ to $-5.80$) while remaining large and significant at the 1\% level. The regime ranking is therefore not an artifact of land-quality sorting; fields carrying diversified rotations are not simply the fields on better soil.
 
 \begin{table}[H]
   \centering
@@ -848,7 +759,7 @@ Two challenges complicate straightforward implementation. First, the transition 
  
 Our analysis has several limitations. First, the yield data come from a satellite-based estimator (QDANN) with a meaningful field-level error rate, and, following \citet{Benami2026}, this measurement error need not be classical. If QDANN's prediction error is uncorrelated with rotation history, it behaves as classical measurement error and attenuates our rotation effect estimates toward zero, suggesting the true agronomic rotation premium may be larger than what we document. If, however, QDANN's accuracy varies systematically with field characteristics that are themselves correlated with rotation choice, for example if prediction error differs with field heterogeneity, management intensity, or the confidence of the underlying CDL crop classification, the resulting non-classical measurement error could bias our estimates in either direction, not only toward zero. We do not have the tools to rule out this possibility here and flag it as a first-order concern for future work using EO-derived yield products for rotation-effect estimation.
 
-Second, our identification strategy relies on within-county variation in rotation sequences across fields, which does not fully address the possibility that unobserved field-level characteristics drive both rotation choice and yield outcomes. Specifications with field fixed effects, explored as a robustness check, address this concern at the cost of restricting identification to fields that change rotation patterns over time.
+Second, our identification strategy relies on within-county variation in rotation sequences across fields, which does not fully address the possibility that unobserved field-level characteristics drive both rotation choice and yield outcomes. Specifications with field fixed effects, explored as a robustness check, address this concern but restrict identification to fields that change rotation patterns over time.
  
 Third, our analysis covers corn rotations involving soybean and winter wheat in Illinois. Winter wheat enters through a minority of sequences and on thin support, so its estimates should be read as suggestive. Perennial forages such as alfalfa, together with winter-wheat/soybean double crops, are too rare (each well under one percent of field-years) to survive the 99\%-frequency restriction used for the main sequence-dummy, RCI, and Z-vector results, and are absent from those tables entirely; the LASSO analysis in Section~\ref{subsec:lasso_results}, run over a substantially larger unrestricted candidate set, does not recover any alfalfa-containing sequence for corn either, so we leave a fuller treatment of perennial forage rotations to settings where alfalfa is more common. Generalizability to other Corn Belt states and to different climate and soil regimes is an open question. Finally, rotation decisions respond endogenously to prices and the proximity of grain market infrastructure such as ethanol refineries \citep{Pates2025,cheu2025}. A full welfare analysis of rotation-conditioned rates would require modeling the joint distribution of rotation choice and yield outcomes under the counterfactual rate schedule, which we leave for future work.
 
