@@ -4,7 +4,7 @@
 ## Source this file at the top of each analysis script:
 ##   source("rotation_setup.R")
 ##
-## Rotation universe restricted to the 49 sequences covering ~99% of
+## Rotation universe restricted to the 29 sequences covering ~99% of
 ## field-years. Effective crops: corn (1), soybeans (5), winter wheat (24).
 ## ============================================================================
 
@@ -31,7 +31,8 @@ tab_dir <- "C:/Users/vf006/Box/crop_rotations_and_losses/tables/"
 fig_dir <- "C:/Users/vf006/Box/crop_rotations_and_losses/figures/"
 
 # ── Rotation patterns ─────────────────────────────────────────────────────────
-# The 49 observed six-year sequences that account for ~99% of field-years.
+# The 29 observed six-year sequences that account for ~99% of field-years
+# (28 non-monoculture: 23 corn-soybean, 5 corn-soybean-wheat; plus C monoculture).
 # Current year (last slot) is always corn (1); codes are CDL (1 corn, 5 soybeans,
 # 24 winter wheat). Kept as numeric-code strings so rot_crop needs no recoding;
 # readable labels are supplied by dict_corn below.
@@ -116,7 +117,7 @@ make_dict <- function(patterns, ref) {
   setNames(labels, paste0("rot_crop", labels))
 }
 
-# Corn analysis: reference = continuous corn. All 49 sequences end in corn.
+# Corn analysis: reference = continuous corn. All 29 sequences end in corn.
 dict_corn <- make_dict(corn_soy_patterns$pattern, ref = "1-1-1-1-1-1")
 
 # Soy analysis: build the same way from the soy script's own 99% list (sequences
@@ -147,9 +148,9 @@ dict_vpd <- c(
 # Features defined over the CDL codes so wheat and alfalfa contribute distinctly:
 #   legume years    = soybeans (5) + WinWht/Soy dbl (26) + alfalfa (36)
 #   small-grain yrs  = winter wheat (24) + WinWht/Soy dbl (26)
-# (26 and 36 don't occur in the 49-sequence set, so those codes are inert here;
+# (26 and 36 don't occur in the 29-sequence set, so those codes are inert here;
 # they keep the code correct if the sequence list is ever widened.)
-# Fit is on the 49 sequences — i.e. the observed set — so rot_index reflects the
+# Fit is on the 29 sequences — i.e. the observed set — so rot_index reflects the
 # rotations that actually occur. Sequences are weighted equally, not by frequency.
 
 legume_codes      <- c(5L, 26L, 36L)
@@ -208,7 +209,7 @@ print(summary(pca_rot)$importance[, 1:2])
 autoplot(pca_rot, data = rot_features,
          loadings = TRUE, loadings.label = TRUE, loadings.label.repel = TRUE) +
   labs(title   = "PCA of rotation features (corn, soy, wheat)",
-       caption = "Each point is one of the 49 sequences covering ~99% of field-years.") +
+       caption = "Each point is one of the 29 sequences covering ~99% of field-years.") +
   theme_bw() +
   theme(legend.position = "none") ->
   rot_pca_plot

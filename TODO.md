@@ -1,166 +1,186 @@
 # TODO — Challenges of Incorporating Rotation Information into Crop Insurance Rates
 
-Open issues only. Rebuilt 2026-09-02 (completed P0/sample-size items dropped;
-bibliography audit findings added as P0-bib and P4). Ordered by priority:
-blockers first, then table/figure regeneration, then inference, then prose
-verification, then bibliography.
+Open issues only. Rebuilt 2026-09-02 after the reference audit and the
+prose/table reconciliation pass on `just_pope_rotations.tex`.
+
+**Manuscript of record: `just_pope_rotations.tex`.** `rotations_insurance.tex` and
+`rotations_losses.tex` were moved to `old/` (commit `157fae0`); README and Makefile
+updated to match (P0, 2026-09-02).
+
+Ordered: build/spec blockers, then table/figure verification, then inference,
+then prose verification, then bibliography.
 
 ---
 
-## P0 — Blockers (build-breaking or committed-artifact contradictions)
+## P0 — Blockers
 
-### Undefined citations in `rotations_losses.tex`
-
-BibTeX keys are case-sensitive; the five below do not resolve and print as `(?)`
-with a `Citation undefined` warning. `just_pope_rotations.tex` and
-`rotations_insurance.tex` use the correct keys — only `rotations_losses.tex` is
-broken.
-
-- [ ] line 79  — `\citet{justPope1979}` → `\citet{Just1979}` (line 95 same file already uses `Just1979`)
-- [ ] line 95  — `\citep[QDANN;][]{ma2024}` → `{Ma2024}` (line 131 same file already uses `Ma2024`)
-- [ ] line 490 — `\citet{maQDANN2024}` → `\citet{Ma2024}` (figure source caption)
-- [ ] line 173 — `\citep{abatzoglou2013}` → `{Abatzoglou2013}` (GRIDMET)
-- [ ] line 173 — `\citep{abatzoglou2018}` → `{Abatzoglou2018}` (TerraClimate)
-
-### `rotations_losses.tex` is stale vs the current draft
-
-- [ ] Abstract (line 79) says panel covers **2009–2022**; intro (line 95) says
-      **2003–2022**. Reconcile to the actual sample window.
-- [ ] Abstract + line 97 say **"four" structural sequence features**, but line 97
-      lists three (recent soy, no consecutive soy, moderate total soy harvests),
-      and `TODO.md` / `just_pope_rotations.tex` describe the **three-feature**
-      Z-vector (nsoy dropped). Fix the count and the feature list.
-- [ ] Decide which file is the manuscript of record. README names
-      `rotations_losses.tex`; content suggests `just_pope_rotations.tex` is
-      current. Align the README and archive the other(s) under `old/`.
+- [x] **README pointed at the wrong manuscript.** Rewrote the stale sections of
+      `README.md` for the live corn-only, wheat-in-history, B=999, field-FE paper
+      and the `corn_analysis_full.R` pipeline: Overview, Repository structure,
+      Data, Running the analysis, Tables/figures inventory, Building the paper,
+      Econometric framework. `Makefile` target fixed (`main` → `just_pope_rotations`,
+      + extra `pdflatex` pass). Remaining README nits are cosmetic (exact runtime,
+      package list completeness). NOTE: `just_pope_rotations.tex` line ~665 has
+      `\bibliography{bibliography.bib}`; the `.bib` extension can trip a local
+      `bibtex` (looks for `bibliography.bib.bib`) — drop to `{bibliography}` if
+      `make` fails at the bibtex step (fine on Overleaf). Ties into the P4
+      apalike-vs-`mplainnat.bst` decision.
+- [x] **`corn_jp_skew.tex` scale mismatch — deleted.** The ~2000× factor is s³
+      (s ≈ 12.4 bu/acre): `corn_jp_skew.tex` reported the raw `resid_cube`
+      coefficients under a "standardized" caption. Standardized stage-3 skewness
+      with B=999 bootstrap SEs is already col (2) of `corn_jp_moments.tex` (the
+      table the manuscript uses), so `corn_jp_skew.tex` was pure redundancy.
+      `git rm`'d the file; removed `write_jp_skew_tex()` + its call from
+      `code/write_jp_tables.R`; updated the appendix comment in
+      `just_pope_rotations.tex`. (`corn_jp_var.tex` is likewise orphaned by the
+      live manuscript but left in place — out of P0 scope.)
 
 ---
 
-## P1 — Regenerate tables/figures on the AWC-free control vector, reconcile prose
+## P1 — Table/figure verification (regenerated artifacts vs prose)
 
-AWC (`rootznaws_mean`) was dropped from the R control vector. Re-run the
-table/figure exports in `corn_analysis_full.R`, then tick each and reconcile the
-prose numbers listed.
+Resolved in the reconciliation pass and not repeated here: `corn_rot`,
+`corn_rci` (regenerated + §5.5/§7 prose rewritten), `corn_jp_moments` /
+`corn_jp_var` / `corn_jp_skew` (bootstrap SEs, sane scale; §5.2 magnitudes and
+skewness values updated), `zvector`, `corn_lasso` (29 sequences, C/S/W labels),
+FE/clustering notes across all tables, RCI reference level (= 0), RCI value
+count/range.
 
-- [ ] `tables/corn_rot.tex` — regenerated Sep 1; 3/6 spot-checks pass
-      (S-S-C-S-S-C=5.94, C-S-C-S-S-C=4.82, C-S-C-C-C-C=−0.77). Still verify
-      S-C-C-C-C-C=−1.08, S-C-S-C-S-C=3.63, C-C-C-C-S-C=4.41 against prose.
-- [ ] `tables/corn_rci.tex` — table regen fixed (cols (1)/(2) no longer
-      byte-identical; headers "No controls" / "Weather and soil controls").
-      Sec 5.5 prose STILL STALE: it cites RCI 1.73 negative, 2.00–2.65 ≈
-      reference, positives at 2.74/4.24/4.74. Regenerated levels are 1.41, 1.73,
-      2, 2.24, 2.45, 2.65, 3, 3.24, 3.46 — no 2.74/4.24/4.74, and 2.24/2.45/2.65
-      are all significantly positive. Rewrite lines 525 and 837; clear inline
-      TODOs at 492/502/525.
-- [ ] `tables/corn_rot_vpd.tex` — verify Sec 5.8 (dry-July −1.29/−1.88; vpd terms).
-- [ ] `tables/corn_rci_vpd.tex` — verify Sec 5.9 (positive interactions at RCI 2.00/2.24/2.45).
-- [ ] `tables/corn_jp_moments.tex` (Appendix) — verify Sec 5.2 C-C-C-C-S-C
-      variance; resolve the "11.3 units" vs −44,885.8 scale mismatch and restate units.
-- [ ] `tables/corn_jp_skew.tex` (Appendix) — verify Sec 5.2 skewness values
-      (C-S-C-S-C-C −0.31, S-S-C-C-C-C −0.33, C-C-C-S-S-C −0.37).
-- [ ] `tables/corn_rci_jp.tex` (Appendix) — verify; confirm omitted RCI reference level.
-- [ ] `figures/corn_rot_plot.png`, `corn_var_plot.png`, `corn_jp_plot.png` —
-      regenerate from updated coefficients. Resolve `corn_jp_plot` x-axis
-      unit/scale (labeled bu/acre but spans ≈ −200/500).
-- [ ] `figures/corn_rci_plot.png` — regenerate alongside `corn_rci.tex`.
+Verified 2026-09-02 (P1 pass):
 
----
+- [x] `tables/corn_rot.tex` last three vs §5.1: S-C-C-C-C-C = −1.07 ✓;
+      S-C-S-C-S-C = 3.637 (prose said "3.63" → fixed to 3.64); C-C-C-C-S-C =
+      4.419 (prose said "4.41" → fixed to 4.42).
+- [x] `tables/corn_rot_vpd.tex` vs §5.8: orderings correct (W-C-C-S-W-C,
+      C-S-C-W-S-C top; C-S-C-C-C-C / S-C-C-C-C-C / S-S-C-C-C-C negative). VPD
+      signs correct (vpd_6 +54.9, vpd_7 −18.9, vpd_8 +11.7). Drought bins
+      −1.29 / −1.88, both n.s. ✓.
+- [x] `tables/corn_rci_vpd.tex` vs §5.9: MISMATCH fixed. Significant "somewhat
+      dry" interactions are RCI = 1.41 (1.42*) and 2.00 (1.61**) only; prose
+      named "2.00, 2.24, 2.45" — 2.24 (1.58, n.s.) and 2.45 (1.87, n.s.) are
+      not significant. Prose reworded; joint-test route still open (P2).
+- [x] `figures/corn_rot_plot.png`, `corn_var_plot.png`: consistent with current
+      coefficients — same commit (344d810) as `corn_rot.tex`, which is unchanged
+      since; both show the 28 sequences (23 CS + 5 CSW) with ordering/magnitudes
+      matching the table. Cosmetic: both have x/y axis labels swapped
+      ("Crop sequence" on the numeric axis).
+- [x] `figures/corn_jp_plot.png`: x-axis issue already resolved in the Sep-2
+      regen — axis spans ≈ −1 to 9 bu/acre (ticks 0/4/8), matches `corn_rot.tex`.
+      Stale inline TODO at the figure removed.
+- [x] `figures/score_yield.png`: y-axis shows 14 distinct rotation-score values
+      from −2.68 to +1.88 exactly as expected. ✓
 
-## P2 — Inference and specification consistency
-
-- [ ] **Bootstrap the three-feature variance/skew stages.** Inference of record
-      is the three-stage bootstrap (Sec 4.3), not analytic SEs. Re-confirm the
-      marginal `soy_gap` variance effect (p<0.10 analytic — may weaken) and the
-      skewness significance stars (Sec 5.2 note flags this) against bootstrap draws.
-- [ ] **FE inconsistency in VPD tables.** `corn_rot_vpd` / `corn_rci_vpd` use
-      field (`tile_field_ID`) FE; the main mean model (eq. 1) uses county (FIPS)
-      FE. Re-estimate under a common FE structure or state the difference so
-      sequence coefficients are comparable across tables.
-- [ ] **VPD double-counting check.** VPD models include both continuous July VPD
-      (`vpd_7`) AND the July dry-season bins. Confirm intended; if the bins
-      capture the nonlinearity, drop continuous `vpd_7` or state it holds the
-      within-bin slope.
-- [ ] **VPD coefficient scale/units.** `vpd_6/7/8` (≈ 54.9 / −18.9 / 11.7) are
-      large vs a bu/acre outcome. If VPD is in kPa, sanity-check per-kPa marginal
-      effects against the observed within-field VPD range before quoting any.
-- [ ] **RCI×Dry interactions.** Non-monotone and individually noisy
-      (RCI3×Dry=+5.36 vs RCI3.24×Dry=−5.32). Use a joint test or a linear-in-RCI
-      interaction rather than reading individual factor-level coefficients before
-      any drought-buffering claim.
+Sequence-count reconciliation (28, not 48/49): the regenerated artifacts use 28
+non-monoculture sequences (23 corn-soy + 5 corn-soy-wheat; 29 incl. monoculture,
+= `corn_soy_patterns` in `rotation_setup_wa.R`). Stale "48" / "31 + 17" /
+"49-sequence" prose corrected across `just_pope_rotations.tex` (lines 198, 200,
+202, 157, 297, 336, 391–392, 415, 466, 565) and the `rotation_setup_wa.R` header
+comments. (§7 "corn-soybean-only sample" wording is still P3.)
 
 ---
 
-## P3 — Prose verification (independent of nsoy/AWC)
+## P2 — Inference and specification
 
-- [ ] **RCI observed range on the 49-sequence wheat-inclusive sample** (Sec 2.4).
-      Prior corn-soy-only range was 1.41–4.74; recompute and state from the
-      current sample.
-- [ ] **"18 distinct RCI values"** (Sec 2.4 and Sec 4.1) — verify the count on
-      the current wheat-inclusive factor-RCI sample; may have changed.
-- [ ] **RCI reference level** — several tables show RCI=1.41 with its own
-      coefficient while the notes call it the omitted reference; Sec 2.4 says
-      monoculture has RCI=0 but the sample range excludes 0. Clarify which level
-      is actually omitted, consistently across `corn_rci`, `corn_rci_vpd`,
-      `corn_rci_jp`.
-- [ ] **`late_soy` sign convention** — the variable runs −6 to 0 (closer to 0 =
-      more recent soybean). Add one clause at its definition (Sec 4.1) so the
-      positive coefficient reads correctly (recency raises yield).
-- [ ] **`tables/corn_lasso.tex`** — confirm whether AWC was in the LASSO control
-      set (if so, re-run). Verify 29 selected / 28.4% / cv.glmnet agreement
-      (26/89.7%). Convert sequence labels from raw CDL numeric codes to the
-      C/S/W letter convention.
-- [ ] **`corn_summary_stats.tex`** — if regenerated on the current sample,
-      verify the bucket numbers (perfect 198.0/28.0; monoculture 187.2/33.2).
-- [ ] **Soy-side tables** — earlier soy figures (e.g. `soy_lasso` N=419,886)
-      predate the current re-run; re-pull against the current sample tiers.
+- [x] **Sequence-dummy variance + skewness bootstrap** — already done. Verified
+      2026-09-02: `corn_jp_moments.tex` col (1) SEs = sqrt(diag(`jp_vcov_var.txt`))
+      to 4 d.p. for all 28 sequences; col (2) SEs = sqrt(diag(`jp_vcov_skew.txt`))
+      rescaled by one 1/s³ factor (s ≈ 12.4 bu/acre). Re-derived stars match the
+      printed table exactly. Nothing weakens vs analytic: C-C-C-C-S-C variance
+      z = −1.67 (p = 0.095, still *); skewness C-C-C-S-S-C p = 0.062,
+      S-S-C-C-C-C p = 0.038, C-S-C-S-C-C p < 0.001; none significantly positive.
+      §5.2 inline NOTE rewritten to record this (was wrongly claiming analytic SEs).
+- [ ] **Z-vector (three-feature) variance bootstrap** — still analytic in
+      `zvector.tex` col (2) (`soy_gap` = −3.75*). Script written:
+      `code/zvector_bootstrap_var.R` (B = 999, same field-pairs design as
+      `just_pope_bootstrap_moments.R`); needs an R run. §5.3 intro prose reworded
+      so it no longer leans on the marginal spacing effect meanwhile.
+- [x] **VPD units** — confirmed kPa (from `corn_summary_stats.tex`: July `vpd_7`
+      mean ≈ 1.1, SD ≈ 0.65 kPa). §5.8 prose + inline NOTE updated: `vpd_7`
+      = −18.9/kPa ⇒ ≈ −12 bu/acre per raw SD (less after FE); `vpd_6` = +54.9/kPa
+      flagged as not structurally identified (June weather-block collinearity),
+      `vpd_8` likewise. Text now interprets only the July sign; no per-kPa
+      marginals quoted for June/August.
+- [ ] **VPD double-counting (spec decision)** — `corn_rot_vpd` / `corn_rci_vpd`
+      keep both continuous `vpd_7` (GRIDMET monthly mean) and the July bins (from
+      `vpdmax_7`). Prose now states `vpd_7` = within-bin slope, bins = threshold
+      shift. Alternative is to drop `vpd_7` and re-run those two tables — decide.
+- [x] **RCI × Dry interactions** — §5.9 prose (fixed in P1) no longer makes a
+      drought-buffering claim; it states only that the pattern is sign-flipping
+      and imprecise. Inline TODO downgraded to a NOTE: a formal joint Wald test
+      on the 9 RCI×Dry terms would upgrade "absence of evidence" to "evidence of
+      absence" but needs a `corn_rci_vpd` re-run to save the sub-vcov. Not a
+      blocker.
+
+---
+
+## P3 — Prose verification
+
+Resolved 2026-09-02 (P3 pass):
+
+- [x] **`late_soy` sign convention** (§4.2, Z-vector definition) — `late_soy` is
+      `-min(soy_pos)` in `corn_analysis_full.R` (~line 576): a non-positive integer
+      from −6 to 0, closer to 0 = more recent soybean, 0 for monoculture. Added a
+      clause at the $Z_{it}$ definition stating the coding and range and noting a
+      positive coefficient means greater soybean recency raises yield. The §5.7 /
+      §7 interpretations were already correct in sign.
+- [x] **`tables/corn_lasso.tex`** — AWC (`rootznaws_mean`) is NOT in the LASSO
+      control set. `corn_selection.r` sources `rotation_setup_wa.R`, whose
+      `all_controls` (→ `all_controls_cols`, passed as `controls=` to
+      `lasso_select_sequences`) is weather + GRIDMET soil-moisture only
+      (`pr/GDD/EDD/vpd/soil` for Jun–Aug); no gSSURGO soil vars. (`rootznaws_mean`
+      appears in `all_controls` only in `just_pope.r` line 117, a different
+      pipeline that does not write `corn_lasso.tex`.) No re-run needed. Counts
+      already reconciled: table has 29 sequence rows; stale "28 of 102" comment in
+      `corn_selection.r` line 187 is cosmetic.
+- [x] **`corn_summary_stats.tex`** — committed table (`eedf565`): monoculture
+      187.2 (33.2) ✓; perfect rotation 194.2 (31.1), not the 198.0 / 28.0 the
+      prose claimed; transitioning 33.5 is the highest SD of the three, not
+      monoculture's 33.2. §2.6 prose fixed to 194.2 / 31.1 and the "highest
+      variability" clause reworded to cover both monoculture and transitioning.
+      (Did not re-run the R pipeline; verified prose against the committed table.)
+- [x] **"corn-soybean-only sample"** — §7 (Conclusion) reworded: "a sample
+      dominated by corn-soybean rotations, with only five winter-wheat sequences
+      entering on thin support" (5 of 28, matching §3.2 / §5.1), and the follow-on
+      clause changed to "holds more broadly for rotations built around a third
+      crop" so it no longer implies wheat is absent.
 
 ---
 
 ## P4 — Bibliography
 
-Findings from the 2026-09-02 reference audit (`bibliography.bib` vs all
-`\cite*` calls, verified against published sources).
+From the 2026-09-02 reference audit (`bibliography.bib` vs all `\cite*` calls,
+verified against published sources). `Elhorst2014` has since been added and is
+resolved.
 
-### Factual errors in `bibliography.bib`
+Applied 2026-09-02 unless noted.
 
-- [ ] **`wu2025`** — `pages = {111--114}` and `number = {20}` are copy-paste
-      artifacts from the `shi2013` entry above it. Correct record: Wu, Davis &
-      Sohngen (2025), *Carbon Balance and Management* **20**, article **6**,
-      doi:10.1186/s13021-025-00293-5. Drop `number = {20}`, keep `volume = {20}`
-      / `issue = {1}`, set article number to `6`.
-- [ ] **`Benami2026`** — `year = {2026}` is wrong. arXiv:2510.05108 was posted
-      October **2025**. Change year to 2025.
+### Factual errors
 
-### Mislabeled keys (render OK, but the key name misstates the year)
+- [x] **`wu2025`** — dropped the copy-pasted `pages = {111--114}`; now
+      `volume = {20}`, `number = {1}`, `pages = {6}` (article number), added bare
+      `doi = {10.1186/s13021-025-00293-5}`.
+- [x] **`Benami2026`** — `year` → `2025`, added `month = {10}` (arXiv:2510.05108,
+      Oct 2025). Key left as `Benami2026`; `\cite` calls render "(2025)" now.
 
-- [ ] **`Gentry2015`** → paper is **2013** (*Agronomy Journal* 105(2):295–303).
-      `year` field is correct; rename key to `Gentry2013` and update the three
-      `\citep{Gentry2015}` calls (`just_pope_rotations.tex` / `rotations_insurance.tex`
-      / `rotations_losses.tex` line ~108/130/131).
-- [ ] **`Tiemann2016`** → paper is **2015** (*Ecology Letters* 18(8):761–771).
-      Rename key to `Tiemann2015` and update the `\citet{Tiemann2016}` call
-      (line ~160/161 in both JP drafts).
-- [ ] **`hennesy2006`** → author is Henne**ss**y; key drops an `s`. Uncited, so
-      low priority — fix if the entry is ever used.
+### Mislabeled keys
 
-### Coverage gaps
+- [x] **`Gentry2015` → `Gentry2013`** — key renamed; both `\citep` calls in
+      `just_pope_rotations.tex` updated.
+- [x] **`Tiemann2016` → `Tiemann2015`** — key renamed; `\citet` call updated.
+- [x] **`hennesy2006` → `hennessy2006`** — key fixed (uncited, no call to update).
 
-- [ ] **`USDA2015`** (CropScape / CDL) is defined but never `\cite`d. The CDL is
-      central to the data section (referenced only in prose). Add a `\cite` at
-      first mention of the Cropland Data Layer, or drop the entry.
-- [ ] Add the **Elhorst (2014)** BibTeX entry to `bibliography.bib`
-      (spatial-panel reference).
-- [ ] Unused entries carried only by `old.tex` (not in the build):
-      `won2024`, `aglasan2024`, `yu2024`, `ortiz_bobea2021`. Also unused:
-      `gammans2025`. Decide keep-for-later vs prune.
+### Coverage / style
 
-### Style nits (won't change output under `apalike`)
-
-- [ ] `Antle2010` — author `{Antle, john M.}` (lowercase "john").
-- [ ] `Cameron2015` — `month = {3u}` typo.
-- [ ] `doi = {https://doi.org/10.1111/...}` in `won2024`, `aglasan2024`,
-      `yu2024`, `Farmaha2016`, etc. — strip the URL prefix from the `doi` field.
-- [ ] All three `.tex` set `\bibliographystyle{apalike}`, but the repo ships
-      `mplainnat.bst` and the README cites it. Pick one.
-- [ ] `ortiz_bobea2021` is `@inbook` but uses `journal =` instead of
-      `booktitle =` for "Handbook of Agricultural Economics".
+- [x] **`USDA2015`** — `\citep[CDL;][]{USDA2015}` added at first CDL mention (§3.1).
+- [x] `Antle2010` — `john` → `John`.
+- [x] `Cameron2015` — `month = {3u}` → `{3}`.
+- [x] URL-prefixed `doi` fields — stripped `https://doi.org/` and
+      `https://dx.doi.org/` from all 22 entries.
+- [x] `ortiz_bobea2021` — `journal =` → `booktitle =`, added `publisher = {Elsevier}`.
+- [x] **Unused entries** — decision: keep all (`aglasan2024`, `won2024`,
+      `yu2024`, `ortiz_bobea2021`, `gammans2025`, `lobell2015`, `hennessy2006`).
+      Harmless; several are used by `old.tex`.
+- [x] **`apalike` vs `mplainnat.bst`** — decision: author-year, keep `apalike`.
+      Fixed the preamble inconsistency: natbib options
+      `[square,sort,comma,numbers]` → `[round,sort,comma,authoryear]`. `mplainnat.bst`
+      now unused (left in repo). In-text cites render as "Author (year)".

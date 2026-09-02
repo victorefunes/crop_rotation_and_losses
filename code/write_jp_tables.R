@@ -1,15 +1,20 @@
 # ==============================================================================
 # Export bootstrap Just-Pope stages to LaTeX tables matching corn_jp_var.tex
 # ------------------------------------------------------------------------------
-# Regenerates tables/corn_jp_var.tex and tables/corn_jp_skew.tex from a
-# boot_jp_moments() object, so the tables and the manuscript text rest on the
-# SAME (bootstrap) inference. Point estimates are the full-sample stage
-# coefficients; SEs and significance stars come from the bootstrap draws, NOT
-# from the analytic clustered vcov that fixest attaches to a single feols() fit.
+# Regenerates tables/corn_jp_var.tex from a boot_jp_moments() object, so the
+# table and the manuscript text rest on the SAME (bootstrap) inference. Point
+# estimates are the full-sample stage coefficients; SEs and significance stars
+# come from the bootstrap draws, NOT from the analytic clustered vcov that
+# fixest attaches to a single feols() fit.
 #
 #   format_jp_moment_tex()  pure string builder (no fixest dependency)
 #   write_jp_var_tex()      variance stage  -> tables/corn_jp_var.tex
-#   write_jp_skew_tex()     skewness stage  -> tables/corn_jp_skew.tex
+#
+# The stage-3 skewness table is NOT written here. The manuscript reports the
+# standardized skewness as column (2) of tables/corn_jp_moments.tex (written by
+# corn_analysis_full.R, already on bootstrap SEs). The old write_jp_skew_tex()
+# emitted tables/corn_jp_skew.tex on the RAW resid_cube scale (~s^3 larger) under
+# a "standardized" caption, so it was deleted (2026-09-02) rather than reconciled.
 #
 # IMPORTANT -- variance stage point estimates change from OLS to FGLS:
 #   The bootstrap stores the FGLS variance coefficients (coef(s2b)), which is the
@@ -128,18 +133,6 @@ write_jp_var_tex <- function(boot_obj,
   .emit_jp_tex(boot_obj$variance, fit, path, dep_label, caption, label, ...)
 }
 
-# ── Skewness stage -> tables/corn_jp_skew.tex ─────────────────────────────────
-write_jp_skew_tex <- function(boot_obj,
-                              fit  = boot_obj$fit_skew,
-                              path = paste0(jp_tab_dir, "corn_jp_skew.tex"),
-                              caption = paste("Stage 3 --- Corn yield conditional",
-                                              "skewness (standardized third moment,",
-                                              "bootstrap SE)"),
-                              dep_label = "resid\\_cube\\_std",
-                              label = "tab:corn_jp_skew", ...) {
-  .emit_jp_tex(boot_obj$skewness, fit, path, dep_label, caption, label, ...)
-}
-
 # ── First-stage (mean) bootstrap vcov -> tables/corn_jp_mean_vcov.rds ─────────
 # The mean-stage LaTeX table (tab:corn_jp_mean) is built elsewhere from the
 # analytic clustered SEs (those are already valid -- see the note at the top of
@@ -168,7 +161,6 @@ write_jp_mean_vcov <- function(boot_obj,
 
 # ── Usage (after boot_moments <- boot_jp_moments(...)) ───────────────────────
 # source("code/write_jp_tables.R")
-write_jp_skew_tex(boot_moments)                 # tables/corn_jp_skew.tex
 write_jp_var_tex(boot_moments)                  # tables/corn_jp_var.tex  (OLS->FGLS!)
 write_jp_mean_vcov(boot_moments)                # tables/corn_jp_mean_vcov.rds
 #
