@@ -206,14 +206,14 @@ Figure~\ref{fig:corn_yield_map} shows the spatial distribution of QDANN corn yie
 \subsection{\label{subsec:rot_seq}Crop History and Rotation Sequences}
 Field-level crop histories come from the USDA Cropland Data Layer (CDL), an annual raster product produced by NASS that classifies each 30-meter pixel into a crop or land-cover category using satellite imagery and agricultural survey reference data. CDL has been available annually since 2008 for the full contiguous United States and since 2003 for Illinois. We use annual CDL data from 2003 to 2022 for Illinois, providing up to 20 years of rotation history for each field.
 
-For each field-pixel and outcome year $t$, we construct a six-year rolling rotation sequence by recording the CDL-classified crop in each of years $t-1$ through $t-6$. Using the CDL numeric codes, we reclassify each year into one of three rotation crops: corn (code 1), soybean (code 5), and winter wheat (code 24). All remaining categories are treated as ``other.'' We restrict the analysis to field-year observations satisfying three conditions: corn is the outcome crop in year $t$; the six-year history contains only corn, soybean, or winter wheat, with no years classified as other crops, fallow, or non-agricultural land cover; and the field appears in at least two consecutive years in the panel after singleton removal. To keep the sequence space tractable and well-supported, we further retain only the 49 distinct six-year sequences that together account for approximately 99\% of qualifying field-years, dropping rarer sequences each observed in a negligible share of fields. After these restrictions, the qualifying corn sample contains 1,796,806 field-year observations for QDANN. Specifications that condition on weather, namely the sequence-effect and RCI regressions and the vapor-pressure-deficit models, exclude field-years with missing vapor pressure deficit and are therefore estimated on 1,785,861 observations, so the sample sizes in Tables~\ref{tab:corn_rot} and~\ref{tab:corn_rci} are slightly below the qualifying total.
-% TODO -- LARGELY RESOLVED: corn sample sizes now reconcile cleanly into three tiers, and
-% the differences are understood:
-%   - 1,796,806 (qualifying QDANN sample): corn_jp_var, corn_jp_skew, zvector -- no VPD conditioning.
-%   - 1,785,861 (weather/VPD-controlled): corn_rot, corn_rci, corn_rot_vpd, corn_rci_vpd --
-%     the 10,945-obs difference is exactly the field-years dropped for missing vapor pressure
-%     deficit. The prose in this section now states both figures.
-%   - 1,799,074 (unrestricted 102-sequence pool): corn_lasso.
+For each field-pixel and outcome year $t$, we construct a six-year rolling rotation sequence by recording the CDL-classified crop in each of years $t-1$ through $t-6$. Using the CDL numeric codes, we reclassify each year into one of three rotation crops: corn (code 1), soybean (code 5), and winter wheat (code 24). All remaining categories are treated as ``other.'' We restrict the analysis to field-year observations satisfying three conditions: corn is the outcome crop in year $t$; the six-year history contains only corn, soybean, or winter wheat, with no years classified as other crops, fallow, or non-agricultural land cover; and the field appears in at least two consecutive years in the panel after singleton removal. To keep the sequence space tractable and well-supported, we further retain only the 49 distinct six-year sequences that together account for approximately 99\% of qualifying field-years, dropping rarer sequences each observed in a negligible share of fields. After these restrictions, the qualifying corn sample contains 1,796,806 field-year observations for QDANN. Dropping the further 10,945 field-years with missing vapor pressure deficit leaves 1,785,861, and we estimate every field-level corn model---the sequence-effect, RCI, Just--Pope moment, Z-vector, and vapor-pressure-deficit specifications---on this common sample so that coefficients are comparable across tables.
+% RESOLVED: corn sample sizes now reconcile into two figures:
+%   - 1,796,806 -- qualifying QDANN sample before the missing-VPD filter.
+%   - 1,785,861 -- common estimation sample for ALL field-level corn tables in the current
+%     re-run: corn_rot, corn_rci, corn_jp_moments, corn_jp_var, corn_jp_skew, corn_zvector
+%     (folded into zvector.tex), corn_rot_vpd, corn_rci_vpd, corn_rci_jp. The 10,945-obs
+%     difference is exactly the field-years dropped for missing vapor pressure deficit.
+%   - 1,799,074 -- unrestricted candidate pool, corn_lasso only.
 % STILL TO DO: re-check the soy-side tables against these (the earlier soy figures, e.g.
 % soy_lasso N = 419,886 vs a full soy sample, predate this re-run and should be re-pulled).
 
@@ -228,7 +228,7 @@ Monthly precipitation totals, vapor pressure deficit (VPD), and a soil moisture 
 Soil characteristics come from gSSURGO, produced by the USDA Natural Resources Conservation Service at 30-meter resolution. We extract three field-level measures: the National Commodity Crop Productivity Index (NCCPI), root-zone available water storage (AWC), and soil organic carbon stock (SOC) in the 0-100-centimeter depth zone. All three are field-level and effectively time-invariant, and are not separately identified once county fixed effects and the monthly soil-moisture controls are included; we therefore drop them from the preferred specification and retain the monthly soil-moisture terms. Figure~\ref{fig:nccpi_corn_map} shows the spatial distribution of NCCPI across Illinois.
 
 \subsection{\label{subsec:smaple_const}Sample Construction and Summary Statistics}
-We construct the estimation sample by merging the QDANN yield raster with CDL rotation sequences, GRIDMET and TerraClimate weather covariates, and gSSURGO soil variables at the 30-meter pixel level. The qualifying sample comprises 1,796,806 field-year observations; dropping field-years with missing vapor pressure deficit leaves 1,785,861, the sample used wherever weather covariates enter the specification, while the Just--Pope moment and Z-vector models, which do not condition on VPD, use the full 1,796,806.
+We construct the estimation sample by merging the QDANN yield raster with CDL rotation sequences, GRIDMET and TerraClimate weather covariates, and gSSURGO soil variables at the 30-meter pixel level. The qualifying sample comprises 1,796,806 field-year observations; dropping field-years with missing vapor pressure deficit leaves 1,785,861, the common sample on which all field-level corn regressions reported below are estimated.
 
 \input{tables/corn_summary_stats.tex}
 \begin{minipage}{\textwidth}
@@ -468,7 +468,7 @@ The selected corn sequences show one clear pattern. Coefficients are consistentl
 \input{tables/zvector.tex}
 \begin{quote}
 \small
-Notes: Columns (1)-(2) report corn yield mean and variance effects, discussed below. Columns (1) and (2) are stage-1 and stage-2 (OLS on squared residuals) coefficients, respectively. Controls include monthly precipitation (quadratic), GDD, EDD, VPD, and soil moisture for June--August. County and year fixed effects included. Standard errors two-way clustered at field and year level. $^{***}p<0.01$, $^{**}p<0.05$, $^{*}p<0.10$.
+Notes: Columns (1)-(2) report corn yield mean and variance effects, discussed below. Columns (1) and (2) are stage-1 and stage-2 (OLS on squared residuals) coefficients, respectively. Controls include monthly precipitation (quadratic), GDD, EDD, VPD, and soil moisture for June--August. Field (tile\_field\_ID) and year fixed effects included. Standard errors two-way clustered at county and year level. $^{***}p<0.01$, $^{**}p<0.05$, $^{*}p<0.10$.
 \end{quote}
 Table~\ref{tab:zvector} reports the parsimonious parameterization of rotation effects in terms of three structural features of soybean placement within the six-year corn rotation window: recency, spacing, and consecutiveness.
 
@@ -479,8 +479,10 @@ The variance equation for corn is considerably weaker. None of the three feature
 % soy_gap, making its partial sign unstable across samples (it flipped between the
 % presentation-era corn-soy-only fit and the current wheat-inclusive fit). The three
 % retained features are near-orthogonal (|r|<0.17). soy_gap now carries the frequency
-% signal. Ensure tables/zvector.tex is regenerated as the three-feature model so the table
-% matches these prose numbers (late_soy 0.447, soy_gap 0.693, soy_cons 1.210).
+% signal. RESOLVED: tables/zvector.tex is the three-feature model (late_soy 0.447,
+% soy_gap 0.693, soy_cons 1.210; variance soy_gap -3.75, p<0.10), N = 1,785,861,
+% field + year FE, clustered at county + year. The redundant tables/corn_zvector.tex
+% was removed. Regenerated by code/corn_analysis_full.R (corn_z_s1 / corn_z_s2).
  
 \subsection{\label{subsec:rci_effects}Rotational Complexity Index Effects}
 
