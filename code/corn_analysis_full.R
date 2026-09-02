@@ -986,7 +986,6 @@ ggsave(paste0(fig_dir, "corn_rci_plot.png"), rci_plot,
  
 rm(corn_rci_jp_data, corn_rci_jp_s1, corn_rci_jp_s2, rci_plot_df, rci_plot); gc()
 
-
  
 # ── 7. FGLS + bootstrap — corn ────────────────────────────────────────────────
  
