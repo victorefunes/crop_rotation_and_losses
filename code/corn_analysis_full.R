@@ -459,10 +459,11 @@ etable(corn_rot_vpd,
        title    = "Effect of weather and rotation sequences on corn yields",
        label    = "tab:corn_rot_vpd",
        file     = paste0(tab_dir, "corn_rot_vpd.tex"))
+   
  
 etable(corn_rci_vpd,
        tex      = TRUE,
-       dict     = dict_vpd,
+       dict     = c(dict_rci, dict_vpd),
        drop     = c("pr_", "cGDD_", "EDD_", "soil_", "vpd_",
                     "rootznaws", "Constant"),
        placement = "H",
@@ -471,7 +472,7 @@ etable(corn_rci_vpd,
        fontsize = "scriptsize",
        title    = "RCI x drought interaction effects on corn yields",
        label    = "tab:corn_rci_vpd",
-       file     = paste0(tab_dir, "corn_rci_vpd.tex"))     
+       file     = paste0(tab_dir, "corn_rci_vpd.tex"))          
  
 #rm(corn_rot_vpd, corn_rci_vpd); 
 gc()
