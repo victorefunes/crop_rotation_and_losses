@@ -625,7 +625,7 @@ feols(fml_z_corn_var, data = corn_jp_data,
 #       rot_vpd     = corn_rot_vpd),
 #  file     = "D:/Crop data/corn_z_models.rds",
 #  compress = TRUE   
-#  # gzip -- the real fix for the original slowness was bzip2, not object size
+  # gzip -- the real fix for the original slowness was bzip2, not object size
 #)
  
 # ── 5. Just-Pope stage 2 — corn ───────────────────────────────────────────────
