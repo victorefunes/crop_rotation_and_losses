@@ -989,7 +989,9 @@ rm(corn_rci_jp_data, corn_rci_jp_s1, corn_rci_jp_s2, rci_plot_df, rci_plot); gc(
  
 # ── 7. FGLS + bootstrap — corn ────────────────────────────────────────────────
  
-source("just_pope_bootstrap_moments.R")
+#source("just_pope_bootstrap_moments.R")
+
+source("jp_boot_vcov.R")
  
 # ── 8. Spatial maps — corn ────────────────────────────────────────────────────
 # Figures: corn_yield_map, rci_map, nccpi_corn_map

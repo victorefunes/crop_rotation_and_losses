@@ -206,6 +206,11 @@ boot_jp_moments <- function(dt, fml_mean, fml_var, fml_skew,
 }
 
 # ── Run ─────────────────────────────────────────────────────────────────────
+# Sourcing this file with `JP_BOOT_LOAD_ONLY <- TRUE` set beforehand loads
+# boot_jp_moments() and the fml_* objects but SKIPS the run below (used by
+# run_jp_bootstrap_standalone.R). Run the file directly to execute as before.
+if (!exists("JP_BOOT_LOAD_ONLY") || !isTRUE(JP_BOOT_LOAD_ONLY)) {
+
 gc()
 boot_moments <- boot_jp_moments(corn_jp_data, fml_mean, fml_var, fml_skew,
                                 B = 999, seed = 42)
@@ -226,3 +231,5 @@ skew_tab <- data.table(
   , term := gsub("rot_crop", "", term)][order(-estimate)]
 
 print(skew_tab)
+
+}  # end if (!JP_BOOT_LOAD_ONLY)
