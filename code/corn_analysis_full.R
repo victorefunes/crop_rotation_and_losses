@@ -415,11 +415,17 @@ rm(corn_rci_nc, corn_rci_cs); gc()
  
 # ── 3. VPD interaction models — corn ─────────────────────────────────────────
 # Tables: tab:corn_rot_vpd, tab:corn_rci_vpd
+
+vpd_controls <- c("pr_6", "pr_7", "pr_8",
+  "I(pr_6^2)", "I(pr_7^2)", "I(pr_8^2)",
+  "cGDD_6m", "cGDD_7m", "cGDD_8m",
+  "EDD_6", "EDD_7", "EDD_8",
+  "soil_6", "soil_7", "soil_8")
  
 corn_vpd_formula     <- make_jp_formula("corn_yield", "rot_crop + vpd_name",
-                                         all_controls)
+                                         vpd_controls)
 corn_rci_vpd_formula <- make_jp_formula("corn_yield", "RCI * vpd_name",
-                                         all_controls)
+                                         vpd_controls)
  
 feols(corn_yield ~ rot_crop + vpd_name | tile_field_ID + year,
       data = corn_jp_data, cluster = ~COUNTY_FIPS+year) -> corn_rot_vpd_nc                                         
