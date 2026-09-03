@@ -416,6 +416,7 @@ rm(corn_rci_nc, corn_rci_cs); gc()
 # ── 3. VPD interaction models — corn ─────────────────────────────────────────
 # Tables: tab:corn_rot_vpd, tab:corn_rci_vpd
 
+# VPD clashes with vpd_name, so it is removed from controls.
 vpd_controls <- c("pr_6", "pr_7", "pr_8",
   "I(pr_6^2)", "I(pr_7^2)", "I(pr_8^2)",
   "cGDD_6m", "cGDD_7m", "cGDD_8m",

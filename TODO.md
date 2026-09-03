@@ -89,21 +89,33 @@ comments. (§7 "corn-soybean-only sample" wording is still P3.)
       z = −1.67 (p = 0.095, still *); skewness C-C-C-S-S-C p = 0.062,
       S-S-C-C-C-C p = 0.038, C-S-C-S-C-C p < 0.001; none significantly positive.
       §5.2 inline NOTE rewritten to record this (was wrongly claiming analytic SEs).
-- [ ] **Z-vector (three-feature) variance bootstrap** — still analytic in
-      `zvector.tex` col (2) (`soy_gap` = −3.75*). Script written:
-      `code/zvector_bootstrap_var.R` (B = 999, same field-pairs design as
-      `just_pope_bootstrap_moments.R`); needs an R run. §5.3 intro prose reworded
-      so it no longer leans on the marginal spacing effect meanwhile.
+- [x] **Z-vector (three-feature) variance bootstrap** — DONE 2026-09-03.
+      `code/zvector_bootstrap_var.R` run → `tables/zvector_boot_var.txt`
+      (B = 999, field-pairs design). Bootstrap SEs: late_soy 0.286 (p=0.040, **),
+      soy_gap 0.375 (p≈0, ***), soy_cons 1.354 (p≈0, ***) — all significant,
+      vs analytic county+year 0.90 / 1.96 / 3.94 (only soy_gap marginal). Gap
+      persists under field clustering too (script's analytic_se 0.86 / 1.68 /
+      3.72), so it is the bootstrap's generated-regressor correction, not the
+      clustering dimension. `zvector.tex` col (2) updated; `tables_combined.r`
+      now re-applies the bootstrap SEs automatically after `etable()` and no
+      longer writes duplicate FE rows. Prose updated: abstract (§ line 91),
+      §Z-vector variance para, Discussion finding 2, Conclusion, Implications.
+      CAVEAT for co-authors: the bootstrap SEs are ~4–5× tighter than either
+      analytic clustering; prose flags this and leans hardest on soy_gap.
 - [x] **VPD units** — confirmed kPa (from `corn_summary_stats.tex`: July `vpd_7`
       mean ≈ 1.1, SD ≈ 0.65 kPa). §5.8 prose + inline NOTE updated: `vpd_7`
       = −18.9/kPa ⇒ ≈ −12 bu/acre per raw SD (less after FE); `vpd_6` = +54.9/kPa
       flagged as not structurally identified (June weather-block collinearity),
       `vpd_8` likewise. Text now interprets only the July sign; no per-kPa
       marginals quoted for June/August.
-- [ ] **VPD double-counting (spec decision)** — `corn_rot_vpd` / `corn_rci_vpd`
-      keep both continuous `vpd_7` (GRIDMET monthly mean) and the July bins (from
-      `vpdmax_7`). Prose now states `vpd_7` = within-bin slope, bins = threshold
-      shift. Alternative is to drop `vpd_7` and re-run those two tables — decide.
+- [x] **VPD double-counting (spec decision)** — RESOLVED 2026-09-03: continuous
+      monthly VPD (`vpd_6/vpd_7/vpd_8`) dropped from `corn_rot_vpd` /
+      `corn_rci_vpd`; the July drought effect is now identified through the bins
+      alone. Comment added at `corn_analysis_full.R` ~line 419; both tables
+      regenerated (vpd_6/7/8 rows gone, coefficients + within-R² shifted).
+      §5.8 prose rewritten (removed the per-kPa continuous-VPD discussion; drought
+      bins now 0.92 / 1.64 bu/acre, both n.s.); §5.9 penalty magnitude 2.7 → 2.5,
+      RCI3×Dry now +6.67* noted; table notes blocks updated.
 - [x] **RCI × Dry interactions** — §5.9 prose (fixed in P1) no longer makes a
       drought-buffering claim; it states only that the pattern is sign-flipping
       and imprecise. Inline TODO downgraded to a NOTE: a formal joint Wald test

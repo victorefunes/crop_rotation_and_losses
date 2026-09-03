@@ -1,4 +1,12 @@
 
+% Column (2) SEs and stars: B=999 field-level pairs cluster bootstrap wrapping
+% both stages (code/zvector_bootstrap_var.R -> tables/zvector_boot_var.txt),
+% the generated-regressor inference of record for this stage. The analytic
+% two-way (county, year) clustered SEs that etable() writes are 0.8990 / 1.964
+% / 3.939 (late_soy n.s.; soy_gap p<0.10; soy_cons n.s.). code/tables_combined.r
+% re-applies the bootstrap SEs automatically after etable() (post-processing
+% block that reads zvector_boot_var.txt); this comment records what it did.
+% Column (1) SEs are the analytic two-way clustered SEs, as written by etable().
 \begin{table}[htbp]
    \caption{\label{tab:zvector} Effect of rotation patterns on yields}
    \bigskip
@@ -9,16 +17,16 @@
                                       & Corn mean               & Corn variance \\
                                       & (1)                     & (2)\\
       \midrule
-      Latest soy rotation             & 0.4470$^{***}$ (0.0612) & -0.5826 (0.9477)\\
-      Soy gap                         & 0.6928$^{***}$ (0.1509) & -3.748$^{*}$ (2.042)\\
-      Number of consecutive soy years & 1.210$^{**}$ (0.4396)   & 6.878 (3.971)\\
+      Latest soy rotation             & 0.4470$^{***}$ (0.0613) & -0.5826$^{**}$ (0.2860)\\
+      Soy gap                         & 0.6928$^{***}$ (0.1598) & -3.748$^{***}$ (0.3746)\\
+      Number of consecutive soy years & 1.210$^{**}$ (0.4396)   & 6.878$^{***}$ (1.354)\\
        \\
       Observations                    & 1,785,861               & 1,785,861\\
       R$^2$                           & 0.84288                 & 0.29040\\
       Within R$^2$                    & 0.15022                 & 0.01383\\
       Controls                        & Yes                     & Yes\\
-      tile\_field\_ID FE              & $\checkmark$            & $\checkmark$\\
-      Year FE                         & $\checkmark$            & $\checkmark$\\
+      tile\_field\_ID fixed effects   & $\checkmark$            & $\checkmark$\\
+      year fixed effects              & $\checkmark$            & $\checkmark$\\
       \bottomrule
    \end{tabular}
 \end{table}
