@@ -320,11 +320,42 @@ f_reg <- as.formula(sprintf("corn_yield ~ regime + %s + %s | %s",
                             paste(Wws, collapse = " + "),
                             paste(fe, collapse = " + ")))
 m_reg <- feols(f_reg, data = corn_df, vcov = ~ grid_cell)
-etable(m_reg, keep = "^corn", 
-        dict = regime_dict, 
+etable(m_reg, keep = "^corn",
+        dict = regime_dict,
         tex = TRUE,
-        file = paste0(tab_dir, "slx_corn_regime.tex"), 
+        file = paste0(tab_dir, "slx_corn_regime.tex"),
         replace = TRUE)
+
+## --------------------------------------------------------------------------
+## Residual spatial autocorrelation of m_reg (same diagnostic as corn_spatial.R)
+## I = (e'We)/(e'e); with row-stochastic W (rows sum to 1) this equals the
+## standard Moran's I (S0 = n cancels n/S0). Computed per-year, pooled to the
+## global e'We/e'e ratio, then reported year-by-year to check for hot spots.
+## --------------------------------------------------------------------------
+resid_moran <- function(model, data, W, row_of,
+                        id_col = "tile_field_ID", time_col = "year") {
+  e   <- resid(model, na.rm = FALSE)
+  ids <- as.character(data[[id_col]]); tm <- data[[time_col]]
+  ok  <- !is.na(e); den <- sum(e[ok]^2); num <- 0
+  for (yr in unique(tm)) {
+    idx <- which(tm == yr); r <- row_of[ids[idx]]
+    ei <- e[idx]; ei[is.na(ei)] <- 0
+    v  <- numeric(nrow(W)); v[r] <- ei
+    We <- as.numeric(W %*% v)
+    keep <- !is.na(e[idx])
+    num  <- num + sum(e[idx][keep] * We[r][keep])
+  }
+  num / den
+}
+moran_tab <- rbindlist(list(
+  data.table(year = "pooled", moran_I = resid_moran(m_reg, corn_df, W, row_of)),
+  rbindlist(lapply(sort(unique(corn_df$year)), function(yr)
+    data.table(year = as.character(yr),
+               moran_I = resid_moran(m_reg, corn_df[year == yr], W, row_of))))
+))
+moran_tab[, moran_I := round(moran_I, 5)]
+print(moran_tab)
+fwrite(moran_tab, paste0(tab_dir, "m_reg_resid_moran.csv"))
  
 ## ==========================================================================
 ## RESULTS
