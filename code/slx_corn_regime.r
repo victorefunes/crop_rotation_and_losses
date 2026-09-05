@@ -182,6 +182,9 @@ corn_df[, perfect_cs := crop_0 == corn_code & crop_1 == soy_code &
 # hay/alfalfa stands are frequently mis-coded as Grassland/Pasture (176) in
 # establishment or dormant years -- when both appear, the crop is the more
 # informative label than the incidental pasture code.
+
+# Where does it come from?
+
 corn_df[, regime := fcase(
   has_forage | has_other,      "corn_other_crops",       # checked first — wins
   has_fallow_pasture,          "corn_fallow_pasture",

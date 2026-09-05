@@ -5,7 +5,17 @@
 ##   source("rotation_setup.R")
 ##
 ## Rotation universe restricted to the 29 sequences covering ~99% of
-## field-years. Effective crops: corn (1), soybeans (5), winter wheat (24).
+## field-years. Effective crops: corn, soybeans, winter wheat -- expressed as
+## FUNCTIONAL-GROUP labels ("corn"/"soybeans"/"annual_cereal") to match
+## recode_cdl_functional() in cdl_functional_recode.R, not raw numeric CDL
+## codes. The group labels come from cdl_functional_classify.R (the project's
+## established functional_group vocabulary: corn, soybeans, ley,
+## annual_cereal, annual_legume, annual_broadleaf, fallow, NA), so if that
+## classification ever changes, corn_soy_patterns is regenerated consistently.
+## Consumers (corn_data_prep.R, corn_analysis_full.R,
+## run_jp_bootstrap_standalone.R) must recode crop_* columns with
+## recode_cdl_functional(), not recode_cdl(), or rot_crop will never match
+## corn_soy_patterns$pattern.
 ## ============================================================================
 
 library(tidyverse)
@@ -26,6 +36,7 @@ library(sf)
 library(usmap)
 theme_set(theme_bw())
 
+source("C:/Users/vf006/Box/crop_rotations_and_losses/code/cdl_functional_classify.R")
 
 tab_dir <- "C:/Users/vf006/Box/crop_rotations_and_losses/tables/"
 fig_dir <- "C:/Users/vf006/Box/crop_rotations_and_losses/figures/"
@@ -33,21 +44,37 @@ fig_dir <- "C:/Users/vf006/Box/crop_rotations_and_losses/figures/"
 # ── Rotation patterns ─────────────────────────────────────────────────────────
 # The 29 observed six-year sequences that account for ~99% of field-years
 # (28 non-monoculture: 23 corn-soybean, 5 corn-soybean-wheat; plus C monoculture).
-# Current year (last slot) is always corn (1); codes are CDL (1 corn, 5 soybeans,
-# 24 winter wheat). Kept as numeric-code strings so rot_crop needs no recoding;
-# readable labels are supplied by dict_corn below.
+# Current year (last slot) is always corn. Sequences were originally identified
+# by CDL code (1 corn, 5 soybeans, 24 winter wheat) -- kept below as
+# corn_soy_patterns_cdl for provenance -- then translated to the functional-group
+# labels recode_cdl_functional() produces, via the same classifier used
+# everywhere else (cdl_functional_classify.R), so the translation can't drift
+# out of sync with the recode.
 
-
-corn_soy_patterns <- tibble(pattern = c(
+corn_soy_patterns_cdl <- tibble(pattern = c(
   "1-1-1-1-5-1", "1-1-1-5-1-1", "1-1-1-5-24-1", "1-1-1-5-5-1",
   "1-1-5-1-1-1", "1-1-5-1-5-1", "1-5-1-1-1-1", "1-5-1-1-5-1",
-  "1-5-1-24-5-1", "1-5-1-5-1-1", "1-5-1-5-5-1", "1-5-5-5-5-1", 
+  "1-5-1-24-5-1", "1-5-1-5-1-1", "1-5-1-5-5-1", "1-5-5-5-5-1",
   "24-1-1-5-24-1", "5-1-1-1-1-1", "5-1-1-1-5-1", "5-1-1-5-24-1",
-  "5-1-1-5-5-1", "5-1-5-1-1-1", "5-1-5-1-5-1", "5-1-5-24-5-1", 
-  "5-1-5-5-1-1", "5-1-5-5-5-1", "5-5-1-1-1-1", "5-5-1-1-5-1", 
-  "5-5-1-5-1-1", "5-5-1-5-5-1", "5-5-5-1-5-1", "5-5-5-5-5-1", 
-  "1-1-1-1-1-1" 
+  "5-1-1-5-5-1", "5-1-5-1-1-1", "5-1-5-1-5-1", "5-1-5-24-5-1",
+  "5-1-5-5-1-1", "5-1-5-5-5-1", "5-5-1-1-1-1", "5-5-1-1-5-1",
+  "5-5-1-5-1-1", "5-5-1-5-5-1", "5-5-5-1-5-1", "5-5-5-5-5-1",
+  "1-1-1-1-1-1"
 ))
+
+# code -> functional-group label, for the three codes this pattern set uses
+cdl_code_group <- classify_cdl_names(c("Corn", "Soybeans", "Winter Wheat"))
+code2group <- setNames(cdl_code_group$class, c("1", "5", "24"))
+# code2group: 1 -> "corn", 5 -> "soybeans", 24 -> "annual_cereal"
+
+cdl_pattern_to_functional <- function(x) {
+  toks <- strsplit(x, "-", fixed = TRUE)
+  vapply(toks, function(v) paste(code2group[v], collapse = "-"), character(1))
+}
+
+corn_soy_patterns <- tibble(
+  pattern = cdl_pattern_to_functional(corn_soy_patterns_cdl$pattern)
+)
 
 
 # ── Degree-day functions (Schlenker-Roberts 2009) ─────────────────────────────
@@ -96,16 +123,21 @@ make_jp_formula <- function(lhs, rot_var, controls,
 }
 
 # ── Coefficient label dictionaries ────────────────────────────────────────────
-# rot_crop levels stay as numeric-code strings; these map coefficient names to
-# readable C/S/W labels. dict_corn is generated from the sequence list so it
-# stays in sync automatically.
+# rot_crop is built from functional-group labels (see corn_soy_patterns above);
+# to_letters() maps each token to a single readable letter for display, e.g.
+# "corn-corn-corn-corn-soybeans-corn" -> "C-C-C-C-S-C". dict_corn is generated
+# from the sequence list so it stays in sync automatically. Add an entry here
+# if a wider sequence list ever brings in a functional group not listed.
 
-to_letters <- function(x) {                 # 1->C, 5->S, 24->W, 36->A
-  x <- gsub("24", "W", x, fixed = TRUE)
-  x <- gsub("36", "A", x, fixed = TRUE)
-  x <- gsub("5",  "S", x, fixed = TRUE)
-  x <- gsub("1",  "C", x, fixed = TRUE)
-  x
+functional_letters <- c(
+  corn = "C", soybeans = "S", annual_cereal = "W", ley = "A",
+  annual_legume = "L", annual_broadleaf = "B", fallow = "F"
+)
+
+to_letters <- function(x) {
+  toks <- strsplit(x, "-", fixed = TRUE)
+  vapply(toks, function(v) paste(functional_letters[v], collapse = "-"),
+         character(1))
 }
 
 make_dict <- function(patterns, ref) {
@@ -113,12 +145,14 @@ make_dict <- function(patterns, ref) {
   labels <- to_letters(seqs)
   # rot_crop is factored on letter-coded levels (see to_letters() in the
   # analysis scripts), so dict keys must be "rot_crop" + letter sequence,
-  # not the raw numeric-code pattern, or etable won't match the coefficients.
+  # not the raw functional-group-label pattern, or etable won't match the
+  # coefficients.
   setNames(labels, paste0("rot_crop", labels))
 }
 
 # Corn analysis: reference = continuous corn. All 29 sequences end in corn.
-dict_corn <- make_dict(corn_soy_patterns$pattern, ref = "1-1-1-1-1-1")
+dict_corn <- make_dict(corn_soy_patterns$pattern,
+                        ref = "corn-corn-corn-corn-corn-corn")
 
 # Soy analysis: build the same way from the soy script's own 99% list (sequences
 # ending in soybeans), e.g.
@@ -145,18 +179,21 @@ dict_vpd <- c(
 )
 
 # ── PCA of rotation features ──────────────────────────────────────────────────
-# Features defined over the CDL codes so wheat and alfalfa contribute distinctly:
-#   legume years    = soybeans (5) + WinWht/Soy dbl (26) + alfalfa (36)
-#   small-grain yrs  = winter wheat (24) + WinWht/Soy dbl (26)
-# (26 and 36 don't occur in the 29-sequence set, so those codes are inert here;
-# they keep the code correct if the sequence list is ever widened.)
+# Features defined over functional-group labels (cdl_functional_classify.R)
+# so wheat and alfalfa contribute distinctly:
+#   legume years      = soybeans + annual_legume + ley (alfalfa is a legume ley)
+#   small-grain years = annual_cereal
+# (annual_legume and ley don't occur in the 29-sequence set -- it's restricted
+# to corn/soybeans/winter-wheat sequences -- so those groups are inert here;
+# they keep the code correct if the sequence list is ever widened to include
+# alfalfa or other-legume years.)
 # Fit is on the 29 sequences — i.e. the observed set — so rot_index reflects the
 # rotations that actually occur. Sequences are weighted equally, not by frequency.
 
-legume_codes      <- c(5L, 26L, 36L)
-small_grain_codes <- c(24L, 26L)
+legume_groups      <- c("soybeans", "annual_legume", "ley")
+small_grain_groups <- c("annual_cereal")
 
-parse_rot   <- function(x) as.integer(strsplit(x, "-", fixed = TRUE)[[1]])
+parse_rot   <- function(x) strsplit(x, "-", fixed = TRUE)[[1]]
 shannon_div <- function(v) { p <- table(v) / length(v); -sum(p * log(p)) }
 longest_run <- function(v) max(rle(v)$lengths)
 count_in    <- function(v, codes) sum(v %in% codes)
@@ -167,13 +204,13 @@ build_rot_features <- function(patterns) {
   tibble(pattern = unique(patterns)) |>
     mutate(
       rot_vec    = lapply(pattern, parse_rot),
-      n_legume   = sapply(rot_vec, count_in, codes = legume_codes),
-      n_grain    = sapply(rot_vec, count_in, codes = small_grain_codes),
+      n_legume   = sapply(rot_vec, count_in, codes = legume_groups),
+      n_grain    = sapply(rot_vec, count_in, codes = small_grain_groups),
       diversity  = sapply(rot_vec, shannon_div),
       max_run    = sapply(rot_vec, longest_run),
       no_mono    = 6 - max_run,
-      leg_gap    = sapply(rot_vec, gap_mean, codes = legume_codes),
-      leg_mingap = sapply(rot_vec, gap_min,  codes = legume_codes),
+      leg_gap    = sapply(rot_vec, gap_mean, codes = legume_groups),
+      leg_mingap = sapply(rot_vec, gap_min,  codes = legume_groups),
       free_leg   = ifelse(leg_gap    == 0, 0, 1 / leg_gap),
       tight_leg  = ifelse(leg_mingap == 0, 0, 1 / leg_mingap)
     ) |>

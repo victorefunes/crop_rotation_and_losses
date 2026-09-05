@@ -98,49 +98,34 @@ corn_data <- corn_data |>
 ## HISTORY; slots are ordered crop_1 = t-1 (most recent) ... crop_6 = t-6.
 ## ============================================================================
 
-# ── Toggle: how to treat Grassland/Pasture ────────────────────────────────────
-# TRUE  -> forage phase (perennial, counts as a crop class)
-# FALSE -> out-of-rotation land (noncrop, excluded from richness/diversity)
-GRASSLAND_AS_FORAGE <- FALSE
-
 # ── Functional crosswalk from raw CDL names ───────────────────────────────────
-# Flags are derived by pattern-match so every double crop lights the right
-# combination automatically. NB: the double-crop abbreviation is "WinWht", which
-# does NOT contain "Wheat" -- both spellings must be in the small-grain pattern.
+# The primary "class" per raw name comes from cdl_functional_classify.R -- the
+# project's established functional_group vocabulary (corn, soybeans, ley,
+# annual_cereal, annual_legume, annual_broadleaf, fallow, or NA for
+# non-agricultural / unclassified land) -- shared with cdl_functional_recode.R
+# and rotation_setup_wa.R so every consumer agrees on what "ley" or
+# "annual_cereal" means. Edit the name -> group rules there, not here.
+#
+# is_legume / is_small_grain / is_perennial are attribute flags LOCAL to this
+# file's multi-hot rotation-feature design (not part of the shared
+# classification): "ley" bundles alfalfa (legume, perennial) with grass hay /
+# pasture (perennial, not legume), so is_legume treats the whole "ley" class
+# as legume-bearing -- a coarser approximation than a raw-name-level split
+# would give, but consistent with how rotation_setup_wa.R's legume_groups
+# treats "ley". Grassland/Pasture always classifies to "ley" now (there is no
+# separate noncrop option for it in the real vocabulary), so a class of NA
+# means genuinely non-agricultural land; it's folded into a "noncrop" level
+# below purely so every raw value lands in one of the categorical levels used
+# for richness/diversity/transitions.
+source("C:/Users/vf006/Box/crop_rotations_and_losses/code/cdl_functional_classify.R")
 
 build_class_lut <- function(raw_vals) {
-  raw <- unique(as.character(raw_vals))
-  raw <- raw[!is.na(raw)]
-
-  is_small_grain <- grepl("Wheat|WinWht|Barley|Oats|Rye|Triticale|Durum",
-                          raw, ignore.case = TRUE)
-  is_legume      <- grepl("Soybean|Alfalfa|Clover|Peas|Dry Beans|Lentil|Vetch",
-                          raw, ignore.case = TRUE)
-  forage_pat     <- if (GRASSLAND_AS_FORAGE) "Alfalfa|Hay|Grassland|Pasture|Sod|Clover"
-                    else                      "Alfalfa|Hay|Sod|Clover"
-  is_perennial   <- grepl(forage_pat, raw, ignore.case = TRUE)
-
-  # single "primary" class for richness / diversity / transitions
-  class <- fcase(
-    grepl("^Corn$|Pop or Orn Corn|Sweet Corn", raw, ignore.case = TRUE), "corn",
-    grepl("Dbl Crop WinWht/Soybean",           raw, ignore.case = TRUE), "wht_soy_dbl",
-    is_small_grain & is_legume,                                          "grain_legume_dbl",
-    is_small_grain,                                                       "small_grain",
-    grepl("^Soybean",              raw, ignore.case = TRUE),             "soybean",
-    grepl("Alfalfa|Hay|Sod",       raw, ignore.case = TRUE),            "forage",
-    grepl("Grassland|Pasture",     raw, ignore.case = TRUE),
-        if (GRASSLAND_AS_FORAGE) "forage" else "noncrop",
-    grepl("Peas|Dry Beans|Clover", raw, ignore.case = TRUE),            "other_legume",
-    grepl("Fallow",                raw, ignore.case = TRUE),            "fallow",
-    grepl("Forest|Wetland|Water|Developed|Barren|Open Water",
-          raw, ignore.case = TRUE),                                      "noncrop",
-    default = "other_crop"
-  )
-
-  data.table(raw, class,
-             is_legume      = as.integer(is_legume),
-             is_small_grain = as.integer(is_small_grain),
-             is_perennial   = as.integer(is_perennial))
+  lut <- classify_cdl_names(raw_vals)
+  lut[, class := fifelse(is.na(class), "noncrop", class)]
+  lut[, is_legume      := as.integer(class %in% c("soybeans", "annual_legume", "ley"))]
+  lut[, is_small_grain := as.integer(class == "annual_cereal")]
+  lut[, is_perennial   := as.integer(class == "ley")]
+  lut[]
 }
 
 # ── Feature builder ───────────────────────────────────────────────────────────
@@ -165,8 +150,8 @@ add_rotation_features <- function(dt, crop_cols = paste0("crop_", 1:6)) {
 
   # primary class code matrix
   cl <- lut$class; names(cl) <- lut$raw
-  lev <- c("corn","soybean","small_grain","wht_soy_dbl","grain_legume_dbl",
-           "other_legume","forage","fallow","other_crop","noncrop")
+  lev <- c("corn","soybeans","annual_cereal","annual_legume",
+           "annual_broadleaf","ley","fallow","noncrop")
   code <- setNames(seq_along(lev), lev)
   nc   <- code[["noncrop"]]
   CM <- vapply(crop_cols, function(c) {

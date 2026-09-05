@@ -1,240 +1,72 @@
 ## ============================================================================
-## corn_analysis.R
-## Just-Pope production risk analysis — CORN
+## corn_rotation_analysis.R
+## Just-Pope production risk analysis — CORN, rotation-sequence models.
 ## Authors: Lawson Connor, Victor Funes-Leal, Eunchun Park
 ## University of Arkansas
 ## ----------------------------------------------------------------------------
+## Requires: corn_data_prep.R (sourced below) — provides corn_jp_data,
+## vpd_controls, load_corn_sf_2016(), and everything from rotation_setup_wa.R.
+##
 ## Tables produced:
-##   tab:corn_rot       — Rotation patterns and corn yields
-##   tab:corn_rci       — Rotational Complexity and corn yields
-##   tab:corn_rot_vpd   — Rotation x VPD interaction, corn
-##   tab:corn_rci_vpd   — RCI x VPD interaction, corn
-##   tab:corn_jp_mean   — Just-Pope stage 1: corn yield mean
-##   tab:corn_jp_moments — Just-Pope stage 2/3: corn yield variance (OLS) and standardized skewness
-##   tab:corn_rci_jp    — Just-Pope factor RCI: corn yield moments
+##   tab:corn_rot        — Rotation patterns and corn yields
+##   tab:corn_rot_vpd     — Rotation x VPD interaction, corn
+##   tab:corn_jp_mean     — Just-Pope stage 1: corn yield mean
+##   tab:corn_jp_moments  — Just-Pope stage 2/3: corn yield variance (FGLS) and
+##                          standardized skewness
 ##
 ## Figures produced:
-##   rot_pca_plot       — PCA biplot of rotation features (shared)
-##   corn_rot_plot      — Response of corn yields to rotation sequences
-##   corn_rci_plot      — Response of corn yields to RCI
-##   corn_var_plot      — Response of std dev of corn yields to rotation sequences
-##   corn_coeff_plot    — Mean vs variance coefficients scatter (corn)
-##   corn_jp_plot       — Just-Pope mean-variance decomposition (corn)
-##   rci_plot           — Nonlinear effect of RCI on corn yield mean and variance
-##   corn_yield_map     — Spatial map of corn yields (2016)
-##   rci_map            — Spatial map of RCI values (2016)
-##   nccpi_corn_map     — Spatial map of NCCPI corn (2016)
+##   corn_rot_plot_nc  — Response of corn yields to rotation sequences (no controls)
+##   corn_rot_plot     — Response of corn yields to rotation sequences
+##   score_yield       — Effect of rotation score (Z-vector) on yields
+##   corn_var_plot     — Response of std dev of corn yields to rotation sequences
+##   corn_coeff_plot   — Mean vs variance coefficients scatter (corn)
+##   corn_jp_plot      — Just-Pope mean-variance decomposition (corn)
+##   corn_yield_map    — Spatial map of corn yields (2016)
 ## ============================================================================
 
-## Split analysis in two: using functional categories
-## and keep the same "skeleton"
+source("corn_data_prep.R")
 
-library(arrow)
-library(statar)
-setwd("C:/Users/vf006/Box/crop_rotations_and_losses/code")
+# ── Shared p-value / vcov splicing helpers (rotation tables only) ────────────
 
-source("rotation_setup_wa.R")
-
-# ── Load corn data ────────────────────────────────────────────────────────────
-# Load, correct, and add degree-day variables in one pipeline.
-# corn_df is kept as the raw data source; corn_jp_data is the analysis sample.
-
-cat("Loading corn data...\n")
-corn_df <- read_parquet(
-  "D:/Crop data/d_igis13_12_1_2025.with_rci.parquet") 
-
-corn_df <- corn_df |>
-  filter(STATE_ABBR == "IL") |> 
-  mutate(tile_field_ID = paste0("T", STATE_FIPS, "_", tile, "_", field_id),
-         corn_yield = corn_yield / 62.77)  |> 
-  arrange(tile_field_ID, year) 
-
-cat("Corn raw rows:", nrow(corn_df), "\n")
-
-## Add present year crop variable
-setDT(corn_df)  
-
-add_crop_year <- function(dt) {
-  stopifnot(is.data.table(dt))
-  
-  # Drop any stale crop_year column from a previous run, so the regex below
-  # can't accidentally re-capture it
-  if ("crop_year" %in% names(dt)) {
-    dt[, crop_year := NULL]
-  }
-  
-  # Match crop_YYYY columns only (exactly 4 digits) -- excludes crop_year,
-  # rot_seq, or anything else that happens to start with "crop_"
-  crop_cols  <- grep("^crop_[0-9]{4}$", names(dt), value = TRUE)
-  crop_years <- as.integer(sub("crop_", "", crop_cols))
-  
-  stopifnot(length(crop_cols) > 0, !anyNA(crop_years))
-  
-  m       <- as.matrix(dt[, ..crop_cols])
-  col_idx <- match(dt$year, crop_years)
-  
-  stopifnot(length(col_idx) == nrow(dt))
-  
-  dt[, crop_year := m[cbind(seq_len(.N), col_idx)]]
-  invisible(dt)
+fmt_p <- function(p) {
+  if (length(p) == 0 || is.na(p)) return(character(0))
+  if (p < 0.001) return("[p<0.001]")
+  sprintf("[p=%.3f]", p)
 }
 
-add_crop_year(corn_df)
+insert_pval <- function(cell, p) {
+  p_str <- fmt_p(p)
+  if (length(p_str) == 0) return(cell)
+  sub("(\\([0-9.]+\\))", paste0("\\1 ", p_str), cell)
+}
 
-corn_df <- corn_df |>
-  rename(crop_0 = crop_year,
-         crop_1 = prioryr_crop,
-         crop_2 = prior2yr_crop,
-         crop_3 = prior3yr_crop,
-         crop_4 = prior4yr_crop,
-         crop_5 = prior5yr_crop,
-         crop_6 = prior6yr_crop) 
+get_rot_pvals <- function(mod) {
+  broom::tidy(mod) |>
+    filter(grepl("^rot_crop", term)) |>
+    transmute(term = gsub("^rot_crop", "", term), p.value)
+}
 
-source("rci_vectorized.R")
+# read_vcov_txt() -- write.table() writes coefficient names verbatim, but a
+# double-wrapped "I(I(pr_6^2))" was saved instead of "I(pr_6^2)" -- fix that on
+# load so the names line up exactly with the fitted models' coefficient names,
+# which etable() requires for a vcov matrix to be accepted.
+read_vcov_txt <- function(path) {
+  m <- as.matrix(read.table(path, header = TRUE, row.names = 1,
+                             check.names = FALSE))
+  fix_names <- function(nm) gsub("^I\\(I\\((.*)\\)\\)$", "I(\\1)", nm)
+  colnames(m) <- fix_names(colnames(m))
+  rownames(m) <- fix_names(rownames(m))
+  m
+}
 
-corn_df <- corn_df |>
-    mutate(RCI = rci(crop_0, crop_1, crop_2, crop_3, crop_4, crop_5))     
-
-source("cdl_functional_recode.R")
-
-recode_cdl_functional(corn_df, cols = paste0("crop_", 0:6))
-
-corn_df <- corn_df |>
-  #rename(RCI = annual_RCI) |>
-  mutate(rot_crop = paste0(crop_5, "-", crop_4, "-", crop_3, "-",
-          crop_2, "-", crop_1, "-", crop_0)) |>
-  #rci_correction() |>
-  add_degree_days()
-
-# ── Build analysis sample ─────────────────────────────────────────────────────
-# Join rotation features, add lag dummies, recode to C/S labels,
-# filter to complete cases on all controls.
-#
-# Rotation universe: any COMPLETE 6-year functional-group history (crop_0..
-# crop_5 all agricultural, i.e. non-NA after recode_cdl_functional()), not
-# just the 29 hand-curated corn/soy/wheat sequences corn_soy_patterns still
-# encodes -- lasso_rotation_selection.R now does the dozens-to-a-handful
-# selection on this broader candidate set instead of a pre-filtered pattern
-# list. MIN_PATTERN_FREQ drops sequences so rare they'd be perfectly
-# collinear with field FE and add nothing but noise to the LASSO design
-# matrix; raise/lower it there, not by hand-editing a pattern list.
-# (corn_soy_patterns / rot_features are still used below, unchanged, to
-# attach rot_index -- that PCA is fit only on the original 29 sequences, so
-# rows outside that set simply get rot_index = NA, which is fine: only the
-# fml_corn_index model actually uses rot_index, and it drops NA rows itself.)
-MIN_PATTERN_FREQ <- 30
-pattern_freq     <- corn_df |> count(rot_crop, name = "N")
-common_patterns  <- pattern_freq$rot_crop[pattern_freq$N >= MIN_PATTERN_FREQ]
-cat(sprintf("Rotation patterns: %d distinct, %d kept at N >= %d field-years.\n",
-            nrow(pattern_freq), length(common_patterns), MIN_PATTERN_FREQ))
-
-corn_jp_data <- corn_df |>
-  filter(if_all(paste0("crop_", 0:5), ~ !is.na(.))) |>
-  filter(rot_crop %in% common_patterns) |>
-  left_join(
-    rot_features |> select(pattern, rot_index),
-    by = c("rot_crop" = "pattern")
-  ) |>
-  mutate(
-    # Lag dummies via delimiter split — robust to multi-word groups
-    # (e.g. "annual_cereal"). Tokens run oldest -> newest; t[6] is the current
-    # year (always corn), so lag k is token 6 - k. Soy = "soybeans" on the
-    # functional-group string, after recode_cdl_functional().
-    seq_num  = strsplit(rot_crop, "-", fixed = TRUE),
-    soy_lag1 = sapply(seq_num, \(v) as.integer(v[5] == "soybeans")),
-    soy_lag2 = sapply(seq_num, \(v) as.integer(v[4] == "soybeans")),
-    soy_lag3 = sapply(seq_num, \(v) as.integer(v[3] == "soybeans")),
-    soy_lag4 = sapply(seq_num, \(v) as.integer(v[2] == "soybeans")),
-    soy_lag5 = sapply(seq_num, \(v) as.integer(v[1] == "soybeans")),
-    rot_crop = to_letters(rot_crop),   # corn->C, soybeans->S, annual_cereal->W (helper from rotation_setup.R)
-    rot_crop = factor(rot_crop),
-    rot_crop = relevel(rot_crop, ref = "C-C-C-C-C-C")
-  ) |>
-  select(-seq_num) |>
-  filter(!is.na(corn_yield)) |>
-  filter(if_all(all_of(all_controls_cols), ~ !is.na(.))) |>
-  mutate(vpd_name = case_when(
-    vpdmax_7 >= 0   & vpdmax_7 < 1.9  ~ "normal",
-    vpdmax_7 >= 1.9 & vpdmax_7 <= 2.1 ~ "somewhat dry",
-    vpdmax_7 > 2.1                     ~ "dry",
-    .default = NA_character_),
-    vpd_name = factor(vpd_name, levels = c("normal", "somewhat dry", "dry")))
-
-cat("Corn analysis sample:", nrow(corn_jp_data), "rows\n")
-
-# Free raw data — no longer needed
-rm(corn_df);
-gc()
-
-# ── Summary statistics table ──────────────────────────────────────────────────
-# Table: tab:summary — means and SDs by rotation type
-# Produced here because corn_jp_data contains all needed variables.
-# Written to tables/summary_stats.tex for \input{} in the manuscript.
- 
-corn_jp_data |>
-  mutate(rotation_type = case_when(
-    as.character(rot_crop) == "C-C-C-C-C-C"               ~ "Corn monoculture",
-    as.character(rot_crop) %in% c("S-C-S-C-S-C",
-                                   "C-S-C-S-C-S")         ~ "Perfect rotation",
-    RCI >= 1.41 & RCI <= 2.00                              ~ "Transitioning",
-    TRUE                                                   ~ "Other"
-  )) |>
-  filter(rotation_type != "Other") |>
-  group_by(rotation_type) |>
-  summarise(
-    N               = n(),
-    `Corn yield`    = sprintf("%.1f (%.1f)", mean(corn_yield, na.rm=TRUE),
-                                              sd(corn_yield,   na.rm=TRUE)),
-    `RCI`           = sprintf("%.2f (%.2f)", mean(RCI,         na.rm=TRUE),
-                                              sd(RCI,          na.rm=TRUE)),
-    `Precip (Jun)`  = sprintf("%.1f (%.1f)", mean(pr_6,        na.rm=TRUE),
-                                              sd(pr_6,         na.rm=TRUE)),
-    `GDD (Jul)`     = sprintf("%.0f (%.0f)", mean(cGDD_7m,     na.rm=TRUE),
-                                              sd(cGDD_7m,      na.rm=TRUE)),
-    `EDD (Jul)`     = sprintf("%.1f (%.1f)", mean(EDD_7,       na.rm=TRUE),
-                                              sd(EDD_7,        na.rm=TRUE)),
-    `VPD (Jul)`     = sprintf("%.2f (%.2f)", mean(vpd_7,       na.rm=TRUE),
-                                              sd(vpd_7,        na.rm=TRUE)),
-    `AWC (mm)`      = sprintf("%.0f (%.0f)", mean(rootznaws_mean, na.rm=TRUE),
-                                              sd(rootznaws_mean,  na.rm=TRUE))
-  ) |>
-  mutate(rotation_type = factor(rotation_type,
-                                 levels = c("Corn monoculture",
-                                            "Perfect rotation",
-                                            "Transitioning"))) |>
-  arrange(rotation_type) |>
-  rename(`Rotation type` = rotation_type) |>
-  kable(format  = "latex",
-        booktabs = TRUE,
-        caption = "Summary statistics by rotation type",
-        label   = "corn_summary",
-        align   = c("l","r","r","r","r","r","r","r","r")) |>
-  kable_styling(latex_options = c("hold_position", "scale_down")) |>
-  #footnote(general = paste0(
-  #  "Means with standard deviations in parentheses. ",
-  #  "Corn yield in bushels per acre (QDANN). ",
-  #  "Precipitation in mm; GDD and EDD in degree-days; ",
-  #  "VPD in kPa; AWC in mm. ",
-  #  "Perfect rotation = alternating C-S sequence (S-C-S-C-S-C or C-S-C-S-C-S). ",
-  #  "Transitioning = sequences with RCI between 1.41 and 2.00. ",
-  #  "Sample: Illinois field-year observations, 2009--2022."
-  #),
-  #general_title = "Notes:") |>
-  save_kable(file = paste0(tab_dir, "corn_summary_stats.tex"))
- 
-cat("Summary statistics table saved.\n")
- 
 # ── 1. OLS mean model ─────────────────────────────────────────────────────────
 # Table: tab:corn_rot | Figure: corn_rot_plot
 
-corn_jp_data <- corn_jp_data |>
-  filter(!is.na(vpd_name))
- 
 corn_yield_formula <- make_jp_formula("corn_yield", "rot_crop", all_controls)
- 
+
 feols(corn_yield ~ rot_crop | tile_field_ID + year,
       data = corn_jp_data, cluster = ~COUNTY_FIPS+year) -> corn_rot_nc
- 
+
 feols(corn_yield_formula,
       data = corn_jp_data, cluster = ~COUNTY_FIPS+year) -> corn_rot
 
@@ -262,7 +94,7 @@ etable(corn_rot_nc, corn_rot,
        label    = "tab:corn_rot",
        extralines = list("_Controls" = c("No", "Yes")),
        file     = paste0(tab_dir, "corn_rot.tex"))
- 
+
 # BH multiple comparisons correction
 pvals_corn <- broom::tidy(corn_rot) |>
   filter(grepl("rot_crop", term)) |>
@@ -270,31 +102,13 @@ pvals_corn <- broom::tidy(corn_rot) |>
   mutate(p_adj_bh = p.adjust(p.value, method = "BH"),
          sig_raw  = p.value  < 0.05,
          sig_bh   = p_adj_bh < 0.05)
- 
+
 cat("Corn sequences significant at 5% (unadjusted):", sum(pvals_corn$sig_raw), "\n")
 cat("Corn sequences significant at 5% FDR (BH):    ", sum(pvals_corn$sig_bh),  "\n")
 
 # Splice p-values into corn_rot.tex, next to each coefficient's SE
-get_rot_pvals <- function(mod) {
-  broom::tidy(mod) |>
-    filter(grepl("^rot_crop", term)) |>
-    transmute(term = gsub("^rot_crop", "", term), p.value)
-}
-
 pvals_nc   <- get_rot_pvals(corn_rot_nc)
 pvals_full <- get_rot_pvals(corn_rot)
-
-fmt_p <- function(p) {
-  if (length(p) == 0 || is.na(p)) return(character(0))
-  if (p < 0.001) return("[p<0.001]")
-  sprintf("[p=%.3f]", p)
-}
-
-insert_pval <- function(cell, p) {
-  p_str <- fmt_p(p)
-  if (length(p_str) == 0) return(cell)
-  sub("(\\([0-9.]+\\))", paste0("\\1 ", p_str), cell)
-}
 
 corn_rot_tex_path <- paste0(tab_dir, "corn_rot.tex")
 tex_lines <- readLines(corn_rot_tex_path)
@@ -318,7 +132,7 @@ tex_lines <- vapply(tex_lines, function(line) {
 }, character(1), USE.NAMES = FALSE)
 
 writeLines(tex_lines, corn_rot_tex_path)
- 
+
 # Figure: corn_rot_plot — Response of corn yields to rotation sequences
 library(tidytext)   # for reorder_within / scale_x_reordered
 
@@ -375,92 +189,18 @@ corn_rot |>
   corn_rot_plot
 ggsave(paste0(fig_dir, "corn_rot_plot.png"), corn_rot_plot,
        width = 10, height = 7.5, dpi = 300)
- 
-# ── 2. RCI models — corn ──────────────────────────────────────────────────────
-# Table: tab:corn_rci | Figure: corn_rci_plot
- 
-corn_rci_nc <- make_jp_formula("corn_yield", "RCI", NULL)
-corn_rci_cs <- make_jp_formula("corn_yield", "RCI", all_controls)
- 
-# Remove infrequent RCI levels (fewer than 100 observations)
-rci_keep <- corn_jp_data |>
-  count(RCI) |>
-  filter(n >= 100) |>
-  pull(RCI)
 
-corn_jp_data |>
-  filter(RCI %in% rci_keep) |>
-  mutate(RCI = factor(RCI)) |>
-  feols(corn_rci_nc, data = _, cluster = ~COUNTY_FIPS+year) -> corn_rci_nc
+# ── 2. VPD interaction — rotation, corn ───────────────────────────────────────
+# Table: tab:corn_rot_vpd
 
-corn_jp_data |>
-  filter(RCI %in% rci_keep) |>
-  mutate(RCI = factor(RCI)) |>
-  feols(corn_rci_cs, data = _, cluster = ~COUNTY_FIPS+year) -> corn_rci_cs
- 
-etable(corn_rci_nc, corn_rci_cs,
-       tex      = TRUE,
-       dict     = dict_rci,
-       headers  = c("No controls", "Weather and soil controls"),
-       keep     = "RCI",
-       placement = "H",
-       style.tex = style.tex("aer"),
-       replace  = TRUE, se.below = FALSE,
-       title    = "Rotation Complexity and corn yields",
-       label    = "tab:corn_rci",
-       file     = paste0(tab_dir, "corn_rci.tex"))
- 
-# Figure: corn_rci_plot — Changes in RCI and corn yields
-corn_rci_cs |>
-  coefplot() |>
-  data.frame() |>
-  filter(grepl("RCI", prms.estimate_names)) |>
-  separate(prms.estimate_names, into = c("temp", "term"), sep = 3) |>
-  select(-temp) |>
-  mutate(term  = as.numeric(term),
-         group = case_when(
-           term == 2.24 ~ "Perfect rotation",
-           .default     = "Other")) |>
-  filter(term < 5.2) |>
-  ggplot(aes(x = term, y = prms.y)) +
-  geom_point(size = 2, aes(color = group)) +
-  geom_errorbar(aes(ymin = prms.ci_low, ymax = prms.ci_high, color = group),
-                width = 0.2) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "grey60") +
-  labs(x = "Rotational Complexity Index (RCI)", y = "Coefficient Estimate",
-       title   = "Changes in RCI and corn yields",
-       caption = "Corn, soy, and wheat fields. Reference: RCI = 0. Clustered at COUNTY_FIPS.") +
-  theme(legend.title = element_blank(), legend.position = "bottom") ->
-  corn_rci_plot
-ggsave(paste0(fig_dir, "corn_rci_plot.png"), corn_rci_plot,
-       width = 10, height = 7.5, dpi = 300)
- 
-rm(corn_rci_nc, corn_rci_cs); gc()
- 
-# ── 3. VPD interaction models — corn ─────────────────────────────────────────
-# Tables: tab:corn_rot_vpd, tab:corn_rci_vpd
+corn_vpd_formula <- make_jp_formula("corn_yield", "rot_crop + vpd_name",
+                                     vpd_controls)
 
-# VPD clashes with vpd_name, so it is removed from controls.
-vpd_controls <- c("pr_6", "pr_7", "pr_8",
-  "I(pr_6^2)", "I(pr_7^2)", "I(pr_8^2)",
-  "cGDD_6m", "cGDD_7m", "cGDD_8m",
-  "EDD_6", "EDD_7", "EDD_8",
-  "soil_6", "soil_7", "soil_8")
- 
-corn_vpd_formula     <- make_jp_formula("corn_yield", "rot_crop + vpd_name",
-                                         vpd_controls)
-corn_rci_vpd_formula <- make_jp_formula("corn_yield", "RCI * vpd_name",
-                                         vpd_controls)
- 
 feols(corn_yield ~ rot_crop + vpd_name | tile_field_ID + year,
-      data = corn_jp_data, cluster = ~COUNTY_FIPS+year) -> corn_rot_vpd_nc                                         
- 
+      data = corn_jp_data, cluster = ~COUNTY_FIPS+year) -> corn_rot_vpd_nc
+
 corn_jp_data |>
   feols(corn_vpd_formula, data = _, cluster = ~COUNTY_FIPS+year) -> corn_rot_vpd
-
-corn_jp_data |>
-  mutate(RCI = factor(RCI)) |>
-  feols(corn_rci_vpd_formula, data = _, cluster = ~COUNTY_FIPS+year) -> corn_rci_vpd
 
 # Order rot_crop coefficient rows by estimate, decreasing
 rot_vpd_order <- broom::tidy(corn_rot_vpd) |>
@@ -483,65 +223,37 @@ etable(corn_rot_vpd,
        title    = "Effect of weather and rotation sequences on corn yields",
        label    = "tab:corn_rot_vpd",
        file     = paste0(tab_dir, "corn_rot_vpd.tex"))
-   
- 
-etable(corn_rci_vpd,
-       tex      = TRUE,
-       dict     = c(dict_rci, dict_vpd),
-       drop     = c("pr_", "cGDD_", "EDD_", "soil_", "vpd_",
-                    "rootznaws", "Constant"),
-       placement = "H",
-       style.tex = style.tex("aer"),
-       replace  = TRUE, se.below = FALSE,
-       fontsize = "scriptsize",
-       title    = "RCI x drought interaction effects on corn yields",
-       label    = "tab:corn_rci_vpd",
-       file     = paste0(tab_dir, "corn_rci_vpd.tex"))          
- 
-#rm(corn_rot_vpd, corn_rci_vpd); 
+
 gc()
- 
-# ── 4. Just-Pope stage 1 — corn ───────────────────────────────────────────────
-# Table: tab:corn_jp_mean | Figures: corn_rot_plot (mean), corn_jp_plot
- 
+
+# ── 3. Just-Pope stage 1 — corn ───────────────────────────────────────────────
+# Table: tab:corn_jp_mean | Figures: corn_rot_plot (mean), score_yield
+
 # Lag comparison models (confirmatory Z-vector pre-registration)
 fml_corn_lag1      <- make_jp_formula("corn_yield", "soy_lag1", all_controls_fgls)
 fml_corn_lag1_lag2 <- make_jp_formula("corn_yield", "soy_lag1 + soy_lag2",
                                        all_controls_fgls)
 fml_corn_index     <- make_jp_formula("corn_yield", "rot_index", all_controls_fgls)
 fml_corn_mean      <- make_jp_formula("corn_yield", "rot_crop", all_controls_fgls)
- 
+
 feols(fml_corn_lag1,      data = corn_jp_data, cluster = ~COUNTY_FIPS+year) -> corn_jp_s1_lag1
 feols(fml_corn_lag1_lag2, data = corn_jp_data, cluster = ~COUNTY_FIPS+year) -> corn_jp_s1_lag2
 feols(fml_corn_index,     data = corn_jp_data, cluster = ~COUNTY_FIPS+year) -> corn_jp_s1_idx
 feols(fml_corn_mean,      data = corn_jp_data, cluster = ~COUNTY_FIPS+year) -> corn_jp_s1
- 
+
 bh_note_corn <- paste0(
   "Benjamini-Hochberg FDR correction across ", nrow(pvals_corn),
   " rotation-sequence coefficients: ",
   sum(pvals_corn$sig_raw), " significant at 5\\% (unadjusted); ",
   sum(pvals_corn$sig_bh),  " significant at 5\\% FDR."
 )
- 
+
 rot_dict <- setNames(
   chartr("15", "CS", sub("^rot_crop", "", grep("^rot_crop", names(coef(corn_jp_s1)), value=TRUE))),
   grep("^rot_crop", names(coef(corn_jp_s1)), value=TRUE)
 )
 
 # Bootstrap vcov matrices, from jp_boot_vcov.R -> tables/*.txt (as tab_dir).
-# write.table() writes coefficient names verbatim, but a double-wrapped
-# "I(I(pr_6^2))" was saved instead of "I(pr_6^2)" -- fix that on load so the
-# names line up exactly with the fitted models' coefficient names, which
-# etable() requires for a vcov matrix to be accepted.
-read_vcov_txt <- function(path) {
-  m <- as.matrix(read.table(path, header = TRUE, row.names = 1,
-                             check.names = FALSE))
-  fix_names <- function(nm) gsub("^I\\(I\\((.*)\\)\\)$", "I(\\1)", nm)
-  colnames(m) <- fix_names(colnames(m))
-  rownames(m) <- fix_names(rownames(m))
-  m
-}
-
 jp_vcov_mean <- read_vcov_txt(paste0(tab_dir, "jp_vcov_mean.txt"))
 
 # Table: tab:corn_jp_mean
@@ -588,19 +300,13 @@ writeLines(tex_lines, corn_jp_mean_tex_path)
 
 rm(corn_jp_s1_lag1, corn_jp_s1_lag2, corn_jp_s1_idx, corn_rot_nc, corn_rot)
 gc()
- 
-# ── Z-vector model (confirmatory spec) ───────────────────────────────────────
-# Table: tab:zvector — Effect of rotation patterns on yields
-# This is the paper's main result table (Table 1 in the draft PDF).
-# Four structural features: late_soy, soy_gap, soy_cons, nsoy
-# Run on both corn and soy data, both mean and variance stages.
-# NOTE: requires late_soy, soy_gap, soy_cons, to be in corn_jp_data.
-# These must be constructed before this chunk runs.
- 
 
-# nsoy dropped due to collinearity
-# Construct Z-vector variables if not already present
+# ── Z-vector model (confirmatory spec) ───────────────────────────────────────
+# Four structural features: late_soy, soy_gap, soy_cons (nsoy dropped —
+# collinear with soy_gap, r=0.65). Run on corn data, both mean and variance
+# stages. Feeds the rotation-score figure (score_yield) below.
 # late_soy: negative integer = how many periods ago was the last soy harvest
+
 corn_jp_data <- corn_jp_data |>
   mutate(
     # Parse rotation sequence to find last soy year
@@ -617,52 +323,40 @@ corn_jp_data <- corn_jp_data |>
       pos <- which(v == "S")
       if (length(pos) < 2) 0L else min(diff(pos))
     }),
-    #nsoy      = sapply(seq_vec, function(v) sum(v == "S"))
   ) |>
   select(-seq_vec)
- 
+
 # Z-vector stage 1 — corn mean
 fml_z_corn_mean <- make_jp_formula("corn_yield",
                                     "late_soy + soy_gap + soy_cons",
                                     all_controls_fgls)
- 
+
 feols(fml_z_corn_mean, data = corn_jp_data,
       cluster = ~COUNTY_FIPS+year) -> corn_z_s1
- 
+
 # Z-vector stage 2 — corn variance
 corn_jp_data <- corn_z_s1 |>
   augment(newdata = corn_jp_data) |>
   mutate(resid_sq_z = (corn_yield - .fitted)^2) |>
   select(-starts_with("."))
- 
+
 fml_z_corn_var <- make_jp_formula("resid_sq_z",
                                    "late_soy + soy_gap + soy_cons",
                                    all_controls_fgls)
- 
+
 feols(fml_z_corn_var, data = corn_jp_data,
       cluster = ~COUNTY_FIPS+year) -> corn_z_s2
- 
-# ── Save Z-vector models for tables_combined.R ────────────────────────────────
-#saveRDS(
-#  list(z_s1        = corn_z_s1,
-#       z_s2        = corn_z_s2,
-#       rot_vpd_nc  = corn_rot_vpd_nc,
-#       rot_vpd     = corn_rot_vpd),
-#  file     = "D:/Crop data/corn_z_models.rds",
-#  compress = TRUE   
-  # gzip -- the real fix for the original slowness was bzip2, not object size
-#)
- 
-# ── 5. Just-Pope stage 2 — corn ───────────────────────────────────────────────
+
+# ── 4. Just-Pope stage 2 — corn ───────────────────────────────────────────────
 # Table: tab:corn_jp_moments | Figures: corn_var_plot, corn_coeff_plot, corn_jp_plot
- 
+
 corn_jp_s1 |>
   augment(newdata = corn_jp_data) |>
-  mutate(resid = corn_yield - .fitted, 
+  mutate(resid = corn_yield - .fitted,
          resid_sq = (corn_yield - .fitted)^2) |>
   select(-starts_with(".")) ->
   corn_jp_data
- 
+
 fml_corn_var <- make_jp_formula("resid_sq", "rot_crop", all_controls_fgls)
 
 # Stage 2a: OLS variance regression, used only to build the FGLS weights (h_hat)
@@ -688,26 +382,24 @@ rm(corn_jp_s2a); gc()
 # ── Figure: score_yield — Response of yields to rotation score values ─────────
 # corn_jp_s1 / corn_jp_s2 contain the sequence-level coefficients.
 # corn_z_s1 supplies the Z-vector coefficients used to compute the score.
- 
+
 # Step 1: compute score for each unique sequence from Z-vector coefficients
 z_coefs <- coef(corn_z_s1)
- 
+
 score_df <- corn_jp_data |>
   group_by(rot_crop) |>
   summarise(
     late_soy = mean(late_soy, na.rm = TRUE),
     soy_gap  = mean(soy_gap,  na.rm = TRUE),
     soy_cons = mean(soy_cons, na.rm = TRUE),
-    #nsoy     = mean(nsoy,     na.rm = TRUE),
     .groups  = "drop"
   ) |>
   mutate(
     score = z_coefs["late_soy"] * late_soy +
             z_coefs["soy_gap"]  * soy_gap  +
             z_coefs["soy_cons"] * soy_cons
-            #z_coefs["nsoy"]     * nsoy   # dropped: collinear with soy_gap (r=0.65)
   )
- 
+
 # Step 2: extract sequence-level coefficients from the FULL sequence models
 corn_s1_coef <- broom::tidy(corn_jp_s1) |>
   filter(grepl("rot_crop", term)) |>
@@ -716,7 +408,7 @@ corn_s1_coef <- broom::tidy(corn_jp_s1) |>
     mean_est = estimate,
     mean_se  = std.error
   )
- 
+
 corn_s2_coef <- broom::tidy(corn_jp_s2) |>
   filter(grepl("rot_crop", term)) |>
   transmute(
@@ -724,7 +416,7 @@ corn_s2_coef <- broom::tidy(corn_jp_s2) |>
     var_est  = estimate,
     var_se   = std.error
   )
- 
+
 # Step 3: join score onto sequence-level coefficients
 score_plot_df <- score_df |>
   left_join(corn_s1_coef, by = "rot_crop") |>
@@ -733,7 +425,7 @@ score_plot_df <- score_df |>
   arrange(score) |>
   mutate(score_label = factor(round(score, 2),
                                levels = unique(round(score, 2))))
- 
+
 # Step 4: two-panel plot sorted by score
 p_mean <- ggplot(score_plot_df,
                  aes(x = mean_est,
@@ -745,7 +437,7 @@ p_mean <- ggplot(score_plot_df,
   geom_vline(xintercept = 0, linetype = "dashed", colour = "grey60") +
   labs(x = "Coefficient Estimate", y = "Rotation score", title = "Mean") +
   theme_bw()
- 
+
 p_var <- ggplot(score_plot_df,
                 aes(x = var_est,
                     y = reorder(score_label, score))) +
@@ -756,7 +448,7 @@ p_var <- ggplot(score_plot_df,
   geom_vline(xintercept = 0, linetype = "dashed", colour = "grey60") +
   labs(x = "Coefficient Estimate", y = NULL, title = "Variance") +
   theme_bw()
- 
+
 score_yield <- p_mean + p_var +
   patchwork::plot_annotation(
     title   = "Effect of rotation score on yields",
@@ -766,23 +458,23 @@ score_yield <- p_mean + p_var +
       "Left: stage-1 mean coefficients. Right: stage-2 variance coefficients."
     )
   )
- 
+
 ggsave(paste0(fig_dir, "score_yield.png"), score_yield,
        width = 12, height = 8, dpi = 300)
 cat("score_yield figure saved.\n")
- 
- 
+
+
 # Summary data frame
 corn_s1_coef <- broom::tidy(corn_jp_s1) |>
   filter(grepl("rot_crop", term)) |>
   transmute(rot_crop = gsub("rot_crop","",term),
             mean_est = estimate, mean_se = std.error, mean_p = p.value)
- 
+
 corn_s2_coef <- broom::tidy(corn_jp_s2) |>
   filter(grepl("rot_crop", term)) |>
   transmute(rot_crop = gsub("rot_crop","",term),
             var_est  = estimate, var_se  = std.error, var_p  = p.value)
- 
+
 corn_jp_summary <- corn_s1_coef |>
   left_join(corn_s2_coef, by = "rot_crop") |>
   mutate(mean_sig  = mean_p < 0.05,
@@ -790,12 +482,12 @@ corn_jp_summary <- corn_s1_coef |>
          dominates = mean_est > 0 & var_est < 0,
          tradeoff  = mean_est > 0 & var_est > 0) |>
   arrange(desc(dominates), desc(mean_est))
- 
+
 cat("Corn sequences dominating monoculture:\n")
 corn_jp_summary |> filter(dominates) |>
-  select(rot_crop, mean_est, mean_se, var_est, var_se) |> 
+  select(rot_crop, mean_est, mean_se, var_est, var_se) |>
   print(n = Inf)
- 
+
 # Figure: corn_var_plot — Response of std dev of corn yields to rotation sequences
 corn_jp_s2 |>
   coefplot() |>
@@ -824,7 +516,7 @@ corn_jp_s2 |>
   corn_var_plot
 ggsave(paste0(fig_dir, "corn_var_plot.png"), corn_var_plot,
        width = 10, height = 7.5, dpi = 300)
- 
+
 # Figure: corn_coeff_plot — Mean vs variance coefficients
 corn_jp_summary |>
   mutate(pr = factor(as.integer(rot_crop %in% c("S-C-S-C-S-C")))) |>
@@ -839,7 +531,7 @@ corn_jp_summary |>
   corn_coeff_plot
 ggsave(paste0(fig_dir, "corn_coeff_plot.png"), corn_coeff_plot,
        width = 10, height = 10, dpi = 300)
- 
+
 # Figure: corn_jp_plot — Just-Pope mean-variance decomposition
 corn_jp_summary |>
   mutate(
@@ -877,7 +569,7 @@ corn_jp_summary |>
   corn_jp_plot
 ggsave(paste0(fig_dir, "corn_jp_plot.png"), corn_jp_plot,
        width = 9, height = 7, dpi = 300)
- 
+
 # corn_jp_s2 is kept alive (not rm()'d here) — its variance estimate is used
 # to standardize stage-3 skewness below, and both models are reported jointly
 # in a single table (tab:corn_jp_moments).
@@ -946,135 +638,19 @@ corn_jp_data |>
   dplyr::summarise(dplyr::across(c(late_soy, soy_cons, soy_gap),
                                  list(min = min, max = max, mean = mean)))
 
-
-# ── 6. Just-Pope factor RCI — corn ───────────────────────────────────────────
-# Table: tab:corn_rci_jp | Figure: rci_plot
- 
-corn_rci_jp_data <- corn_jp_data |>
-  select(-any_of(c("resid_sq", "h_hat"))) |>
-  filter(RCI %in% rci_keep) |>
-  mutate(RCI = factor(RCI))
- 
-fml_corn_rci_mean <- make_jp_formula("corn_yield", "RCI", all_controls_fgls)
-feols(fml_corn_rci_mean, data = corn_rci_jp_data,
-      cluster = ~COUNTY_FIPS+year) -> corn_rci_jp_s1
- 
-corn_rci_jp_s1 |>
-  augment(newdata = corn_rci_jp_data) |>
-  mutate(resid_sq = (corn_yield - .fitted)^2) |>
-  select(-starts_with(".")) ->
-  corn_rci_jp_data
- 
-fml_corn_rci_var <- make_jp_formula("resid_sq", "RCI", all_controls_fgls)
-feols(fml_corn_rci_var, data = corn_rci_jp_data,
-      cluster = ~COUNTY_FIPS+year) -> corn_rci_jp_s2
- 
-# Table: tab:corn_rci_jp
-etable(corn_rci_jp_s1, corn_rci_jp_s2,
-       tex      = TRUE,
-       keep     = "^RCI",
-       dict     = dict_rci,
-       headers  = c("Mean", "Variance"),
-       se.below = FALSE,
-       placement = "H",
-       style.tex = style.tex("aer"),
-       replace  = TRUE,
-       title    = "Just-Pope: factor RCI and corn yield moments",
-       label    = "tab:corn_rci_jp",
-       file     = paste0(tab_dir, "corn_rci_jp.tex"))
- 
-# Figure: rci_plot — Nonlinear effect of RCI on corn yield mean and variance
-rci_plot_df <- bind_rows(
-  broom::tidy(corn_rci_jp_s1) |>
-    filter(grepl("^RCI", term)) |>
-    transmute(rci = as.numeric(gsub("RCI","",term)),
-              est = estimate, se = std.error, moment = "Mean"),
-  broom::tidy(corn_rci_jp_s2) |>
-    filter(grepl("^RCI", term)) |>
-    transmute(rci = as.numeric(gsub("RCI","",term)),
-              est = estimate, se = std.error, moment = "Variance")
-)
- 
-ggplot(rci_plot_df, aes(x = rci, y = est, colour = moment, fill = moment)) +
-  geom_hline(yintercept = 0, linetype = "dashed", colour = "grey60") +
-  geom_ribbon(aes(ymin = est - 1.96*se, ymax = est + 1.96*se),
-              alpha = 0.15, colour = NA) +
-  geom_line(linewidth = 0.8) +
-  geom_point(size = 2.5) +
-  facet_wrap(~moment, scales = "free_y") +
-  scale_colour_manual(values = c("Mean" = "#1f77b4", "Variance" = "#d62728")) +
-  scale_fill_manual(  values = c("Mean" = "#1f77b4", "Variance" = "#d62728")) +
-  scale_x_continuous(breaks = sort(unique(rci_plot_df$rci))) +
-  labs(x      = "Rotational Complexity Index (RCI)",
-       y      = "Coefficient relative to RCI = 0",
-       title  = "Nonlinear effect of RCI on corn yield mean and variance",
-       caption = "Corn, soy, and wheat fields. Reference: RCI = 0. Two-way clustering.") +
-  theme_bw() +
-  theme(legend.position = "none",
-        axis.text.x = element_text(angle = 45, hjust = 1)) ->
-  rci_plot
-ggsave(paste0(fig_dir, "corn_rci_plot.png"), rci_plot,
-       width = 9, height = 7, dpi = 300)
- 
-rm(corn_rci_jp_data, corn_rci_jp_s1, corn_rci_jp_s2, rci_plot_df, rci_plot); gc()
-
- 
-# ── 7. FGLS + bootstrap — corn ────────────────────────────────────────────────
- 
-#source("just_pope_bootstrap_moments.R")
+# ── 5. FGLS + bootstrap — corn (rotation-sequence stages) ────────────────────
 
 source("jp_boot_vcov.R")
- 
-# ── 8. Spatial maps — corn ────────────────────────────────────────────────────
-# Figures: corn_yield_map, rci_map, nccpi_corn_map
-# Reload a minimal version of corn_df for spatial plotting only
- 
-cat("Reloading corn data for spatial maps...\n")
-corn_df <- read_parquet(
-  "D:/Crop data/d_igis13_12_1_2025.with_rci.parquet") 
 
-corn_df <- corn_df |>
-  filter(STATE_ABBR == "IL" & year == 2016) |> 
-  mutate(tile_field_ID = paste0("T", STATE_FIPS, "_", tile, "_", field_id),
-         corn_yield = corn_yield / 62.77)  |> 
-  arrange(tile_field_ID, year) 
+# ── 6. Spatial map — corn yields ──────────────────────────────────────────────
+# Figure: corn_yield_map
+# See load_corn_sf_2016() in corn_data_prep.R for caveats about this reload
+# path (rci_correction()/annual_RCI dependency, pre-existing).
 
-## Add present year crop variable
-setDT(corn_df)  
+corn_spatial <- load_corn_sf_2016()
+corn_sf <- corn_spatial$corn_sf
+il_map  <- corn_spatial$il_map
 
-add_crop_year(corn_df)
-
-corn_df <- corn_df |>
-  rename(crop_0 = crop_year,
-         crop_1 = prioryr_crop,
-         crop_2 = prior2yr_crop,
-         crop_3 = prior3yr_crop,
-         crop_4 = prior4yr_crop,
-         crop_5 = prior5yr_crop,
-         crop_6 = prior6yr_crop) 
-
-source("cdl_functional_recode.R")
-
-recode_cdl_functional(corn_df, cols = paste0("crop_", 0:6))
-
-corn_df <- corn_df |>
-  rename(RCI = annual_RCI) |>
-  mutate(rot_crop = paste0(crop_5, "-", crop_4, "-", crop_3, "-", 
-          crop_2, "-", crop_1, "-", crop_0)) |>
-  rci_correction()
-
-corn_sf <- corn_df |>     
-  filter(rot_crop %in% corn_soy_patterns$pattern) |>
-  arrange(tile_field_ID, year) |>
-  st_as_sf(coords = c("lon", "lat"), crs = st_crs("EPSG:4326"))
-  rm(corn_df); gc()
- 
-il_map <- us_map(regions = "counties") |>
-  filter(abbr == "IL") |>
-  st_as_sf() |>
-  st_transform(st_crs("EPSG:4326"))
- 
-# Figure: corn_yield_map — Corn yields across Illinois (2016)
 corn_sf |>
   filter(!is.na(corn_yield)) |>
   ggplot() +
@@ -1087,42 +663,14 @@ corn_sf |>
   corn_yield_map
 ggsave(paste0(fig_dir, "corn_yield_map.png"), corn_yield_map,
        width = 10, height = 12.5, dpi = 600)
- 
-# Figure: rci_map — RCI values across Illinois (2016)
-corn_sf |>
-  filter(!is.na(RCI)) |>
-  ggplot() +
-  geom_sf(data = il_map) +
-  geom_sf(aes(color = RCI), size = 0.2, alpha = 0.3) +
-  scale_color_viridis_c() +
-  theme(legend.position = "bottom") +
-  labs(title   = "Rotational Complexity Index (2016)",
-       caption = "Source: CDL / Socolar et al. (2021)") ->
-  rci_map
-ggsave(paste0(fig_dir, "rci_map.png"), rci_map,
-       width = 10, height = 12.5, dpi = 600)
 
-# Figure: nccpi_corn_map — NCCPI corn productivity index (2016)
-corn_sf |>
-  filter(!is.na(nccpi3corn_mean)) |>
-  ggplot() +
-  geom_sf(data = il_map) +
-  geom_sf(aes(color = nccpi3corn_mean), size = 0.2) +
-  scale_color_viridis_c() +
-  theme(legend.position = "bottom") +
-  labs(title   = "NCCPI — Corn (2016)",
-       caption = "Source: gSSURGO") ->
-  nccpi_corn_map
-ggsave(paste0(fig_dir, "nccpi_corn_map.png"), nccpi_corn_map,
-       width = 10, height = 12.5, dpi = 600)
- 
-rm(corn_sf, il_map, corn_yield_map, rci_map, nccpi_corn_map); gc()
- 
-# ── 9. County-level yields and maximum entropy distribution ───────────────────
- 
+rm(corn_spatial, corn_sf, il_map, corn_yield_map); gc()
+
+# ── 7. County-level yields and maximum entropy distribution ───────────────────
+
 cat("Reloading corn data for county-level analysis...\n")
 corn_df <- read_parquet(
-  "D:/Crop data/d_igis13_12_1_2025.with_rci.parquet") 
+  "D:/Crop data/d_igis13_12_1_2025.with_rci.parquet")
 
 corn_county <- corn_df |>
   filter(STATE_ABBR == "IL") |>
@@ -1131,15 +679,15 @@ corn_county <- corn_df |>
   group_by(COUNTY_FIPS, STATE_FIPS, year) |>
   summarise(yield = mean(corn_yield, na.rm = TRUE), .groups = "drop") |>
   rename(state = STATE_FIPS, county = COUNTY_FIPS)
-rm(corn_df); gc() 
- 
+rm(corn_df); gc()
+
 source("./max_entropy/maxent_tack2013.r")
 corn_det <- detrend_yields_proportional(corn_county)
 dist_m   <- tack_table2(corn_det$yield_norm)
- 
-distm$table 
+
+dist_m$table
 rm(corn_county, corn_det); gc()
- 
-cat("\n=== Corn analysis complete ===\n")
+
+cat("\n=== Corn rotation analysis complete ===\n")
 cat("All tables saved to:", tab_dir, "\n")
 cat("All figures saved to:", fig_dir, "\n")

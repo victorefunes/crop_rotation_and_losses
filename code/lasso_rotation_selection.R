@@ -36,6 +36,9 @@ library(fixest)
 library(data.table)
 library(hdm)
 library(glmnet)   # optional cross-check only
+library(arrow)
+library(statar)
+setwd("C:/Users/vf006/Box/crop_rotations_and_losses/code")
 
 # ── Core function ──────────────────────────────────────────────────────────
 # data        : corn_jp_data or soy_jp_data
@@ -104,24 +107,41 @@ lasso_select_sequences <- function(data, yvar, seqvar = "rot_crop",
   # candidates for selection themselves, only controls being partialled out).
   fe_data <- analysis_dt[, ..fe_vars]
   y <- analysis_dt[[yvar]]
- 
+
   if (!is.null(controls)) {
     W <- as.matrix(analysis_dt[, ..controls])
   }
- 
+
   # Guaranteed to hold by construction (all three come from analysis_dt), but
   # asserted explicitly so any future refactor that breaks this fails loudly
   # here instead of at an opaque cbind() call three lines down.
   stopifnot(nrow(X_seq) == length(y))
   if (!is.null(controls)) stopifnot(nrow(W) == length(y))
- 
-  to_demean <- if (!is.null(controls)) cbind(y = y, X_seq, W) else cbind(y = y, X_seq)
-  demeaned <- fixest::demean(X = to_demean, f = fe_data)
- 
-  y_dm <- demeaned[, "y"]
-  X_dm <- demeaned[, colnames(X_seq), drop = FALSE]
+
+  # X_seq can easily be 300+ dummy columns; with millions of rows a single
+  # cbind(y, X_seq, W) is a many-GB matrix that can fail to allocate even
+  # when plenty of (fragmented) system RAM is free ("cannot allocate vector
+  # of size N Gb"). Demean y + W together (small), then demean X_seq in
+  # column batches, writing each batch's result directly into a
+  # preallocated X_dm -- this keeps peak transient memory to one batch's
+  # worth instead of a second full-size copy of the whole matrix.
+  yW <- if (!is.null(controls)) cbind(y = y, W) else cbind(y = y)
+  yW_dm <- fixest::demean(X = yW, f = fe_data)
+  y_dm <- yW_dm[, "y"]
+
+  n_candidate <- ncol(X_seq)
+  X_dm <- matrix(NA_real_, nrow = nrow(X_seq), ncol = n_candidate,
+                 dimnames = list(NULL, colnames(X_seq)))
+  batch_size <- 40L
+  n_batches <- ceiling(n_candidate / batch_size)
+  for (b in seq_len(n_batches)) {
+    cols <- ((b - 1L) * batch_size + 1L):min(b * batch_size, n_candidate)
+    X_dm[, cols] <- fixest::demean(X = X_seq[, cols, drop = FALSE], f = fe_data)
+  }
+  rm(X_seq); gc()
+
   if (!is.null(controls)) {
-    W_dm <- demeaned[, colnames(W), drop = FALSE]
+    W_dm <- yW_dm[, colnames(W), drop = FALSE]
     # Partial the (demeaned) controls out of y and of every sequence column
     # too, via a second FWL step, so LASSO sees pure sequence variation.
     y_dm <- residuals(lm.fit(W_dm, y_dm))
@@ -140,7 +160,7 @@ lasso_select_sequences <- function(data, yvar, seqvar = "rot_crop",
   nonzero <- setdiff(nonzero, "(Intercept)")
   selected_sequences <- sub(paste0("^", seqvar), "", nonzero)
   cat(sprintf("Selected (nonzero) sequences: %d of %d\n",
-              length(selected_sequences), ncol(X_seq)))
+              length(selected_sequences), n_candidate))
  
   # --- 3b. Optional cross-check: cv.glmnet with clustered folds ---
   # LASSO's CV-tuned lambda tends to select more variables than rlasso's
@@ -178,7 +198,7 @@ lasso_select_sequences <- function(data, yvar, seqvar = "rot_crop",
   list(
     rlasso_fit          = fit,
     selected_sequences  = selected_sequences,
-    n_candidate         = ncol(X_seq),
+    n_candidate         = n_candidate,
     n_selected          = length(selected_sequences),
     cv_glmnet_selected  = cv_selected,   # cross-check; compare length/overlap
     cv_glmnet_fit       = cv_fit,        # full path; plot(cv_glmnet_fit) for lambda vs CV error / nvars
@@ -189,17 +209,146 @@ lasso_select_sequences <- function(data, yvar, seqvar = "rot_crop",
     y_dm                = y_dm           # demeaned (and control-partialled) outcome fed to LASSO
   )
 }
- 
+
+source("rotation_setup_wa.R")
+
+# ── Load corn data ────────────────────────────────────────────────────────────
+# Load, correct, and add degree-day variables in one pipeline.
+# corn_df is kept as the raw data source; corn_jp_data is the analysis sample.
+
+cat("Loading corn data...\n")
+corn_df <- read_parquet(
+  "D:/Crop data/d_igis13_12_1_2025.with_rci.parquet")
+
+corn_df <- corn_df |>
+  filter(STATE_ABBR == "IL") |>
+  mutate(tile_field_ID = paste0("T", STATE_FIPS, "_", tile, "_", field_id),
+         corn_yield = corn_yield / 62.77)  |>
+  arrange(tile_field_ID, year)
+
+cat("Corn raw rows:", nrow(corn_df), "\n")
+
+## Add present year crop variable
+setDT(corn_df)
+
+add_crop_year <- function(dt) {
+  stopifnot(is.data.table(dt))
+
+  # Drop any stale crop_year column from a previous run, so the regex below
+  # can't accidentally re-capture it
+  if ("crop_year" %in% names(dt)) {
+    dt[, crop_year := NULL]
+  }
+
+  # Match crop_YYYY columns only (exactly 4 digits) -- excludes crop_year,
+  # rot_seq, or anything else that happens to start with "crop_". This is a
+  # pure year-lookup: it works the same whether crop_YYYY holds raw CDL names
+  # ("Corn"), numeric CDL codes, or functional-group labels ("corn") from
+  # recode_cdl_functional() -- it never inspects the values, only picks the
+  # column matching dt$year. Forced to character so the lookup is well-defined
+  # regardless of which of those three a given caller has already applied.
+  crop_cols  <- grep("^crop_[0-9]{4}$", names(dt), value = TRUE)
+  crop_years <- as.integer(sub("crop_", "", crop_cols))
+
+  stopifnot(length(crop_cols) > 0, !anyNA(crop_years))
+
+  m       <- as.matrix(dt[, lapply(.SD, as.character), .SDcols = crop_cols])
+  col_idx <- match(dt$year, crop_years)
+
+  stopifnot(length(col_idx) == nrow(dt))
+
+  dt[, crop_year := m[cbind(seq_len(.N), col_idx)]]
+  invisible(dt)
+}
+
+add_crop_year(corn_df)
+
+corn_df <- corn_df |>
+  rename(crop_0 = crop_year,
+         crop_1 = prioryr_crop,
+         crop_2 = prior2yr_crop,
+         crop_3 = prior3yr_crop,
+         crop_4 = prior4yr_crop,
+         crop_5 = prior5yr_crop,
+         crop_6 = prior6yr_crop)
+
+source("rci_vectorized.R")
+
+corn_df <- corn_df |>
+    mutate(RCI = rci(crop_0, crop_1, crop_2, crop_3, crop_4, crop_5))
+
+source("cdl_functional_recode.R")
+
+recode_cdl_functional(corn_df, cols = paste0("crop_", 0:6))
+
+corn_df <- corn_df |>
+  #rename(RCI = annual_RCI) |>
+  mutate(rot_crop = paste0(crop_5, "-", crop_4, "-", crop_3, "-",
+          crop_2, "-", crop_1, "-", crop_0)) |>
+  #rci_correction() |>
+  add_degree_days()
+
+# ── Build analysis sample ─────────────────────────────────────────────────────
+# Join rotation features, add lag dummies, recode to C/S labels,
+# filter to complete cases on all controls.
+#
+# Rotation universe: any COMPLETE 6-year functional-group history (crop_0..
+# crop_5 all agricultural, i.e. non-NA after recode_cdl_functional()), not
+# just the 29 hand-curated corn/soy/wheat sequences corn_soy_patterns still
+# encodes -- lasso_rotation_selection.R now does the dozens-to-a-handful
+# selection on this broader candidate set instead of a pre-filtered pattern
+# list. MIN_PATTERN_FREQ drops sequences so rare they'd be perfectly
+# collinear with field FE and add nothing but noise to the LASSO design
+# matrix; raise/lower it there, not by hand-editing a pattern list.
+# (corn_soy_patterns / rot_features are still used below, unchanged, to
+# attach rot_index -- that PCA is fit only on the original 29 sequences, so
+# rows outside that set simply get rot_index = NA, which is fine: only the
+# fml_corn_index model actually uses rot_index, and it drops NA rows itself.)
+corn_df |> 
+  tab(rot_crop) |>
+  data.frame() |>
+  arrange(desc(Freq.)) |>
+  head(20)
+
+MIN_PATTERN_FREQ <- 250
+pattern_freq     <- corn_df |> count(rot_crop, name = "N")
+common_patterns  <- pattern_freq$rot_crop[pattern_freq$N >= MIN_PATTERN_FREQ]
+cat(sprintf("Rotation patterns: %d distinct, %d kept at N >= %d field-years.\n",
+            nrow(pattern_freq), length(common_patterns), MIN_PATTERN_FREQ))
+
+corn_jp_data <- corn_df |>
+  filter(if_all(paste0("crop_", 0:5), ~ !is.na(.))) |>
+  filter(rot_crop %in% common_patterns) |>
+  filter(!is.na(corn_yield)) |>
+  filter(if_all(all_of(all_controls_cols), ~ !is.na(.))) |>
+  mutate(vpd_name = case_when(
+    vpdmax_7 >= 0   & vpdmax_7 < 1.9  ~ "normal",
+    vpdmax_7 >= 1.9 & vpdmax_7 <= 2.1 ~ "somewhat dry",
+    vpdmax_7 > 2.1                     ~ "dry",
+    .default = NA_character_),
+    vpd_name = factor(vpd_name, levels = c("normal", "somewhat dry", "dry")),
+    # lasso_select_sequences() requires rot_crop to be a factor with the
+    # reference level (continuous corn monoculture) already set via relevel()
+    # -- see stopifnot(is.factor(...)) at the top of that function.
+    rot_crop = factor(rot_crop),
+    rot_crop = relevel(rot_crop, ref = "corn-corn-corn-corn-corn-corn"))
+
+cat("Corn analysis sample:", nrow(corn_jp_data), "rows\n")
+
+# Free raw data — no longer needed
+#rm(corn_df);
+gc()
+
 # ── Apply to corn and soybean ────────────────────────────────────────────────
 # Pass all_controls_cols (numeric control column names, no I() terms) to also
 # partial out weather/soil before selection -- recommended; see note above.
 # Using cluster = ~COUNTY_FIPS to match the existing corn_rot / soy_rot tables.
-#corn_lasso <- lasso_select_sequences(
-#  data        = corn_jp_data,
-#  yvar        = "corn_yield",
-#  controls    = all_controls_cols,
-#  cluster_fml = ~COUNTY_FIPS
-#)
+corn_lasso <- lasso_select_sequences(
+  data        = corn_jp_data,
+  yvar        = "corn_yield",
+  controls    = all_controls_cols,
+  cluster_fml = ~COUNTY_FIPS
+)
 
 #soy_lasso <- lasso_select_sequences(
 #  data        = soy_jp_data,
@@ -208,18 +357,33 @@ lasso_select_sequences <- function(data, yvar, seqvar = "rot_crop",
 #  cluster_fml = ~COUNTY_FIPS
 #)
 
-#cat(sprintf("\nCorn: %d of %d sequences selected (rlasso); %d selected under cv.glmnet cross-check.\n",
-#            corn_lasso$n_selected, corn_lasso$n_candidate, length(corn_lasso$cv_glmnet_selected)))
+cat(sprintf("\nCorn: %d of %d sequences selected (rlasso); %d selected under cv.glmnet cross-check.\n",
+            corn_lasso$n_selected, corn_lasso$n_candidate, length(corn_lasso$cv_glmnet_selected)))
 #cat(sprintf("Soy:  %d of %d sequences selected (rlasso); %d selected under cv.glmnet cross-check.\n",
 #            soy_lasso$n_selected, soy_lasso$n_candidate, length(soy_lasso$cv_glmnet_selected)))
 
 # ── Save tables in the same etable/dict_corn style as the rest of the paper ──
-#etable(corn_lasso$refit_full_controls, tex = TRUE, cluster = ~COUNTY_FIPS,
-#       dict = dict_corn, keep = "^[CSW]-",
-#       file = paste0(tab_dir, "corn_lasso.tex"), replace = TRUE,
-#       title = "LASSO-selected rotation sequence effects on corn yield")
+# `keep` is built from functional_letters (rotation_setup_wa.R) rather than a
+# hardcoded "^[CSW]-", because rot_crop's candidate universe is no longer
+# corn/soy/wheat-only: recode_cdl_functional() over the full crop history
+# means a selected sequence can contain any of the project's functional-group
+# letters (A = ley, L = annual_legume, B = annual_broadleaf, F = fallow, on
+# top of C/S/W) -- a literal "^[CSW]-" would silently drop those rows from
+# the table.
+seq_letter_class <- paste0("^[", paste(unname(functional_letters), collapse = ""), "]-")
+
+etable(corn_lasso$refit_full_controls, tex = TRUE, cluster = ~COUNTY_FIPS,
+       dict = dict_corn, keep = seq_letter_class,
+       file = paste0(tab_dir, "corn_lasso.tex"), replace = TRUE,
+       title = "LASSO-selected rotation sequence effects on corn yield")
 
 #etable(soy_lasso$refit_full_controls, tex = TRUE, cluster = ~COUNTY_FIPS,
-#       dict = dict_soy, keep = "^[CSW]-",
+#       dict = dict_soy, keep = seq_letter_class,
 #       file = paste0(tab_dir, "soy_lasso.tex"), replace = TRUE,
 #       title = "LASSO-selected rotation sequence effects on soybean yield")
+length(corn_lasso$selected_sequences)   # n_selected
+corn_lasso$n_candidate                  # out of how many candidates
+setdiff(corn_lasso$selected_sequences, corn_lasso$cv_glmnet_selected)  # rlasso-only picks
+setdiff(corn_lasso$cv_glmnet_selected, corn_lasso$selected_sequences)  # cv.glmnet-only picks
+
+fwrite(data.table(rot_crop = corn_lasso$selected_sequences), "corn_lasso_selected_sequences.csv")

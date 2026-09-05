@@ -85,27 +85,37 @@ source("rci_vectorized.R")
 corn_df <- corn_df |>
   mutate(RCI = rci(crop_0, crop_1, crop_2, crop_3, crop_4, crop_5))
 
-source("cdl_recode.R")
-recode_cdl(corn_df, cols = paste0("crop_", 0:6))
+source("cdl_functional_recode.R")
+recode_cdl_functional(corn_df, cols = paste0("crop_", 0:6))
 
 corn_df <- corn_df |>
   mutate(rot_crop = paste0(crop_5, "-", crop_4, "-", crop_3, "-",
                            crop_2, "-", crop_1, "-", crop_0)) |>
   add_degree_days()
 
+# Rotation universe: any COMPLETE 6-year functional-group history, not just
+# the 29 hand-curated corn/soy/wheat sequences -- see corn_data_prep.R for
+# the full rationale (kept identical here so this driver matches it exactly).
+MIN_PATTERN_FREQ <- 30
+pattern_freq     <- corn_df |> count(rot_crop, name = "N")
+common_patterns  <- pattern_freq$rot_crop[pattern_freq$N >= MIN_PATTERN_FREQ]
+cat(sprintf("Rotation patterns: %d distinct, %d kept at N >= %d field-years.\n",
+            nrow(pattern_freq), length(common_patterns), MIN_PATTERN_FREQ))
+
 corn_jp_data <- corn_df |>
-  filter(rot_crop %in% corn_soy_patterns$pattern) |>
+  filter(if_all(paste0("crop_", 0:5), ~ !is.na(.))) |>
+  filter(rot_crop %in% common_patterns) |>
   left_join(
     rot_features |> select(pattern, rot_index),
     by = c("rot_crop" = "pattern")
   ) |>
   mutate(
     seq_num  = strsplit(rot_crop, "-", fixed = TRUE),
-    soy_lag1 = sapply(seq_num, \(v) as.integer(v[5] == "5")),
-    soy_lag2 = sapply(seq_num, \(v) as.integer(v[4] == "5")),
-    soy_lag3 = sapply(seq_num, \(v) as.integer(v[3] == "5")),
-    soy_lag4 = sapply(seq_num, \(v) as.integer(v[2] == "5")),
-    soy_lag5 = sapply(seq_num, \(v) as.integer(v[1] == "5")),
+    soy_lag1 = sapply(seq_num, \(v) as.integer(v[5] == "soybeans")),
+    soy_lag2 = sapply(seq_num, \(v) as.integer(v[4] == "soybeans")),
+    soy_lag3 = sapply(seq_num, \(v) as.integer(v[3] == "soybeans")),
+    soy_lag4 = sapply(seq_num, \(v) as.integer(v[2] == "soybeans")),
+    soy_lag5 = sapply(seq_num, \(v) as.integer(v[1] == "soybeans")),
     rot_crop = to_letters(rot_crop),
     rot_crop = factor(rot_crop),
     rot_crop = relevel(rot_crop, ref = "C-C-C-C-C-C")
